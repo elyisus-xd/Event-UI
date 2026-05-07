@@ -1,0 +1,12 @@
+name: EventUI
+version: 2.0.0
+main: com.eventui.core.v2.EventUIPlugin
+api-version: 1.21
+author: elyisus-xd
+description: Configurable event/quest system with custom UI
+
+commands:
+  eventui:
+    description: EventUI main command
+    usage: /eventui <subcommand>
+    aliases: [events, ev]

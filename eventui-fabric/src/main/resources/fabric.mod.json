@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "eventui",
+  "version": "${version}",
+  "name": "EventUI",
+  "description": "Customizable event UI system for Minecraft",
+  "authors": [
+    "elyisusxd"
+  ],
+  "contact": {
+    "homepage": "https://github.com/elyisusxd/eventui",
+    "sources": "https://github.com/elyisusxd/eventui"
+  },
+  "license": "MIT",
+  "environment": "*",
+
+  "entrypoints": {
+    "client": [
+      "com.eventui.fabric.client.EventUIClient"
+    ]
+  },
+
+  "mixins": [
+    "eventui.mixins.json"
+  ],
+
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
