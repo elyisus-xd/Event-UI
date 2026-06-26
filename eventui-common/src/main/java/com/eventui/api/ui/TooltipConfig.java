@@ -54,6 +54,13 @@ public class TooltipConfig {
         return "true".equalsIgnoreCase(properties.get("shadow"));
     }
 
+    /**
+     * Whether to render the tooltip background (default: true)
+     */
+    public boolean isShowTooltipBackground() {
+        return !"false".equalsIgnoreCase(properties.get("show_tooltip_background"));
+    }
+
 
     public String getRecipeId() {
         return properties.get("render_recipe");
@@ -113,6 +120,10 @@ public class TooltipConfig {
             TEXT,
             ITEM,
             RECIPE,
+            FURNACE_RECIPE,
+            SMITHING_RECIPE,
+            ANVIL_RECIPE,
+            BREWING_RECIPE,
             ENTITY,
             IMAGE,
             SEPARATOR

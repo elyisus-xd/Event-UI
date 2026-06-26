@@ -45,16 +45,23 @@ public class ObjectiveProgressImpl implements ObjectiveProgress {
 
         public synchronized boolean increment(int amount) {
         if (completed) {
-            return false;        }
+            return false;
+        }
 
         currentAmount += amount;
 
         if (currentAmount >= targetAmount) {
-            currentAmount = targetAmount;            completed = true;
+            currentAmount = targetAmount;
+            completed = true;
             return true;
         }
 
         return false;
+    }
+    
+    public synchronized void decrement(int amount) {
+        currentAmount = Math.max(0, currentAmount - amount);
+        completed = currentAmount >= targetAmount;
     }
 
         public synchronized void setProgress(int amount) {

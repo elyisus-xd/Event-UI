@@ -23,7 +23,7 @@ EventUI está diseñado con una arquitectura desacoplada de tres capas:
 ./gradlew build
 ```
 
-El archivo del mod se genera en: ```eventui-fabric/build/libs/eventui-fabric-0.1.0-SNAPSHOT.jar```
+El archivo del mod se genera en: ```eventui-fabric/build/libs/eventui-fabric-1.0.1.jar```
 
 ## 🎮 Desarrollo
 - **Ejecutar cliente de desarrollo:**

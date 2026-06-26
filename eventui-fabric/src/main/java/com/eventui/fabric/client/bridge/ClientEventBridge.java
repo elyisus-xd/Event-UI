@@ -13,6 +13,7 @@ import com.eventui.fabric.client.keybinds.EventUIKeybinds;
 import com.eventui.fabric.client.ui.ConfigurableUIScreen;
 import com.eventui.fabric.client.ui.QuestTrackerHUD;
 import com.eventui.fabric.client.ui.custom.CustomEventScreen;
+import com.eventui.fabric.client.ui.tooltip.RecipeCache;
 import com.eventui.fabric.client.viewmodel.EventViewModel;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -25,6 +26,7 @@ import java.lang.reflect.Type;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -32,8 +34,7 @@ public class ClientEventBridge implements EventBridge {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientEventBridge.class);
     private static ClientEventBridge instance;
-
-    private final Map<MessageType, MessageHandler> handlers;
+    private final Map<MessageType, List<MessageHandler>> handlers;
     private final ClientEventCache cache;
     private final NetworkHandler network;
     private boolean connected;
@@ -49,6 +50,8 @@ public class ClientEventBridge implements EventBridge {
 
         LOGGER.info("ClientEventBridge initialized and connected");
     }
+
+
 
     public static ClientEventBridge getInstance() {
         if (instance == null) {
@@ -72,12 +75,23 @@ public class ClientEventBridge implements EventBridge {
 
     @Override
     public void registerMessageHandler(MessageType type, MessageHandler handler) {
-        handlers.put(type, handler);
+        handlers.computeIfAbsent(type, k -> new CopyOnWriteArrayList<>()).add(handler);
         LOGGER.debug("Registered handler for message type: {}", type);
     }
+
+    public void removeHandler(MessageType type, MessageHandler handler) {
+        List<MessageHandler> list = handlers.get(type);
+        if (list != null) {
+            list.remove(handler);
+            if (list.isEmpty()) {
+                handlers.remove(type);
+            }
+        }
+    }
+
     public void unregisterMessageHandler(MessageType type) {
         handlers.remove(type);
-        LOGGER.debug("Unregistered handler for message type: {}", type);
+        LOGGER.debug("Unregistered all handlers for message type: {}", type);
     }
 
     @Override
@@ -171,13 +185,15 @@ public class ClientEventBridge implements EventBridge {
     }
 
     public void handleIncomingMessage(BridgeMessage message) {
-        MessageHandler handler = handlers.get(message.getType());
+        List<MessageHandler> handlerList = handlers.get(message.getType());
 
-        if (handler != null) {
-            try {
-                handler.handle(message);
-            } catch (Exception e) {
-                LOGGER.error("Error handling message type: {}", message.getType(), e);
+        if (handlerList != null && !handlerList.isEmpty()) {
+            for (MessageHandler handler : handlerList) {
+                try {
+                    handler.handle(message);
+                } catch (Exception e) {
+                    LOGGER.error("Error handling message type: {}", message.getType(), e);
+                }
             }
         } else {
             LOGGER.warn("No handler registered for message type: {}", message.getType());
@@ -208,19 +224,25 @@ public class ClientEventBridge implements EventBridge {
         registerMessageHandler(MessageType.EVENT_RELOAD_NOTIFICATION, message -> {
             String reason = message.getPayload().get("reason");
             String screenId = message.getPayload().get("screenId");
-            LOGGER.debug("Received EVENT_RELOAD_NOTIFICATION - reason: {}, screenId: {}", reason, screenId);
+            LOGGER.info("[RELOAD_NOTIF] === EVENT_RELOAD_NOTIFICATION === reason='{}', screenId='{}'", reason, screenId);
 
             if ("hotreload".equals(reason) && screenId != null) {
                 Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
                     if (client.screen instanceof ConfigurableUIScreen activeScreen
                             && screenId.equals(activeScreen.getCurrentScreenId())) {
-                        LOGGER.debug("Hot reloading active screen: {}", screenId);
+                        LOGGER.info("[RELOAD_NOTIF] Hot reloading active screen: {}", screenId);
                         client.setScreen(new CustomEventScreen(screenId, new java.util.Stack<>()));
+                    } else {
+                        LOGGER.info("[RELOAD_NOTIF] Screen '{}' not currently open, invalidating keybind cache", screenId);
+                        EventUIKeybinds.invalidateCache();
+                        RecipeCache.clear();
                     }
                 });
             } else {
+                LOGGER.info("[RELOAD_NOTIF] Config reload (non-hotreload), invalidating keybind cache");
                 EventUIKeybinds.invalidateCache();
+                RecipeCache.clear();
                 Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
                     if (client.player != null)
@@ -228,6 +250,7 @@ public class ClientEventBridge implements EventBridge {
                 });
             }
         });
+
 
         registerMessageHandler(MessageType.UI_STATE_UPDATE, message -> {
             String variablesJson = message.getPayload().get("variables");
@@ -245,6 +268,21 @@ public class ClientEventBridge implements EventBridge {
             } catch (Exception e) {
                 LOGGER.error("Failed to parse UI_STATE_UPDATE", e);
             }
+        });
+
+        registerMessageHandler(MessageType.OPEN_UI_COMMAND, message -> {
+            String screenId = message.getPayload().get("screen_id");
+            if (screenId == null || screenId.isEmpty()) {
+                LOGGER.warn("OPEN_UI_COMMAND received without screen_id");
+                return;
+            }
+            LOGGER.info("OPEN_UI_COMMAND received — opening screen: {}", screenId);
+            Minecraft client = Minecraft.getInstance();
+            client.execute(() -> {
+                if (client.player != null) {
+                    client.setScreen(new CustomEventScreen(screenId, new java.util.Stack<>()));
+                }
+            });
         });
     }
 
@@ -289,20 +327,16 @@ public class ClientEventBridge implements EventBridge {
         UUID messageId = UUID.randomUUID();
         UUID playerId = getLocalPlayerId();
 
-        if (playerId == null) {
-            future.completeExceptionally(new IllegalStateException("Player ID not available"));
-            return future;
-        }
-
-        MessageHandler responseHandler = message -> {
+        MessageHandler[] handlerRef = new MessageHandler[1];
+        handlerRef[0] = message -> {
             if (message.getReplyToMessageId() != null &&
                     message.getReplyToMessageId().equals(messageId)) {
                 future.complete(message.getPayload());
-                unregisterMessageHandler(MessageType.UI_MODE_RESPONSE);
+                removeHandler(MessageType.UI_MODE_RESPONSE, handlerRef[0]);
             }
         };
 
-        registerMessageHandler(MessageType.UI_MODE_RESPONSE, responseHandler);
+        registerMessageHandler(MessageType.UI_MODE_RESPONSE, handlerRef[0]);
         Map<String, String> payload = Map.of();
         BridgeMessage request = new BridgeMessageImpl(
                 MessageType.REQUEST_UI_MODE,
@@ -318,7 +352,7 @@ public class ClientEventBridge implements EventBridge {
         CompletableFuture.delayedExecutor(5, TimeUnit.SECONDS).execute(() -> {
             if (!future.isDone()) {
                 future.completeExceptionally(new TimeoutException("UI mode request timed out"));
-                unregisterMessageHandler(MessageType.UI_MODE_RESPONSE);
+                removeHandler(MessageType.UI_MODE_RESPONSE, handlerRef[0]);
             }
         });
 
@@ -366,7 +400,7 @@ public class ClientEventBridge implements EventBridge {
             cache.failPendingRequest(replyTo, e);
         }
     }
-
+    @SuppressWarnings("unchecked")
     private UIConfig deserializeUIConfig(String json) {
         Gson gson = new Gson();
         Type mapType = new TypeToken<Map<String, Object>>(){}.getType();

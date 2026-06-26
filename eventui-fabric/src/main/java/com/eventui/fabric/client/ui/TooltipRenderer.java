@@ -2,7 +2,13 @@ package com.eventui.fabric.client.ui;
 
 import com.eventui.api.ui.TooltipConfig;
 import com.eventui.fabric.client.ui.tooltip.EntityTooltipComponent;
+import com.eventui.fabric.client.ui.tooltip.RecipeCache;
 import com.eventui.fabric.client.ui.tooltip.RecipeTooltipComponent;
+import com.eventui.fabric.client.ui.tooltip.RecipeGridConfig;
+import com.eventui.fabric.client.ui.tooltip.renderer.AnvilStaticRenderer;
+import com.eventui.fabric.client.ui.tooltip.renderer.BrewingStaticRenderer;
+import com.eventui.fabric.client.ui.tooltip.renderer.FurnaceStaticRenderer;
+import com.eventui.fabric.client.ui.tooltip.renderer.SmithingStaticRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -84,7 +90,9 @@ public class TooltipRenderer {
         x = Math.max(4, x);
         y = Math.max(4, y);
 
-        renderTooltipBackground(graphics, x, y, dims.width, dims.height);
+        if (config.isShowTooltipBackground()) {
+            renderTooltipBackground(graphics, x, y, dims.width, dims.height);
+        }
 
         int currentY = y + 6;
         int contentX = x + 8;
@@ -99,6 +107,7 @@ public class TooltipRenderer {
 
     private static int renderSectionInline(TooltipConfig.TooltipSection section, GuiGraphics graphics,
                                            Font font, int x, int y, int availableWidth) {
+        LOGGER.info("[TOOLTIP_DEBUG] renderSectionInline type={}", section.getType());
         return switch (section.getType()) {
 
             case TEXT -> {
@@ -145,19 +154,18 @@ public class TooltipRenderer {
                 String recipeId    = section.getData().get("recipe");
                 String customFrame = section.getData().get("frame");
                 if (recipeId == null || recipeId.isBlank()) yield 0;
+
+                // parse grid config from section properties
+                RecipeGridConfig gridConfig = RecipeGridConfig.fromMap(section.getData());
+                LOGGER.debug("Recipe section '{}' gridConfig={}", recipeId, gridConfig);
+
                 try {
                     ResourceLocation recipeLoc = ResourceLocation.parse(recipeId.trim());
-                    var level = Minecraft.getInstance().level;
-                    if (level == null) { LOGGER.warn("Level null, cannot load recipe: {}", recipeId); yield 0; }
-                    var recipeManager = level.getRecipeManager();
-                    var holder = recipeManager.byKey(recipeLoc);
-                    if (holder.isEmpty()) {
-                        holder = recipeManager.getRecipes().stream()
-                                .filter(h -> h.id().equals(recipeLoc)).findFirst();
-                    }
-                    if (holder.isPresent()) {
+                    java.util.Optional<net.minecraft.world.item.crafting.Recipe<?>> recipeOpt =
+                            RecipeCache.get(recipeLoc);
+                    if (recipeOpt.isPresent()) {
                         RecipeTooltipComponent comp =
-                                new RecipeTooltipComponent(holder.get().value(), customFrame);
+                                new RecipeTooltipComponent(recipeOpt.get(), customFrame, gridConfig);
                         comp.renderImage(font, x, y, graphics);
                         yield comp.getHeight();
                     } else {
@@ -170,6 +178,31 @@ public class TooltipRenderer {
                     LOGGER.warn("Failed to load recipe '{}': {}", recipeId, e.getMessage());
                     yield 0;
                 }
+            }
+
+            case FURNACE_RECIPE -> {
+                LOGGER.info("[TOOLTIP_DEBUG] Rendering FURNACE_RECIPE, data={}", section.getData());
+                FurnaceStaticRenderer renderer = new FurnaceStaticRenderer();
+                renderer.render(graphics, font, x, y, section.getData());
+                yield renderer.getHeight();
+            }
+            case SMITHING_RECIPE -> {
+                LOGGER.info("[TOOLTIP_DEBUG] Rendering SMITHING_RECIPE, data={}", section.getData());
+                SmithingStaticRenderer renderer = new SmithingStaticRenderer();
+                renderer.render(graphics, font, x, y, section.getData());
+                yield renderer.getHeight();
+            }
+            case ANVIL_RECIPE -> {
+                LOGGER.info("[TOOLTIP_DEBUG] Rendering ANVIL_RECIPE, data={}", section.getData());
+                AnvilStaticRenderer renderer = new AnvilStaticRenderer();
+                renderer.render(graphics, font, x, y, section.getData());
+                yield renderer.getHeight();
+            }
+            case BREWING_RECIPE -> {
+                LOGGER.info("[TOOLTIP_DEBUG] Rendering BREWING_RECIPE, data={}", section.getData());
+                BrewingStaticRenderer renderer = new BrewingStaticRenderer();
+                renderer.render(graphics, font, x, y, section.getData());
+                yield renderer.getHeight();
             }
 
             case ENTITY -> {
@@ -249,24 +282,24 @@ public class TooltipRenderer {
                     sectionW = 100; sectionH = 76;
                     if (recipeId != null && !recipeId.isBlank()) {
                         try {
-                            var level = Minecraft.getInstance().level;
-                            if (level != null) {
-                                ResourceLocation loc = ResourceLocation.parse(recipeId.trim());
-                                var holder = level.getRecipeManager().byKey(loc);
-                                if (holder.isEmpty()) {
-                                    holder = level.getRecipeManager().getRecipes().stream()
-                                            .filter(h -> h.id().equals(loc)).findFirst();
-                                }
-                                if (holder.isPresent()) {
-                                    RecipeTooltipComponent comp =
-                                            new RecipeTooltipComponent(holder.get().value(), null);
-                                    sectionW = comp.getWidth(font);
-                                    sectionH = comp.getHeight();
-                                }
+                            ResourceLocation loc = ResourceLocation.parse(recipeId.trim());
+                            java.util.Optional<net.minecraft.world.item.crafting.Recipe<?>> recipeOpt =
+                                    RecipeCache.get(loc);
+                            if (recipeOpt.isPresent()) {
+                                RecipeGridConfig cfg = RecipeGridConfig.fromMap(section.getData());
+                                LOGGER.debug("Calculating dimensions: recipe {} cfg={}", recipeId, cfg);
+                                RecipeTooltipComponent comp =
+                                        new RecipeTooltipComponent(recipeOpt.get(), null, cfg);
+                                sectionW = comp.getWidth(font);
+                                sectionH = comp.getHeight();
                             }
                         } catch (Exception ignored) {}
                     }
                 }
+                case FURNACE_RECIPE -> { sectionW = 82; sectionH = 54; LOGGER.info("[TOOLTIP_DEBUG] FURNACE_RECIPE dims: w={} h={}", sectionW, sectionH); }
+                case SMITHING_RECIPE -> { sectionW = 108; sectionH = 58; }
+                case ANVIL_RECIPE -> { sectionW = 125; sectionH = 56; }
+                case BREWING_RECIPE -> { sectionW = 64; sectionH = 59; }
                 case ENTITY -> {
                     sectionW = 70; sectionH = 60;
                     String entityId = section.getData().get("entity");

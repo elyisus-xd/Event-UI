@@ -350,10 +350,10 @@ public class EventConfigLoader {
                 LOGGER.warning("  no detectar la ubicación de forma consistente.");
             }
         }
-
+        
         int targetAmount = 0;
         Map<String, String> parameters = new HashMap<>();
-
+        
         Map<String, Object> parametersData = (Map<String, Object>) data.get("parameters");
         if (parametersData != null) {
             parametersData.forEach((key, value) -> {
@@ -365,7 +365,7 @@ public class EventConfigLoader {
                 targetAmount = parseTargetAmount(parametersData.get("target_amount"), id);
             }
         }
-
+        
         if (data.containsKey("target_amount")) {
             targetAmount = parseTargetAmount(data.get("target_amount"), id);
         } else if (data.containsKey("target")) {
@@ -379,6 +379,36 @@ public class EventConfigLoader {
                 });
             }
         }
+        
+        // Validación de parámetros requeridos
+        if (type == ObjectiveType.REACH_LOCATION) {
+            if (!parameters.containsKey("x") || !parameters.containsKey("y") || !parameters.containsKey("z")) {
+                LOGGER.warning("⚠ REACH_LOCATION objetivo '" + id + "' falta parámetros requeridos:");
+                LOGGER.warning("  Requiere: x, y, z");
+                LOGGER.warning("  Opcionales: radius (default 3), world (default actual)");
+            }
+        }
+        
+        if (type == ObjectiveType.CUSTOM) {
+            if (!parameters.containsKey("custom_id")) {
+                LOGGER.warning("⚠ CUSTOM objetivo '" + id + "' falta parámetro requerido: custom_id");
+                LOGGER.warning("  Ejemplo: custom_id: 'mylib:my_handler_id'");
+            }
+        }
+        
+        if (type == ObjectiveType.BREW_POTION) {
+            if (!parameters.containsKey("potion_type")) {
+                LOGGER.warning("⚠ BREW_POTION objetivo '" + id + "' falta parámetro: potion_type");
+                LOGGER.warning("  Ejemplo: potion_type: 'minecraft:healing'");
+            }
+        }
+        
+        if (type == ObjectiveType.COLLECT_ITEM) {
+            if (!parameters.containsKey("item_id")) {
+                LOGGER.warning("⚠ COLLECT_ITEM objetivo '" + id + "' falta parámetro: item_id");
+                LOGGER.warning("  Ejemplo: item_id: 'minecraft:diamond'");
+            }
+        }
 
         Map<String, String> uiResources = new HashMap<>();
         Map<String, Object> uiResourcesData = (Map<String, Object>) data.get("ui_resources");
@@ -389,16 +419,10 @@ public class EventConfigLoader {
         return new ObjectiveDefinitionImpl(id, type, description, targetAmount, parameters, uiResources, optional);
     }
 
-    private static final Set<ObjectiveType> UNIMPLEMENTED_TYPES = Set.of(
-            ObjectiveType.BREW_POTION,
-            ObjectiveType.CUSTOM
-    );
+    private static final Set<ObjectiveType> UNIMPLEMENTED_TYPES = Set.of();
 
     // Tipos con implementación parcial — funcionan con limitaciones conocidas
-    private static final Set<ObjectiveType> PARTIAL_TYPES = Set.of(
-            ObjectiveType.COLLECT_ITEM,
-            ObjectiveType.REACH_LOCATION
-    );
+    private static final Set<ObjectiveType> PARTIAL_TYPES = Set.of();
 
     private int parseTargetAmount(Object value, String objectiveId) {
         if (value instanceof Number n) return n.intValue();
@@ -439,7 +463,7 @@ public class EventConfigLoader {
                     type: MINE_BLOCK
                     description: "Mina 10 bloques de piedra"
                     target:
-                      block: "minecraft:stone"
+                      block_id: "minecraft:stone"
                       count: 10
                 
                 rewards:

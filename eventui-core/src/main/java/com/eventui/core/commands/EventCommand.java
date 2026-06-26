@@ -9,13 +9,15 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.jspecify.annotations.NonNull;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class EventCommand implements CommandExecutor {
 
-    private static final Logger LOGGER = Logger.getLogger(EventCommand.class.getName());
+    private static final Logger LOGGER = Logger.getLogger("EventUI Commands");
 
     private final EventUIPlugin plugin;
 
@@ -24,7 +26,7 @@ public class EventCommand implements CommandExecutor {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         if (args.length == 0) {
             sender.sendMessage("§6EventUI v2 Commands:");
             sender.sendMessage("§e/ev list §7- List all events");
@@ -35,6 +37,7 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("§e/ev open <ui_id> §7- Open custom UI");
             sender.sendMessage("§6§lTesting Commands:");
             sender.sendMessage("§e/ev reset <id|all> §7- Reset progress");
+            sender.sendMessage("§e/ev abandon <id> §7- Abandon an event");
             sender.sendMessage("§e/ev complete <id> §7- Instant complete");
             sender.sendMessage("§e/ev fail <id> §7- Mark event as failed");
             sender.sendMessage("§e/ev debug <id> §7- Show debug info");
@@ -49,6 +52,7 @@ public class EventCommand implements CommandExecutor {
             case "info" -> handleInfo(sender, args);
             case "progress" -> handleProgress(sender, args);
             case "start" -> handleStart(sender, args);
+            case "abandon" -> handleAbandon(sender, args);
             case "reload" -> handleReload(sender);
             case "open" -> handleOpen(sender, args);
             case "reset" -> handleReset(sender, args);
@@ -190,7 +194,7 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("§aStarted event: " + eventDef.getDisplayName());
             notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.IN_PROGRESS);
             if (!eventDef.getObjectives().isEmpty()) {
-                var firstObjective = eventDef.getObjectives().get(0);
+                var firstObjective = eventDef.getObjectives().getFirst();
                 plugin.getEventBridge().notifyProgressUpdate(
                         player.getUniqueId(),
                         eventId,
@@ -203,7 +207,7 @@ public class EventCommand implements CommandExecutor {
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to start event: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev start para " + sender.getName(), e);
         }
     }
 
@@ -220,6 +224,7 @@ public class EventCommand implements CommandExecutor {
         );
 
         plugin.getEventBridge().sendMessage(message);
+        plugin.getPlayerDataManager().requestSave(playerId, "event state changed: " + eventId + " -> " + newState);
 
         LOGGER.fine("Notified state change to client: event=" + eventId + ", newState=" + newState);
     }
@@ -246,7 +251,7 @@ public class EventCommand implements CommandExecutor {
         } catch (Exception e) {
             sender.sendMessage("§cFailed to reload: " + e.getMessage());
             LOGGER.severe("Failed to reload events: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev reload para " + sender.getName(), e);
         }
     }
 
@@ -262,10 +267,10 @@ public class EventCommand implements CommandExecutor {
             return;
         }
 
-        String target = args[1];
+        String eventId = args[1];
 
         try {
-            if (target.equalsIgnoreCase("all")) {
+            if (eventId.equalsIgnoreCase("all")) {
                 var allEvents = plugin.getStorage().getAllEventDefinitions();
                 int resetCount = 0;
                 for (EventDefinition eventDef : allEvents.values()) {
@@ -283,7 +288,6 @@ public class EventCommand implements CommandExecutor {
                 sender.sendMessage("§7Press K to refresh the events screen.");
 
             } else {
-                String eventId = target;
 
                 var eventOpt = plugin.getStorage().getEventDefinition(eventId);
                 if (eventOpt.isEmpty()) {
@@ -317,7 +321,7 @@ public class EventCommand implements CommandExecutor {
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to reset: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev reset para " + sender.getName(), e);
         }
     }
 
@@ -363,7 +367,7 @@ public class EventCommand implements CommandExecutor {
             notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.COMPLETED);
 
             if (!eventDef.getObjectives().isEmpty()) {
-                var lastObjective = eventDef.getObjectives().get(eventDef.getObjectives().size() - 1);
+                var lastObjective = eventDef.getObjectives().getLast();
                 plugin.getEventBridge().notifyProgressUpdate(
                         player.getUniqueId(),
                         eventId,
@@ -376,7 +380,7 @@ public class EventCommand implements CommandExecutor {
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to complete: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev complete para " + sender.getName(), e);
         }
     }
 
@@ -504,6 +508,10 @@ public class EventCommand implements CommandExecutor {
                         objective.getTargetAmount(),
                         objective.getDescription()
                 );
+                plugin.getPlayerDataManager().requestSave(
+                        player.getUniqueId(),
+                        "progress manually set: " + eventId + "/" + objectiveId
+                );
 
                 if (progress.areAllObjectivesCompleted()) {
                     progress.complete();
@@ -514,7 +522,7 @@ public class EventCommand implements CommandExecutor {
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to set progress: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev setprogress para " + sender.getName(), e);
         }
     }
 
@@ -535,9 +543,7 @@ public class EventCommand implements CommandExecutor {
             }
 
             java.io.File eventsDir = new java.io.File(plugin.getDataFolder(), "events");
-            java.io.File[] files = eventsDir.listFiles((dir, name) -> {
-                return (name.endsWith(".yml") || name.endsWith(".yaml")) && name.contains(eventId);
-            });
+            java.io.File[] files = eventsDir.listFiles((dir, name) -> (name.endsWith(".yml") || name.endsWith(".yaml")) && name.contains(eventId));
 
             if (files == null || files.length == 0) {
                 sender.sendMessage("§cCouldn't find YAML file for event: " + eventId);
@@ -555,7 +561,7 @@ public class EventCommand implements CommandExecutor {
         } catch (Exception e) {
             sender.sendMessage("§cFailed to reload event: " + e.getMessage());
             sender.sendMessage("§7Check console for details.");
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev reload para " + sender.getName(), e);
         }
     }
 
@@ -586,7 +592,7 @@ public class EventCommand implements CommandExecutor {
 
         return onlinePlayers.size();
     }
-        private void handleOpen(CommandSender sender, String[] args) {
+    private void handleOpen(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("§cOnly players can open UIs!");
             return;
@@ -610,12 +616,11 @@ public class EventCommand implements CommandExecutor {
 
         try {
             java.util.Map<String, String> payload = java.util.Map.of(
-                    "screenid", uiId,
-                    "playerid", player.getUniqueId().toString()
+                    "screen_id", uiId
             );
 
             com.eventui.api.bridge.BridgeMessage message = new com.eventui.core.bridge.PluginBridgeMessage(
-                    com.eventui.api.bridge.MessageType.REQUEST_UI_CONFIG_WITH_DATA,
+                    com.eventui.api.bridge.MessageType.OPEN_UI_COMMAND,
                     payload,
                     player.getUniqueId()
             );
@@ -626,7 +631,7 @@ public class EventCommand implements CommandExecutor {
         } catch (Exception e) {
             sender.sendMessage("§cFailed to open UI: " + e.getMessage());
             LOGGER.severe("Failed to open UI " + uiId + " for " + player.getName());
-            e.printStackTrace();
+            LOGGER.log(java.util.logging.Level.SEVERE, "Error en /ev open para " + sender.getName(), e);
         }
     }
 
@@ -668,7 +673,8 @@ public class EventCommand implements CommandExecutor {
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to fail event: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error en /ev fail para " + sender.getName(), e);
+
         }
     }
 
@@ -813,30 +819,37 @@ public class EventCommand implements CommandExecutor {
             vars.forEach((k, v) -> sender.sendMessage("  §e" + k + " §7= §f" + v));
         }
     }
-        private List<Player> resolvePlayers(CommandSender sender, String selector) {
-        return (List<Player>) (switch (selector.toLowerCase()) {
-                    case "@a" -> new ArrayList<>(plugin.getServer().getOnlinePlayers());
-                    case "@r" -> {
-                        var online = new ArrayList<>(plugin.getServer().getOnlinePlayers());
-                        if (online.isEmpty()) yield List.of();
-                        yield List.of(online.get(new Random().nextInt(online.size())));
-                    }
-                    case "@p" -> {
-                        if (sender instanceof Player p) {
-                            yield plugin.getServer().getOnlinePlayers().stream()
-                                    .min(Comparator.comparingDouble(pl ->
-                                            pl.getLocation().distanceSquared(p.getLocation())))
-                                    .map(List::of)
-                                    .orElse(List.of());
-                        }
-                        yield plugin.getServer().getOnlinePlayers().stream()
-                                .findFirst().map(List::of).orElse(List.of());
-                    }
-                    default -> {
-                        var p = plugin.getServer().getPlayer(selector);
-                        yield p != null ? List.of(p) : List.of();
-                    }
-                }).reversed();
-    }
+    private List<Player> resolvePlayers(CommandSender sender, String selector) {
+        List<Player> result = switch (selector.toLowerCase()) {
+            case "@a" -> new ArrayList<>(plugin.getServer().getOnlinePlayers());
 
-}
+            case "@r" -> {
+                var online = new ArrayList<Player>(plugin.getServer().getOnlinePlayers());
+                if (online.isEmpty()) yield new ArrayList<>();
+                yield new ArrayList<>(List.of(online.get(new Random().nextInt(online.size()))));
+            }
+
+            case "@p" -> {
+                if (sender instanceof Player p) {
+                    yield plugin.getServer().getOnlinePlayers().stream()
+                            .min(Comparator.comparingDouble(pl ->
+                                    pl.getLocation().distanceSquared(p.getLocation())))
+                            .map(pl -> new ArrayList<Player>(List.of(pl)))
+                            .orElseGet(ArrayList::new);
+                }
+                yield plugin.getServer().getOnlinePlayers().stream()
+                        .findFirst()
+                        .map(pl -> new ArrayList<Player>(List.of(pl)))
+                        .orElseGet(ArrayList::new);
+            }
+
+            default -> {
+                var p = plugin.getServer().getPlayer(selector);
+                yield p != null ? new ArrayList<>(List.of(p)) : new ArrayList<>();
+            }
+        };
+
+        Collections.reverse(result);
+        return result;
+    }
+    }

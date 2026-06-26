@@ -28,7 +28,21 @@ public class EventUIClient implements ClientModInitializer {
             LOGGER.info("Registering Quest Tracker HUD...");
             HudRenderCallback.EVENT.register((graphics, tickDelta) -> QuestTrackerHUD.render(graphics));
 
-            ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> ClientEventBridge.getInstance().requestUIState());
+            ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+                LOGGER.info("[JOIN_DEBUG] === JOIN EVENT FIRED === Thread: {}", Thread.currentThread().getName());
+                EventUIKeybinds.invalidateCache();
+                LOGGER.info("[JOIN_DEBUG] invalidateCache() done, calling onConnect/requestUIState");
+                ClientEventBridge bridge = ClientEventBridge.getInstance();
+                bridge.onConnect();
+                bridge.requestUIState();
+            });
+
+            ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+                LOGGER.info("[DISCONNECT_DEBUG] === DISCONNECT EVENT FIRED === Thread: {}", Thread.currentThread().getName());
+                EventUIKeybinds.invalidateCache();
+                LOGGER.info("[DISCONNECT_DEBUG] invalidateCache() done, calling onDisconnect");
+                ClientEventBridge.getInstance().onDisconnect();
+            });
 
             net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(
                     net.minecraft.server.packs.PackType.CLIENT_RESOURCES

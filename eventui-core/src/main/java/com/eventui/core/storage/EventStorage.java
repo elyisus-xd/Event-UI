@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 public class EventStorage {
 
-    private static final Logger LOGGER = Logger.getLogger("EventUI");
+    private static final Logger LOGGER = Logger.getLogger("EventUI EventStorage");
 
     private final Map<String, EventDefinition> eventDefinitions;
 

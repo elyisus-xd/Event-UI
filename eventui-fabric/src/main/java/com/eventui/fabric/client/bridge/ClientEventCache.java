@@ -38,7 +38,7 @@ public class ClientEventCache {
     public void registerPendingRequest(UUID messageId, CompletableFuture<?> future) {
         pendingRequests.put(messageId, future);
     }
-
+    @SuppressWarnings("unchecked")
     <T> void completePendingRequest(UUID messageId, T data) {
         CompletableFuture<?> future = pendingRequests.remove(messageId);
 

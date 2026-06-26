@@ -48,6 +48,7 @@ public class EventUIPlugin extends JavaPlugin {
         instance = this;
 
         LOGGER.info("  EventUI Plugin initialization...");
+        saveDefaultConfig();
         this.adventure = BukkitAudiences.create(this);
         this.configLoader = new EventConfigLoader(getDataFolder());
         this.uiConfigLoader = new UIConfigLoader(getDataFolder());
@@ -87,9 +88,9 @@ public class EventUIPlugin extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () ->
                 getServer().getOnlinePlayers().forEach(player ->
                         playerDataManager.savePlayerData(player.getUniqueId())
-                ), 6000L, 6000L); // delay inicial = 5 min, intervalo = 5 min
+                ), 2400L, 2400L); // delay inicial = 2 min, intervalo = 2 min
 
-        LOGGER.info("✓ Auto-save scheduled every 5 minutes");
+        LOGGER.info("✓ Auto-save scheduled every 2 minutes");
 
         LOGGER.info("✓ EventUI enabled — " + storage.getAllEventDefinitions().size()
                 + " events, " + uiConfigs.size() + " UIs loaded");

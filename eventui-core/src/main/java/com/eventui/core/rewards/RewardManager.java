@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 
 public class RewardManager {
 
-    private static final Logger LOGGER = Logger.getLogger(RewardManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger("EventUI RM");
 
     private final EventUIPlugin plugin;
 

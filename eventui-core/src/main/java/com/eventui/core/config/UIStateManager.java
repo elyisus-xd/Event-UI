@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 public class UIStateManager {
 
-    private static final Logger LOGGER = Logger.getLogger(UIStateManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger("EventUI UIManager");
     private final EventUIPlugin plugin;
     private final Gson gson = new Gson();
 

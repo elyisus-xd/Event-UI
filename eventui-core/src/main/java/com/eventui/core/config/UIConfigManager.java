@@ -41,8 +41,6 @@ public class UIConfigManager {
         plugin.reloadConfig();
         plugin.saveDefaultConfig();
         FileConfiguration config = plugin.getConfig();
-
-        // ── UI Mode ──
         String modeStr = config.getString("ui.mode", "hardcoded");
         this.mode = UIMode.fromString(modeStr);
         this.customScreenId = config.getString("ui.custom.screenId", "");

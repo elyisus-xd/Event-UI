@@ -604,6 +604,26 @@ public class UIElementRenderer {
                         element.getY() + element.getHeight(),
                         0x30FFFFFF
                 );
+
+            } else if (!isHovered && effects.isEmpty()) {
+                hoverAnimationManager.stopAnimation(element.getId() + "_overlay");
+            }
+
+            if (effects.isEmpty()) {
+                if (isHovered) {
+                    hoverAnimationManager.startAnimation(element.getId() + "_overlay",
+                            new HoverAnimation(HoverAnimation.AnimationType.ZOOM_IN, 150, 1.0f, "ease_out"));
+                }
+                float overlayProgress = hoverAnimationManager.getProgress(element.getId() + "_overlay");
+                if (overlayProgress > 0f) {
+                    int overlayAlpha = (int)(0x30 * overlayProgress);
+                    graphics.fill(
+                            element.getX(), element.getY(),
+                            element.getX() + element.getWidth(),
+                            element.getY() + element.getHeight(),
+                            (overlayAlpha << 24) | 0xFFFFFF
+                    );
+                }
             }
 
         } catch (Exception e) {
@@ -665,11 +685,11 @@ public class UIElementRenderer {
             hoverAnimationManager.startAnimation(elementId, animation);
         } else {
             hoverAnimationManager.stopAnimation(elementId);
-            return;
         }
 
         float progress = hoverAnimationManager.getProgress(elementId);
         if (progress <= 0f) return;
+
         hoverAnimationManager.applyTransform(
                 elementId,
                 poseStack,

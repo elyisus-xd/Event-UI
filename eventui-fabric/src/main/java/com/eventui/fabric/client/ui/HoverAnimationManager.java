@@ -167,30 +167,31 @@ public class HoverAnimationManager {
     private void applySwing(PoseStack poseStack, float centerX, float centerY,
                             float progress, float intensity) {
         long time = System.currentTimeMillis();
-        float swingAngle = (float) Math.sin(time * 0.003) * intensity * 15.0f;
+        float swingAngle = (float) Math.sin(time * 0.003) * intensity * 15.0f * progress;
 
         poseStack.translate(centerX, centerY, 0);
         poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(swingAngle));
         poseStack.translate(-centerX, -centerY, 0);
     }
 
+
     private void applyFloat(PoseStack poseStack, float progress, float intensity) {
         long time = System.currentTimeMillis();
-        float floatOffset = (float) Math.sin(time * 0.002) * intensity * 5.0f;
+        float floatOffset = (float) Math.sin(time * 0.002) * intensity * 5.0f * progress;
         poseStack.translate(0, floatOffset, 0);
     }
 
     private void applyWave(PoseStack poseStack, float progress, float intensity) {
         long time = System.currentTimeMillis();
-        float waveX = (float) Math.sin(time * 0.002) * intensity * 3.0f;
-        float waveY = (float) Math.cos(time * 0.003) * intensity * 3.0f;
+        float waveX = (float) Math.sin(time * 0.002) * intensity * 3.0f * progress;
+        float waveY = (float) Math.cos(time * 0.003) * intensity * 3.0f * progress;
         poseStack.translate(waveX, waveY, 0);
     }
 
     private void applyHeartbeat(PoseStack poseStack, float centerX, float centerY,
                                 float progress, float intensity) {
         long time = System.currentTimeMillis();
-        float beat = (float) Math.abs(Math.sin(time * 0.004)) * intensity * 0.1f;
+        float beat = (float) Math.abs(Math.sin(time * 0.004)) * intensity * 0.1f * progress;
         float scale = 1.0f + beat;
 
         poseStack.translate(centerX, centerY, 0);
@@ -201,8 +202,9 @@ public class HoverAnimationManager {
     private void applyJelly(PoseStack poseStack, float centerX, float centerY,
                             float progress, float intensity) {
         long time = System.currentTimeMillis();
-        float jellyX = 1.0f + (float) Math.sin(time * 0.004) * intensity * 0.1f;
-        float jellyY = 1.0f - (float) Math.sin(time * 0.004) * intensity * 0.1f;
+        float deviation = (float) Math.sin(time * 0.004) * intensity * 0.1f * progress;
+        float jellyX = 1.0f + deviation;
+        float jellyY = 1.0f - deviation;
 
         poseStack.translate(centerX, centerY, 0);
         poseStack.scale(jellyX, jellyY, 1.0f);
@@ -215,7 +217,7 @@ public class HoverAnimationManager {
         float angle3D = (time * intensity * 0.1f) % 360.0f;
 
         poseStack.translate(centerX, centerY, 0);
-        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(angle3D));
+        poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(angle3D * progress));
         poseStack.translate(-centerX, -centerY, 0);
     }
 

@@ -1,10 +1,10 @@
 plugins {
     java
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.4.2"
 }
 
 group = "com.eventui"
-version = "1.0.0"
+version = "1.0.1"
 
 repositories {
     mavenCentral()

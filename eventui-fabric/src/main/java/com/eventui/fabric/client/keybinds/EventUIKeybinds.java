@@ -22,6 +22,7 @@ public class EventUIKeybinds {
     private static KeyMapping toggleTrackerKey;
     private static String cachedUIMode = null;
     private static String cachedScreenId = null;
+    private static final java.util.Map<String, String> cachedTooltipDefaults = new java.util.HashMap<>();
 
     public static void register() {
         LOGGER.info("Registering EventUI keybinds...");
@@ -54,6 +55,7 @@ public class EventUIKeybinds {
     }
 
     private static void handleOpenEvents(Minecraft client) {
+        LOGGER.info("[OPEN_DEBUG] handleOpenEvents() called — cachedUIMode='{}', cachedScreenId='{}'", cachedUIMode, cachedScreenId);
         if (client.player == null) return;
         if (cachedUIMode != null) {
             openScreen(client, cachedUIMode, cachedScreenId);
@@ -65,7 +67,16 @@ public class EventUIKeybinds {
             cachedUIMode = response.get("mode");
             cachedScreenId = response.get("screenId");
 
+            // capture tooltip defaults from server response (keys: tooltip.<key>)
+            cachedTooltipDefaults.clear();
+            response.forEach((k, v) -> {
+                if (k != null && k.startsWith("tooltip.")) {
+                    cachedTooltipDefaults.put(k.substring("tooltip.".length()), v);
+                }
+            });
+
             LOGGER.info("Received UI mode: {}", cachedUIMode);
+            LOGGER.info("[OPEN_DEBUG] Received tooltip defaults: {}", cachedTooltipDefaults);
             if (cachedScreenId != null && !cachedScreenId.isEmpty()) {
                 LOGGER.info("Custom screen ID: {}", cachedScreenId);
             }
@@ -113,9 +124,15 @@ public class EventUIKeybinds {
 
 
     public static void invalidateCache() {
+        LOGGER.info("[CACHE_DEBUG] invalidateCache() BEFORE — cachedUIMode='{}', cachedScreenId='{}', tooltipDefaults={}'", cachedUIMode, cachedScreenId, cachedTooltipDefaults);
         cachedUIMode = null;
         cachedScreenId = null;
-        LOGGER.info("UI mode cache invalidated - next open will request from server");
+        cachedTooltipDefaults.clear();
+        LOGGER.info("[CACHE_DEBUG] invalidateCache() AFTER — caches cleared");
+    }
+
+    public static java.util.Map<String,String> getCachedTooltipDefaults() {
+        return new java.util.HashMap<>(cachedTooltipDefaults);
     }
 
     public static void forceHardcodedMode() {

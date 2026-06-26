@@ -732,6 +732,7 @@ public class PluginEventBridge implements EventBridge {
         );
 
         sendMessage(message);
+        plugin.getPlayerDataManager().requestSave(playerId, "event state changed: " + eventId + " -> " + newState);
 
         LOGGER.info("✓ Notified state change to client: event=" + eventId + ", state=" + newState);
     }

@@ -131,6 +131,13 @@ public enum MessageType {
     REQUEST_UI_STATE,
 
     /**
+     * PLUGIN → MOD: Ordena al cliente abrir una pantalla custom específica.
+     * Enviado por ejemplo desde /ev open <screen_id>.
+     * Payload: { "screen_id": "main-menu" }
+     */
+    OPEN_UI_COMMAND,
+
+    /**
      * Error en el procesamiento de un mensaje
      * Payload: {"error_code": "...", "message": "..."}
      */

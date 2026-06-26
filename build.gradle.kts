@@ -1,6 +1,6 @@
 plugins {
     java
-    id("fabric-loom") version "1.8-SNAPSHOT" apply false
+    id("fabric-loom") version "1.12.7" apply false
 }
 
 allprojects {
@@ -31,5 +31,8 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+    }
+    tasks.withType<JavaCompile> {
+        options.compilerArgs.addAll(listOf("-Xlint:deprecation", "-Xlint:unchecked"))
     }
 }

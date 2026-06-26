@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "eventui",
-  "version": "${version}",
+  "version": "1.0.1",
   "name": "EventUI",
   "description": "Customizable event UI system for Minecraft",
   "authors": [

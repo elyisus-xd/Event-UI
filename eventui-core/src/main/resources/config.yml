@@ -1,0 +1,36 @@
+ui:
+  mode: custom
+  custom:
+    screenId: main-menu
+    fallback: true
+events:
+  always_active: true
+messages:
+  enabled: false
+  progress:
+    enabled: true
+    format: >-
+      <dark_gray>[<green>EventUI</green>]</dark_gray> <white><description></white>
+      <gray>(<current>/<target>)</gray>
+  objective_completed:
+    enabled: true
+    format: <gold>[EventUI]</gold> <green>¡Objetivo completado! ✔</green>
+  event_started:
+    enabled: true
+    format: "<yellow>[EventUI]</yellow> <green>Misión iniciada: </green><white><event_name></white>"
+  event_completed:
+    enabled: true
+    format: "<gold><bold>[EventUI] ¡Evento completado: <event_name>!</bold></gold>"
+  event_failed:
+    enabled: true
+    format: "<red>[EventUI]</red> <dark_red>Evento fallado: <event_name></dark_red>"
+  event_locked:
+    enabled: true
+    format: <red>[EventUI]</red> <gray>Este evento está bloqueado. Completa los anteriores primero.</gray>
+tracking:
+  updateInterval: 40
+  locationCheckInterval: 40
+debug:
+  logMessages: false
+  logTracking: false
+  logUIConfig: false

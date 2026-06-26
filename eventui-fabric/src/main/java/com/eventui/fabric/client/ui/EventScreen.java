@@ -1016,7 +1016,7 @@ public class EventScreen extends Screen {
 
         Map<String, String> payload = Map.of(
                 "button_id", "abandon-button-" + event.id,
-                "action", "abandon_event",
+                "action", "abandon_event:" + event.id,
                 "event_id", event.id
         );
 

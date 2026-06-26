@@ -10,7 +10,7 @@ bin/
 *.iml
 *.ipr
 *.iws
-
+*.junie
 
 .classpath
 .project
