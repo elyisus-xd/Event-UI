@@ -64,6 +64,7 @@ public class PlayerDataManager {
         var skillsSection = yaml.getConfigurationSection("skills");
         if (skillsSection != null) {
             loadSkillProgress(playerId, yaml);
+            reapplySkillEffects(playerId);
         }
 
         var eventsSection = yaml.getConfigurationSection("events");
@@ -379,5 +380,43 @@ public class PlayerDataManager {
 
     private File getDataFile(UUID playerId) {
         return new File(plugin.getDataFolder(), "playerdata/" + playerId + ".yml");
+    }
+
+    /**
+     * Reaaplica los efectos de atributos de los nodos después de cargar datos al reconectar.
+     * Los comandos NO se reaaplican (solo los atributos).
+     */
+    private void reapplySkillEffects(UUID playerId) {
+        org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerId);
+        if (player == null || !player.isOnline()) {
+            return; // Jugador no en línea aún
+        }
+
+        var skillProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+        if (skillProgress.isEmpty()) {
+            return; // Sin datos de skills
+        }
+
+        var progress = skillProgress.get();
+        var effectApplier = plugin.getSkillNodeService().getEffectApplier();
+
+        // Iterar todos los árboles
+        for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
+            String treeId = tree.getId();
+
+            // Iterar todos los nodos
+            for (var node : tree.getNodes()) {
+                String nodeId = node.getId();
+                int level = progress.getNodeLevel(treeId, nodeId);
+
+                // Si el jugador tiene un nivel > 0 en este nodo, reaaplica los efectos
+                if (level > 0) {
+                    // Pasar false para que SOLO reaaplique atributos, no comandos
+                    effectApplier.applyNodeEffects(player, node, level, false);
+                }
+            }
+        }
+
+        LOGGER.fine("Reapplied skill effects for player " + player.getName());
     }
 }

@@ -38,6 +38,7 @@ public class EventUIPlugin extends JavaPlugin {
     private SkillTreeConfigLoader skillTreeConfigLoader;
     private SkillTreeStorage skillTreeStorage;
     private com.eventui.core.storage.SkillProgressStorage skillProgressStorage;
+    private com.eventui.core.skill.SkillNodeService skillNodeService;
     private PluginEventBridge eventBridge;
     private UIConfigLoader uiConfigLoader;
     private Map<String, UIConfig> uiConfigs;
@@ -59,6 +60,7 @@ public class EventUIPlugin extends JavaPlugin {
         this.skillTreeConfigLoader = new SkillTreeConfigLoader();
         this.skillTreeStorage = new SkillTreeStorage();
         this.skillProgressStorage = new com.eventui.core.storage.SkillProgressStorage();
+        this.skillNodeService = new com.eventui.core.skill.SkillNodeService(this);
         this.uiConfigLoader = new UIConfigLoader(getDataFolder());
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
         this.fileWatcher = new UIFileWatcher(this);
@@ -256,6 +258,7 @@ public class EventUIPlugin extends JavaPlugin {
     public EventStorage getStorage() { return storage; }
     public SkillTreeStorage getSkillTreeStorage() { return skillTreeStorage; }
     public com.eventui.core.storage.SkillProgressStorage getSkillProgressStorage() { return skillProgressStorage; }
+    public com.eventui.core.skill.SkillNodeService getSkillNodeService() { return skillNodeService; }
     public EventConfigLoader getConfigLoader() { return configLoader; }
     public PluginEventBridge getEventBridge() { return eventBridge; }
     public ObjectiveTracker getObjectiveTracker() { return objectiveTracker; }

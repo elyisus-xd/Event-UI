@@ -72,6 +72,23 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
         nodeLevels.remove(treeId);
     }
 
+    public void spendPoints(String pointType, int amount) {
+        if (amount <= 0) return;
+        int current = availablePoints.getOrDefault(pointType, 0);
+        int remaining = Math.max(0, current - amount);
+        availablePoints.put(pointType, remaining);
+    }
+
+    public void resetAllPoints() {
+        availablePoints.clear();
+        totalEarnedPoints.clear();
+    }
+
+    public void resetPoints(String pointType) {
+        availablePoints.remove(pointType);
+        totalEarnedPoints.remove(pointType);
+    }
+
     // Helper methods for persistence
     public Map<String, Map<String, Integer>> getNodeLevelsSnapshot() {
         Map<String, Map<String, Integer>> snapshot = new HashMap<>();

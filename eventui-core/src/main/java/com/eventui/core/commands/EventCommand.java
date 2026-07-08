@@ -873,9 +873,10 @@ public class EventCommand implements CommandExecutor {
 
     private void handleSkill(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage("§cUsage: /ev skill <info|grant> [args...]");
+            sender.sendMessage("§cUsage: /ev skill <info|grant|spend> [args...]");
             sender.sendMessage("§e/ev skill info <player> <tree_id> §7- Show skill progress");
             sender.sendMessage("§e/ev skill grant <player> <point_type> <amount> §7- Grant points");
+            sender.sendMessage("§e/ev skill spend <player> <tree_id> <node_id> §7- Spend points to level up");
             return;
         }
 
@@ -883,6 +884,7 @@ public class EventCommand implements CommandExecutor {
         switch (subcommand) {
             case "info" -> handleSkillInfo(sender, args);
             case "grant" -> handleSkillGrant(sender, args);
+            case "spend" -> handleSkillSpend(sender, args);
             default -> sender.sendMessage("§cUnknown subcommand. Use /ev skill for help");
         }
     }
@@ -962,5 +964,71 @@ public class EventCommand implements CommandExecutor {
 
         sender.sendMessage("§a✓ Granted §e" + amount + " §a" + pointType + " to §f" + target.getName());
         target.sendMessage("§a✓ You received §e" + amount + " §a" + pointType + "!");
+    }
+
+    private void handleSkillSpend(CommandSender sender, String[] args) {
+        if (args.length < 5) {
+            sender.sendMessage("§cUsage: /ev skill spend <player> <tree_id> <node_id>");
+            return;
+        }
+
+        var target = plugin.getServer().getPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage("§cPlayer not found: " + args[2]);
+            return;
+        }
+
+        String treeId = args[3];
+        String nodeId = args[4];
+
+        // Obtener definiciones
+        var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
+        if (treeOpt.isEmpty()) {
+            sender.sendMessage("§cSkill tree not found: " + treeId);
+            return;
+        }
+
+        var tree = treeOpt.get();
+        var nodeOpt = tree.getNodes().stream()
+                .filter(n -> n.getId().equals(nodeId))
+                .findFirst();
+        if (nodeOpt.isEmpty()) {
+            sender.sendMessage("§cNode not found: " + nodeId);
+            return;
+        }
+
+        var node = nodeOpt.get();
+
+        // Intentar gastar puntos
+        var result = plugin.getSkillNodeService().trySpendNode(target.getUniqueId(), treeId, nodeId);
+
+        switch (result) {
+            case SUCCESS -> {
+                var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
+                if (skillProgress.isPresent()) {
+                    int newLevel = skillProgress.get().getNodeLevel(treeId, nodeId);
+                    sender.sendMessage("§a✓ " + target.getName() + " leveled up §e" + node.getDisplayName()
+                            + " §ato level §f" + newLevel + "/" + node.getMaxLevel());
+                    target.sendMessage("§a✓ You leveled up §e" + node.getDisplayName() + " §ato level §f" + newLevel);
+                }
+            }
+            case ALREADY_MAXED ->
+                    sender.sendMessage("§cThis node is already at max level (§f" + node.getMaxLevel() + "§c)");
+            case INSUFFICIENT_POINTS -> {
+                var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
+                if (skillProgress.isPresent()) {
+                    int nextLevel = skillProgress.get().getNodeLevel(treeId, nodeId) + 1;
+                    int cost = node.getCostForLevel(nextLevel);
+                    int available = skillProgress.get().getAvailablePoints(tree.getPointType());
+                    sender.sendMessage("§cNot enough points: costs §f" + cost + "§c, you have §f" + available);
+                }
+            }
+            case REQUIREMENTS_NOT_MET ->
+                    sender.sendMessage("§cRequirements not met for this node");
+            case TREE_NOT_FOUND ->
+                    sender.sendMessage("§cSkill tree not found: " + treeId);
+            case NODE_NOT_FOUND ->
+                    sender.sendMessage("§cNode not found: " + nodeId);
+        }
     }
 }
