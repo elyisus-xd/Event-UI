@@ -51,11 +51,9 @@ public class EventCommandTabCompleter implements TabCompleter {
                     }
                 }
                 case "reset" -> {
-                    completions = new ArrayList<>();
-                    completions.add("all");
-                    if (sender instanceof Player player) {
-                        completions.addAll(getPlayerEventIds(player, args[1]));
-                    }
+                    completions = Arrays.asList("events", "skills").stream()
+                            .filter(s -> s.startsWith(args[1].toLowerCase()))
+                            .collect(Collectors.toList());
                 }
                 case "setprogress" -> {
                     if (sender instanceof Player player) {
@@ -102,6 +100,10 @@ public class EventCommandTabCompleter implements TabCompleter {
                         .collect(Collectors.toList());
             }
 
+            if ("reset".equals(subcommand) && ("events".equalsIgnoreCase(args[1]) || "skills".equalsIgnoreCase(args[1]))) {
+                completions = getOnlinePlayerNames(args[2]);
+            }
+
         } else if (args.length == 4) {
             String subcommand = args[0].toLowerCase();
 
@@ -118,6 +120,14 @@ public class EventCommandTabCompleter implements TabCompleter {
                     completions = getAvailableSkillTreeIds(args[3]);
                 } else if ("grant".equals(skillSubcommand)) {
                     completions = getAvailablePointTypes(args[3]);
+                }
+            }
+
+            if ("reset".equals(subcommand)) {
+                if ("events".equalsIgnoreCase(args[1])) {
+                    completions = getAvailableEventIdsWithAll(args[3]);
+                } else if ("skills".equalsIgnoreCase(args[1])) {
+                    completions = getAvailableSkillTreeIdsWithAll(args[3]);
                 }
             }
         }
@@ -188,6 +198,26 @@ public class EventCommandTabCompleter implements TabCompleter {
 
     private List<String> getAvailableSkillTreeIds(String partial) {
         return plugin.getSkillTreeStorage().getAllSkillTrees().keySet().stream()
+                .filter(id -> id.toLowerCase().startsWith(partial.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAvailableEventIdsWithAll(String partial) {
+        List<String> ids = new ArrayList<>();
+        ids.add("all");
+        ids.addAll(getAvailableEventIds(partial));
+        return ids.stream()
+                .filter(id -> id.toLowerCase().startsWith(partial.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAvailableSkillTreeIdsWithAll(String partial) {
+        List<String> ids = new ArrayList<>();
+        ids.add("all");
+        ids.addAll(getAvailableSkillTreeIds(partial));
+        return ids.stream()
                 .filter(id -> id.toLowerCase().startsWith(partial.toLowerCase()))
                 .sorted()
                 .collect(Collectors.toList());

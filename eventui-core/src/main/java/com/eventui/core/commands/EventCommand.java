@@ -36,7 +36,8 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("§e/ev reload §7- Reload all events");
             sender.sendMessage("§e/ev open <ui_id> §7- Open custom UI");
             sender.sendMessage("§6§lTesting Commands:");
-            sender.sendMessage("§e/ev reset <id|all> §7- Reset progress");
+            sender.sendMessage("§e/ev reset events <player> <event_id|all> §7- Reset event progress");
+            sender.sendMessage("§e/ev reset skills <player> <tree_id|all> §7- Reset skill tree levels");
             sender.sendMessage("§e/ev abandon <id> §7- Abandon an event");
             sender.sendMessage("§e/ev complete <id> §7- Instant complete");
             sender.sendMessage("§e/ev fail <id> §7- Mark event as failed");
@@ -261,74 +262,87 @@ public class EventCommand implements CommandExecutor {
 
 
         private void handleReset(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cOnly players can reset events!");
+        if (args.length < 4) {
+            sender.sendMessage("§cUsage: /ev reset <events|skills> <player> <id|all>");
             return;
         }
 
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /eventui reset <event_id|all>");
+        String mode = args[1].toLowerCase();
+        Player target = plugin.getServer().getPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage("§cPlayer not found: " + args[2]);
             return;
         }
 
-        String eventId = args[1];
+        String id = args[3];
 
         try {
-            if (eventId.equalsIgnoreCase("all")) {
-                var allEvents = plugin.getStorage().getAllEventDefinitions();
-                int resetCount = 0;
-                for (EventDefinition eventDef : allEvents.values()) {
-                    var progressOpt = plugin.getStorage().getProgress(player.getUniqueId(), eventDef.getId());
-
-                    if (progressOpt.isPresent()) {
-                        plugin.getStorage().removeProgress(player.getUniqueId(), eventDef.getId());
-                        notifyStateChange(player.getUniqueId(), eventDef.getId(), com.eventui.api.event.EventState.AVAILABLE);
-                        resetCount++;
-                    }
-                }
-
-                sender.sendMessage("§a✓ Reset completed!");
-                sender.sendMessage("§7Cleared progress for " + resetCount + " event(s).");
-                sender.sendMessage("§7Press K to refresh the events screen.");
-
-            } else {
-
-                var eventOpt = plugin.getStorage().getEventDefinition(eventId);
-                if (eventOpt.isEmpty()) {
-                    sender.sendMessage("§cEvent not found: " + eventId);
-                    return;
-                }
-                var eventDef = eventOpt.get();
-
-                String repeatableStr = eventDef.getMetadata().getOrDefault("repeatable", "false");
-                boolean repeatable = Boolean.parseBoolean(repeatableStr);
-
-                if (!repeatable) {
-                    sender.sendMessage("§cThis event is not repeatable and cannot be reset.");
-                    sender.sendMessage("§7Use §e/ev reset all §7to force-reset everything (testing only).");
-                    return;
-                }
-
-                var progressOpt = plugin.getStorage().getProgress(player.getUniqueId(), eventId);
-                if (progressOpt.isEmpty()) {
-                    sender.sendMessage("§7You haven't started this event yet.");
-                    return;
-                }
-
-                plugin.getStorage().removeProgress(player.getUniqueId(), eventId);
-
-                sender.sendMessage("§a✓ Event reset: " + eventDef.getDisplayName());
-                sender.sendMessage("§7Progress cleared. You can start it again.");
-
-                notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.AVAILABLE);
+            switch (mode) {
+                case "events" -> handleResetEvents(sender, target, id);
+                case "skills" -> handleResetSkills(sender, target, id);
+                default -> sender.sendMessage("§cUsage: /ev reset <events|skills> <player> <id|all>");
             }
-
         } catch (Exception e) {
             sender.sendMessage("§cFailed to reset: " + e.getMessage());
             LOGGER.log(Level.SEVERE, "Error en /ev reset para " + sender.getName(), e);
         }
     }
 
+    private void handleResetEvents(CommandSender sender, Player target, String eventId) {
+        UUID playerId = target.getUniqueId();
+
+        if (eventId.equalsIgnoreCase("all")) {
+            int resetCount = 0;
+            for (EventDefinition eventDef : plugin.getStorage().getAllEventDefinitions().values()) {
+                if (plugin.getStorage().getProgress(playerId, eventDef.getId()).isPresent()) {
+                    plugin.getStorage().removeProgress(playerId, eventDef.getId());
+                    notifyStateChange(playerId, eventDef.getId(), com.eventui.api.event.EventState.AVAILABLE);
+                    resetCount++;
+                }
+            }
+
+            plugin.getPlayerDataManager().requestSave(playerId, "reset: events all");
+            sender.sendMessage("§a✓ Reset ALL events for " + target.getName() + " (" + resetCount + " event(s))");
+            return;
+        }
+
+        var eventOpt = plugin.getStorage().getEventDefinition(eventId);
+        if (eventOpt.isEmpty()) {
+            sender.sendMessage("§cEvent not found: " + eventId);
+            return;
+        }
+
+        plugin.getStorage().removeProgress(playerId, eventId);
+        notifyStateChange(playerId, eventId, com.eventui.api.event.EventState.AVAILABLE);
+        plugin.getPlayerDataManager().requestSave(playerId, "reset: event " + eventId);
+        sender.sendMessage("§a✓ Reset event '" + eventId + "' for " + target.getName());
+    }
+
+    private void handleResetSkills(CommandSender sender, Player target, String treeId) {
+        UUID playerId = target.getUniqueId();
+        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
+
+        // Admin reset only clears node levels. It intentionally does not refund
+        // available or total earned points; that belongs to a future respec flow.
+        if (treeId.equalsIgnoreCase("all")) {
+            for (String registeredTreeId : plugin.getSkillTreeStorage().getAllSkillTrees().keySet()) {
+                skillProgress.resetTreeProgress(registeredTreeId);
+            }
+
+            plugin.getPlayerDataManager().requestSave(playerId, "reset: skills all");
+            sender.sendMessage("§a✓ Reset ALL skill trees for " + target.getName() + " (points not refunded)");
+            return;
+        }
+
+        if (plugin.getSkillTreeStorage().getSkillTree(treeId).isEmpty()) {
+            sender.sendMessage("§cSkill tree not found: " + treeId);
+            return;
+        }
+
+        skillProgress.resetTreeProgress(treeId);
+        plugin.getPlayerDataManager().requestSave(playerId, "reset: skill tree " + treeId);
+        sender.sendMessage("§a✓ Reset skill tree '" + treeId + "' for " + target.getName() + " (points not refunded)");
+    }
         private void handleComplete(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("§cOnly players can use this command!");

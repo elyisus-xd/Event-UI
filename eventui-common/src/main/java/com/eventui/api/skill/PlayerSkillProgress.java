@@ -38,7 +38,19 @@ public interface PlayerSkillProgress {
     void setAvailablePoints(String pointType, int amount);
 
     /**
+     * Establece directamente el total historico ganado, sin afectar los puntos
+     * disponibles. Uso exclusivo para restaurar datos guardados; para otorgar
+     * puntos en tiempo real usar addEarnedPoints.
+     */
+    void setTotalEarnedPoints(String pointType, int amount);
+
+    /**
      * Suma puntos ganados. Incrementa AMBOS available y total_earned.
      */
     void addEarnedPoints(String pointType, int amount);
+
+    /**
+     * Resetea a 0 todos los nodos registrados para un arbol.
+     */
+    void resetTreeProgress(String treeId);
 }

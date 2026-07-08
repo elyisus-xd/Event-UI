@@ -238,10 +238,7 @@ public class PlayerDataManager {
                 int available = yaml.getInt("skills.points." + pointType + ".available", 0);
                 int totalEarned = yaml.getInt("skills.points." + pointType + ".total_earned", 0);
                 skillProgress.setAvailablePoints(pointType, available);
-                for (int i = 0; i < totalEarned; i++) {
-                    skillProgress.addEarnedPoints(pointType, 0);  // Sólo incrementa totalEarned
-                }
-                skillProgress.setAvailablePoints(pointType, available);  // Restaura available
+                skillProgress.setTotalEarnedPoints(pointType, totalEarned);
             }
         }
 

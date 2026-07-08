@@ -56,10 +56,20 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
     }
 
     @Override
+    public void setTotalEarnedPoints(String pointType, int amount) {
+        totalEarnedPoints.put(pointType, Math.max(0, amount));
+    }
+
+    @Override
     public void addEarnedPoints(String pointType, int amount) {
         if (amount <= 0) return;
         availablePoints.put(pointType, getAvailablePoints(pointType) + amount);
         totalEarnedPoints.put(pointType, getTotalEarnedPoints(pointType) + amount);
+    }
+
+    @Override
+    public void resetTreeProgress(String treeId) {
+        nodeLevels.remove(treeId);
     }
 
     // Helper methods for persistence
