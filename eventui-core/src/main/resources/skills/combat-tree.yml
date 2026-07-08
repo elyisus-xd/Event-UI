@@ -1,0 +1,61 @@
+id: "combat-tree"
+display_name: "Árbol de Combate"
+description: "Mejora tus estadísticas de combate"
+point_type: "combat_points"
+
+nodes:
+  - id: "vitality_1"
+    display_name: "Vitalidad I"
+    description: "+2 corazones de vida máxima por nivel"
+    icon: "minecraft:apple"
+    max_level: 5
+    cost_per_level: 1
+    requires: []
+    position:
+      x: 0
+      y: 0
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_MAX_HEALTH"
+        operation: "add"
+        value_per_level: 2.0
+
+  - id: "strength_1"
+    display_name: "Fuerza I"
+    description: "+5% de daño de ataque por nivel"
+    icon: "minecraft:iron_sword"
+    max_level: 3
+    cost_per_level: 2
+    requires:
+      - node: "vitality_1"
+        min_level: 2
+    requires_mode: "all"
+    position:
+      x: 1
+      y: 0
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_ATTACK_DAMAGE"
+        operation: "multiply_base"
+        value_per_level: 0.05
+
+  - id: "berserker"
+    display_name: "Berserker"
+    description: "Desbloquea velocidad de ataque al recibir daño"
+    icon: "minecraft:netherite_axe"
+    max_level: 1
+    cost_per_level: 5
+    requires:
+      - node: "strength_1"
+        min_level: 3
+    position:
+      x: 2
+      y: 0
+    effects:
+      - type: "command"
+        command: "say {player} activated berserker!"
+        at_level: 1
+    texture_override:
+      locked: "eventui:textures/ui/skills/capstone_locked.png"
+      available: "eventui:textures/ui/skills/capstone_available.png"
+      maxed: "eventui:textures/ui/skills/capstone_maxed.png"

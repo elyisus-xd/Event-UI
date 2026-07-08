@@ -103,6 +103,13 @@ public class PluginEventBridge implements EventBridge {
         registerMessageHandler(MessageType.REQUEST_UI_STATE, message -> {
             UUID playerId = message.getPlayerId();
             plugin.getUIStateManager().pushStateToClient(playerId, true);
+
+            // Also push dismissed badges for this player
+            java.util.List<String> list = new java.util.ArrayList<>(plugin.getPlayerDataManager().getDismissedBadges(playerId));
+            String badgesJson = new com.google.gson.Gson().toJson(list);
+            Map<String, String> payload = Map.of("badges", badgesJson);
+            BridgeMessage response = new PluginBridgeMessage(MessageType.BADGES_UPDATE, payload, playerId);
+            sendMessage(response);
         });
         registerMessageHandler(MessageType.REQUEST_EVENT_PROGRESS, message -> {
             String eventId = message.getPayload().get("event_id");
@@ -134,13 +141,15 @@ public class PluginEventBridge implements EventBridge {
             String buttonId = message.getPayload().get("button_id");
             String screenId = message.getPayload().get("screen_id");
             String eventId = message.getPayload().get("event_id");
-            String actionFromPayload = message.getPayload().get("action");            UUID playerId = message.getPlayerId();
+            String actionFromPayload = message.getPayload().get("action");
+            UUID playerId = message.getPlayerId();
 
             Player player = plugin.getServer().getPlayer(playerId);
             if (player == null) {
                 LOGGER.warning("Player not found for button click: " + playerId);
                 return;
             }
+
             if (screenId == null || screenId.isEmpty()) {
                 screenId = eventId;
             }
@@ -182,6 +191,27 @@ public class PluginEventBridge implements EventBridge {
 
             LOGGER.fine("Executing action: " + action);
             handleButtonAction(player, action, buttonId);
+        });
+
+        // Handle badge dismissals from client
+        registerMessageHandler(MessageType.BADGE_DISMISS, message -> {
+            UUID playerId = message.getPlayerId();
+            Player player = plugin.getServer().getPlayer(playerId);
+            if (player == null) return;
+
+            String screenId = message.getPayload().get("screen_id");
+            String elementId = message.getPayload().get("element_id");
+            if (elementId == null || elementId.isEmpty()) return;
+
+            String badgeKey = (screenId == null || screenId.isEmpty()) ? ("unknown:" + elementId) : (screenId + ":" + elementId);
+            plugin.getPlayerDataManager().addDismissedBadge(playerId, badgeKey);
+
+            // Send updated badges list back to player
+            java.util.List<String> list = new java.util.ArrayList<>(plugin.getPlayerDataManager().getDismissedBadges(playerId));
+            String badgesJson = new com.google.gson.Gson().toJson(list);
+            Map<String, String> payload = Map.of("badges", badgesJson);
+            BridgeMessage response = new PluginBridgeMessage(MessageType.BADGES_UPDATE, payload, playerId);
+            sendMessage(response);
         });
 
         registerMessageHandler(MessageType.REQUEST_UI_CONFIG, message -> {

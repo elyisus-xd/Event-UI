@@ -16,19 +16,19 @@ import java.util.Map;
 public abstract class StaticRecipeRenderer {
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticRecipeRenderer.class);
 
-    protected final ResourceLocation texture;
-    protected final int texWidth;
-    protected final int texHeight;
-
-    protected StaticRecipeRenderer(ResourceLocation texture, int texWidth, int texHeight) {
-        this.texture = texture;
-        this.texWidth = texWidth;
-        this.texHeight = texHeight;
+    protected StaticRecipeRenderer() {
+        // Constructor sin parámetros para subclases
     }
 
-    protected void renderBackground(GuiGraphics graphics, int x, int y) {
-        LOGGER.info("[FURNACE_DEBUG] renderBackground texture={}", texture);
-        graphics.blit(texture, x, y, 0, 0, texWidth, texHeight, texWidth, texHeight);
+    /**
+     * Render background with explicit texture (used by frame manager-aware renderers).
+     * Avoids calling initialize() every frame.
+     */
+    protected void renderBackground(GuiGraphics graphics, int x, int y,
+                                   ResourceLocation frameTexture,
+                                   int frameWidth, int frameHeight) {
+        if (frameTexture == null) return;
+        graphics.blit(frameTexture, x, y, 0, 0, frameWidth, frameHeight, frameWidth, frameHeight);
     }
 
     protected void renderCyclingItem(GuiGraphics graphics, Font font,

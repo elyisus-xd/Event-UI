@@ -7,6 +7,7 @@ import com.eventui.fabric.client.ui.tooltip.RecipeTooltipComponent;
 import com.eventui.fabric.client.ui.tooltip.RecipeGridConfig;
 import com.eventui.fabric.client.ui.tooltip.renderer.AnvilStaticRenderer;
 import com.eventui.fabric.client.ui.tooltip.renderer.BrewingStaticRenderer;
+import com.eventui.fabric.client.ui.tooltip.renderer.CustomRecipeStaticRenderer;
 import com.eventui.fabric.client.ui.tooltip.renderer.FurnaceStaticRenderer;
 import com.eventui.fabric.client.ui.tooltip.renderer.SmithingStaticRenderer;
 import net.minecraft.client.Minecraft;
@@ -107,7 +108,6 @@ public class TooltipRenderer {
 
     private static int renderSectionInline(TooltipConfig.TooltipSection section, GuiGraphics graphics,
                                            Font font, int x, int y, int availableWidth) {
-        LOGGER.info("[TOOLTIP_DEBUG] renderSectionInline type={}", section.getType());
         return switch (section.getType()) {
 
             case TEXT -> {
@@ -171,7 +171,7 @@ public class TooltipRenderer {
                     } else {
                         graphics.drawString(font, "§cRecipe not found:", x, y, 0xFF5555, false);
                         graphics.drawString(font, "§7" + recipeId, x, y + 10, 0xAAAAAA, false);
-                        LOGGER.warn("Recipe not found: '{}'", recipeId);
+                        LOGGER.debug("Recipe not found: '{}'", recipeId);
                         yield 20;
                     }
                 } catch (Exception e) {
@@ -181,26 +181,28 @@ public class TooltipRenderer {
             }
 
             case FURNACE_RECIPE -> {
-                LOGGER.info("[TOOLTIP_DEBUG] Rendering FURNACE_RECIPE, data={}", section.getData());
                 FurnaceStaticRenderer renderer = new FurnaceStaticRenderer();
                 renderer.render(graphics, font, x, y, section.getData());
                 yield renderer.getHeight();
             }
             case SMITHING_RECIPE -> {
-                LOGGER.info("[TOOLTIP_DEBUG] Rendering SMITHING_RECIPE, data={}", section.getData());
                 SmithingStaticRenderer renderer = new SmithingStaticRenderer();
                 renderer.render(graphics, font, x, y, section.getData());
                 yield renderer.getHeight();
             }
             case ANVIL_RECIPE -> {
-                LOGGER.info("[TOOLTIP_DEBUG] Rendering ANVIL_RECIPE, data={}", section.getData());
                 AnvilStaticRenderer renderer = new AnvilStaticRenderer();
                 renderer.render(graphics, font, x, y, section.getData());
                 yield renderer.getHeight();
             }
             case BREWING_RECIPE -> {
-                LOGGER.info("[TOOLTIP_DEBUG] Rendering BREWING_RECIPE, data={}", section.getData());
                 BrewingStaticRenderer renderer = new BrewingStaticRenderer();
+                renderer.render(graphics, font, x, y, section.getData());
+                yield renderer.getHeight();
+            }
+
+            case CUSTOM_RECIPE -> {
+                CustomRecipeStaticRenderer renderer = new CustomRecipeStaticRenderer();
                 renderer.render(graphics, font, x, y, section.getData());
                 yield renderer.getHeight();
             }
@@ -296,10 +298,14 @@ public class TooltipRenderer {
                         } catch (Exception ignored) {}
                     }
                 }
-                case FURNACE_RECIPE -> { sectionW = 82; sectionH = 54; LOGGER.info("[TOOLTIP_DEBUG] FURNACE_RECIPE dims: w={} h={}", sectionW, sectionH); }
+                case FURNACE_RECIPE -> { sectionW = 82; sectionH = 54; }
                 case SMITHING_RECIPE -> { sectionW = 108; sectionH = 58; }
                 case ANVIL_RECIPE -> { sectionW = 125; sectionH = 56; }
                 case BREWING_RECIPE -> { sectionW = 64; sectionH = 59; }
+                case CUSTOM_RECIPE -> {
+                    sectionW = parseIntSafe(section.getData().get("texture_width"),  64);
+                    sectionH = parseIntSafe(section.getData().get("texture_height"), 64);
+                }
                 case ENTITY -> {
                     sectionW = 70; sectionH = 60;
                     String entityId = section.getData().get("entity");

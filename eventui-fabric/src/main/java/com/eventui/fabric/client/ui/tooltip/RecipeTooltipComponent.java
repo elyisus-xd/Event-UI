@@ -1,5 +1,6 @@
 package com.eventui.fabric.client.ui.tooltip;
 
+import com.eventui.fabric.client.ui.tooltip.frame.RecipeFrameManager;
 import com.eventui.fabric.client.ui.tooltip.renderer.RecipeRenderer;
 import com.eventui.fabric.client.ui.tooltip.renderer.RecipeRendererFactory;
 import net.minecraft.client.gui.Font;
@@ -7,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.ShapedRecipe;
 import net.minecraft.resources.ResourceLocation;
 
 import org.slf4j.Logger;
@@ -53,21 +55,42 @@ public class RecipeTooltipComponent implements ClientTooltipComponent {
     public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
         LOG.debug("Rendering recipe tooltip for {}", recipe.getClass().getSimpleName());
         if (renderer.usesVanillaCraftingFrame() && gridConfig.isShowGridFrame()) {
+            // Determinar el tipo de frame (shaped vs shapeless)
+            String frameType = recipe instanceof ShapedRecipe ? "shaped_frame" : "shapeless_frame";
+            
+            // Resolver frame: primero custom (si está en YAML), luego default
+            ResourceLocation frameTexture = null;
             if (customFrame != null && !customFrame.isEmpty()) {
-                renderCustomFrame(graphics, x, y);
-            } else {
+                try {
+                    frameTexture = ResourceLocation.parse(customFrame);
+                } catch (Exception e) {
+                    LOG.warn("Failed to parse custom frame '{}': {}", customFrame, e.getMessage());
+                }
+            }
+            
+            // Si no hay custom o falló, usar RecipeFrameManager
+            if (frameTexture == null) {
+                frameTexture = RecipeFrameManager.getInstance()
+                    .resolveFrameTexture(frameType, null);
+            }
+            
+            if (frameTexture == null) {
+                // No hay textura custom ni default configurada: usar frame vanilla como antes
                 renderVanillaFrame(graphics, x, y);
+            } else {
+                renderFrame(graphics, x, y, frameTexture);
             }
         }
         renderer.renderRecipe(graphics, font, x, y, recipe);
     }
 
-    private void renderCustomFrame(GuiGraphics graphics, int x, int y) {
+    private void renderFrame(GuiGraphics graphics, int x, int y, ResourceLocation frameTexture) {
         try {
-            ResourceLocation loc = ResourceLocation.parse(customFrame);
-            graphics.blit(loc, x, y, 0, 0, gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight(), gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight());
+            graphics.blit(frameTexture, x, y, 0, 0, gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight(), gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight());
         } catch (Exception e) {
-            LOG.warn("Failed to render custom frame '{}': {}", customFrame, e.getMessage());
+            LOG.warn("Failed to render frame '{}': {}", frameTexture, e.getMessage());
+            // Fallback a vanilla frame si falla
+            renderVanillaFrame(graphics, x, y);
         }
     }
 

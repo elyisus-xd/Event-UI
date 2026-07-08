@@ -56,6 +56,7 @@ public class ConfigurableUIScreen extends Screen {
         super(Component.literal(config.getTitle()));
         this.uiConfig = config;
         this.renderer = new UIElementRenderer();
+        this.renderer.setScreenId(config.getId());
         this.currentScreenId = config.getId();
         var player = Minecraft.getInstance().player;
         if (player != null) {

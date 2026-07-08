@@ -124,6 +124,7 @@ public class TooltipConfig {
             SMITHING_RECIPE,
             ANVIL_RECIPE,
             BREWING_RECIPE,
+            CUSTOM_RECIPE,
             ENTITY,
             IMAGE,
             SEPARATOR

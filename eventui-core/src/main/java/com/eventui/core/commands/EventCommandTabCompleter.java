@@ -29,7 +29,7 @@ public class EventCommandTabCompleter implements TabCompleter {
             List<String> subcommands = Arrays.asList(
                     "list", "info", "progress", "start", "reload", "open",
                     "reset", "complete", "fail", "debug", "setprogress", "reloadevent",
-                    "setuivar", "getuivar", "clearuivars", "dumpuivars"
+                    "setuivar", "getuivar", "clearuivars", "dumpuivars", "skill"
             );
 
             String partial = args[0].toLowerCase();
@@ -70,6 +70,11 @@ public class EventCommandTabCompleter implements TabCompleter {
                             .filter(s -> s.toLowerCase().startsWith(args[1].toLowerCase()))
                             .collect(Collectors.toList());
                 }
+                case "skill" -> {
+                    completions = Arrays.asList("info", "grant").stream()
+                            .filter(s -> s.startsWith(args[1].toLowerCase()))
+                            .collect(Collectors.toList());
+                }
             }
 
         } else if (args.length == 3) {
@@ -87,6 +92,16 @@ public class EventCommandTabCompleter implements TabCompleter {
                 }
             }
 
+            if ("skill".equals(subcommand)) {
+                String skillSubcommand = args[1].toLowerCase();
+                completions = new ArrayList<>();
+                completions.addAll(Arrays.asList("@a", "@p", "@r"));
+                completions.addAll(getOnlinePlayerNames(args[2]));
+                completions = completions.stream()
+                        .filter(s -> s.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+
         } else if (args.length == 4) {
             String subcommand = args[0].toLowerCase();
 
@@ -95,6 +110,15 @@ public class EventCommandTabCompleter implements TabCompleter {
             }
             if ("setuivar".equals(subcommand)) {
                 completions = Arrays.asList("true", "false");
+            }
+
+            if ("skill".equals(subcommand)) {
+                String skillSubcommand = args[1].toLowerCase();
+                if ("info".equals(skillSubcommand)) {
+                    completions = getAvailableSkillTreeIds(args[3]);
+                } else if ("grant".equals(skillSubcommand)) {
+                    completions = getAvailablePointTypes(args[3]);
+                }
             }
         }
 
@@ -158,6 +182,22 @@ public class EventCommandTabCompleter implements TabCompleter {
         private List<String> getKnownUIVars(java.util.UUID playerId, String partial) {
         return plugin.getUIStateManager().getAllVariables(playerId).keySet().stream()
                 .filter(key -> key.toLowerCase().startsWith(partial.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAvailableSkillTreeIds(String partial) {
+        return plugin.getSkillTreeStorage().getAllSkillTrees().keySet().stream()
+                .filter(id -> id.toLowerCase().startsWith(partial.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAvailablePointTypes(String partial) {
+        return plugin.getSkillTreeStorage().getAllSkillTrees().values().stream()
+                .map(tree -> tree.getPointType())
+                .distinct()
+                .filter(type -> type.toLowerCase().startsWith(partial.toLowerCase()))
                 .sorted()
                 .collect(Collectors.toList());
     }

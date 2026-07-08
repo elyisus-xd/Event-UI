@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.Set;
 
 public class PlayerDataManager {
 
@@ -26,6 +28,8 @@ public class PlayerDataManager {
     private final Map<UUID, BukkitTask> scheduledSaves = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> saveInProgress = ConcurrentHashMap.newKeySet();
     private final java.util.Set<UUID> saveAgainAfterCurrent = ConcurrentHashMap.newKeySet();
+    // Dismissed badges persisted per-player
+    private final Map<UUID, java.util.Set<String>> dismissedBadges = new ConcurrentHashMap<>();
 
     public PlayerDataManager(EventUIPlugin plugin) {
         this.plugin = plugin;
@@ -49,6 +53,19 @@ public class PlayerDataManager {
     }
 
     private void applyLoadedData(UUID playerId, YamlConfiguration yaml) {
+        var badgesList = yaml.getStringList("badges.dismissed");
+        if (badgesList != null && !badgesList.isEmpty()) {
+            java.util.Set<String> set = ConcurrentHashMap.newKeySet();
+            set.addAll(badgesList);
+            dismissedBadges.put(playerId, set);
+        }
+
+        // Cargar progreso de habilidades
+        var skillsSection = yaml.getConfigurationSection("skills");
+        if (skillsSection != null) {
+            loadSkillProgress(playerId, yaml);
+        }
+
         var eventsSection = yaml.getConfigurationSection("events");
         if (eventsSection == null) return;
 
@@ -213,6 +230,56 @@ public class PlayerDataManager {
         return Map.copyOf(plugin.getStorage().getPlayerProgressSnapshot(playerId));
     }
 
+    private void loadSkillProgress(UUID playerId, YamlConfiguration yaml) {
+        var pointsSection = yaml.getConfigurationSection("skills.points");
+        if (pointsSection != null) {
+            var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
+            for (String pointType : pointsSection.getKeys(false)) {
+                int available = yaml.getInt("skills.points." + pointType + ".available", 0);
+                int totalEarned = yaml.getInt("skills.points." + pointType + ".total_earned", 0);
+                skillProgress.setAvailablePoints(pointType, available);
+                for (int i = 0; i < totalEarned; i++) {
+                    skillProgress.addEarnedPoints(pointType, 0);  // Sólo incrementa totalEarned
+                }
+                skillProgress.setAvailablePoints(pointType, available);  // Restaura available
+            }
+        }
+
+        var treesSection = yaml.getConfigurationSection("skills.trees");
+        if (treesSection != null) {
+            var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
+            for (String treeId : treesSection.getKeys(false)) {
+                var skillTreeDef = plugin.getSkillTreeStorage().getSkillTree(treeId);
+                if (skillTreeDef.isEmpty()) {
+                    LOGGER.info("Ignoring saved skill progress for removed tree '" + treeId + "' for player " + playerId);
+                    continue;
+                }
+
+                var nodesSection = yaml.getConfigurationSection("skills.trees." + treeId + ".nodes");
+                if (nodesSection != null) {
+                    for (String nodeId : nodesSection.getKeys(false)) {
+                        var nodeDef = skillTreeDef.get().getNodes().stream()
+                                .filter(n -> n.getId().equals(nodeId))
+                                .findFirst();
+                        if (nodeDef.isEmpty()) {
+                            LOGGER.info("Ignoring saved progress for removed node '" + nodeId
+                                    + "' in tree '" + treeId + "' for player " + playerId);
+                            continue;
+                        }
+
+                        int level = yaml.getInt("skills.trees." + treeId + ".nodes." + nodeId + ".level", 0);
+                        int clampedLevel = Math.min(level, nodeDef.get().getMaxLevel());
+                        if (clampedLevel < level) {
+                            LOGGER.warning("Clamped node level for " + nodeId + " from " + level
+                                    + " to " + clampedLevel + " (max_level changed) for player " + playerId);
+                        }
+                        skillProgress.setNodeLevel(treeId, nodeId, clampedLevel);
+                    }
+                }
+            }
+        }
+    }
+
     private void writeSnapshotsUntilClean(UUID playerId, Map<String, EventProgressImpl> initialSnapshot) {
         Map<String, EventProgressImpl> snapshot = initialSnapshot;
 
@@ -248,6 +315,39 @@ public class PlayerDataManager {
             );
         }
 
+        // Persistir badges descartados
+        java.util.Set<String> badges = dismissedBadges.get(playerId);
+        if (badges != null && !badges.isEmpty()) {
+            yaml.set("badges.dismissed", new ArrayList<>(badges));
+        }
+
+        // Persistir progreso de habilidades
+        var skillProgress = plugin.getSkillProgressStorage().getPlayerProgressSnapshot(playerId);
+        if (skillProgress != null && skillProgress.getPlayerId() != null) {
+            var availablePts = ((com.eventui.core.skill.PlayerSkillProgressImpl) skillProgress).getAvailablePointsSnapshot();
+            var totalPts = ((com.eventui.core.skill.PlayerSkillProgressImpl) skillProgress).getTotalEarnedPointsSnapshot();
+            var nodeLvls = ((com.eventui.core.skill.PlayerSkillProgressImpl) skillProgress).getNodeLevelsSnapshot();
+
+            if (!availablePts.isEmpty() || !totalPts.isEmpty()) {
+                for (String pointType : totalPts.keySet()) {
+                    yaml.set("skills.points." + pointType + ".available", availablePts.getOrDefault(pointType, 0));
+                    yaml.set("skills.points." + pointType + ".total_earned", totalPts.get(pointType));
+                }
+            }
+
+            if (!nodeLvls.isEmpty()) {
+                for (var treeEntry : nodeLvls.entrySet()) {
+                    String treeId = treeEntry.getKey();
+                    Map<String, Integer> nodes = treeEntry.getValue();
+                    for (var nodeEntry : nodes.entrySet()) {
+                        String nodeId = nodeEntry.getKey();
+                        int level = nodeEntry.getValue();
+                        yaml.set("skills.trees." + treeId + ".nodes." + nodeId + ".level", level);
+                    }
+                }
+            }
+        }
+
         try {
             File targetFile = getDataFile(playerId);
             targetFile.getParentFile().mkdirs();
@@ -266,6 +366,18 @@ public class PlayerDataManager {
 
     public void saveAll() {
         plugin.getServer().getOnlinePlayers().forEach(p -> savePlayerData(p.getUniqueId()));
+    }
+
+    // Badge persistence helpers
+    public java.util.Set<String> getDismissedBadges(UUID playerId) {
+        return java.util.Collections.unmodifiableSet(
+                dismissedBadges.getOrDefault(playerId, java.util.Set.of())
+        );
+    }
+
+    public void addDismissedBadge(UUID playerId, String badgeKey) {
+        dismissedBadges.computeIfAbsent(playerId, k -> ConcurrentHashMap.newKeySet()).add(badgeKey);
+        requestSave(playerId, "badge_dismiss:" + badgeKey);
     }
 
     private File getDataFile(UUID playerId) {

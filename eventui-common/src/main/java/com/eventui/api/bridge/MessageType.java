@@ -34,6 +34,12 @@ public enum MessageType {
     UI_BUTTON_CLICKED,
 
     /**
+     * MOD → PLUGIN: Notificar que el jugador descartó un badge
+     * Payload: {"screen_id":"...","element_id":"..."}
+     */
+    BADGE_DISMISS,
+
+    /**
      * Notificar que el jugador abrió la pantalla de evento
      * Payload: {"event_id": "...", "player_uuid": "..."}
      */
@@ -122,6 +128,12 @@ public enum MessageType {
      * El cliente actualiza su caché local y re-evalúa visible_if en pantallas activas.
      */
     UI_STATE_UPDATE,
+
+    /**
+     * PLUGIN → MOD: Enviar lista de badges descartados al cliente
+     * Payload: {"badges":"[\"s1:btn1\",\"s2:btn2\"]"}
+     */
+    BADGES_UPDATE,
 
     /**
      * MOD → PLUGIN: Solicita todas las variables de estado actuales.

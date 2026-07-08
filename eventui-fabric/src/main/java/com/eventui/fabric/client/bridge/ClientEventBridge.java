@@ -251,6 +251,21 @@ public class ClientEventBridge implements EventBridge {
             }
         });
 
+        // Handle badges update from server
+        registerMessageHandler(MessageType.BADGES_UPDATE, message -> {
+            String badgesJson = message.getPayload().get("badges");
+            if (badgesJson == null || badgesJson.isEmpty()) return;
+            try {
+                java.lang.reflect.Type listType = new com.google.gson.reflect.TypeToken<java.util.List<String>>() {}.getType();
+                java.util.List<String> list = new com.google.gson.Gson().fromJson(badgesJson, listType);
+                java.util.Set<String> set = new java.util.HashSet<>(list);
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    com.eventui.fabric.client.ui.BadgeRenderer.replaceDismissedFromServer(set);
+                });
+            } catch (Exception e) {
+                LOGGER.error("Failed to parse BADGES_UPDATE payload", e);
+            }
+        });
 
         registerMessageHandler(MessageType.UI_STATE_UPDATE, message -> {
             String variablesJson = message.getPayload().get("variables");

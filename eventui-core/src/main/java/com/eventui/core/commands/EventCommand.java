@@ -43,6 +43,9 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("§e/ev debug <id> §7- Show debug info");
             sender.sendMessage("§e/ev setprogress <event> <obj> <amount> §7- Set progress");
             sender.sendMessage("§e/ev reloadevent <id> §7- Reload specific event");
+            sender.sendMessage("§6§lSkill Tree Commands:");
+            sender.sendMessage("§e/ev skill info <player> <tree_id> §7- Show skill progress");
+            sender.sendMessage("§e/ev skill grant <player> <point_type> <amount> §7- Grant points");
             return true;
         }
 
@@ -65,6 +68,7 @@ public class EventCommand implements CommandExecutor {
             case "getuivar"    -> handleGetUIVar(sender, args);
             case "clearuivars" -> handleClearUIVars(sender, args);
             case "dumpuivars"  -> handleDumpUIVars(sender, args);
+            case "skill"       -> handleSkill(sender, args);
             default -> sender.sendMessage("§cUnknown command. Use /ev for help");
         }
 
@@ -852,4 +856,97 @@ public class EventCommand implements CommandExecutor {
         Collections.reverse(result);
         return result;
     }
+
+    private void handleSkill(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§cUsage: /ev skill <info|grant> [args...]");
+            sender.sendMessage("§e/ev skill info <player> <tree_id> §7- Show skill progress");
+            sender.sendMessage("§e/ev skill grant <player> <point_type> <amount> §7- Grant points");
+            return;
+        }
+
+        String subcommand = args[1].toLowerCase();
+        switch (subcommand) {
+            case "info" -> handleSkillInfo(sender, args);
+            case "grant" -> handleSkillGrant(sender, args);
+            default -> sender.sendMessage("§cUnknown subcommand. Use /ev skill for help");
+        }
     }
+
+    private void handleSkillInfo(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            sender.sendMessage("§cUsage: /ev skill info <player> <tree_id>");
+            return;
+        }
+
+        var target = plugin.getServer().getPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage("§cPlayer not found: " + args[2]);
+            return;
+        }
+
+        String treeId = args[3];
+        var treeDef = plugin.getSkillTreeStorage().getSkillTree(treeId);
+        if (treeDef.isEmpty()) {
+            sender.sendMessage("§cSkill tree not found: " + treeId);
+            return;
+        }
+
+        var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
+        var tree = treeDef.get();
+
+        sender.sendMessage("§6═══ SKILL TREE: " + tree.getDisplayName() + " ═══");
+        sender.sendMessage("§ePlayer: §f" + target.getName());
+        sender.sendMessage("§ePoint Type: §f" + tree.getPointType());
+
+        int available = skillProgress.map(p -> p.getAvailablePoints(tree.getPointType())).orElse(0);
+        int total = skillProgress.map(p -> p.getTotalEarnedPoints(tree.getPointType())).orElse(0);
+
+        sender.sendMessage("§ePoints: §a" + available + " §7/ §f" + total + " earned");
+        sender.sendMessage("§eNodes:");
+
+        for (var node : tree.getNodes()) {
+            int level = skillProgress.map(p -> p.getNodeLevel(treeId, node.getId())).orElse(0);
+            String status = level == 0 ? "§7[LOCKED]" : (level >= node.getMaxLevel() ? "§a[MAXED]" : "§e[" + level + "/" + node.getMaxLevel() + "]");
+            sender.sendMessage("  §f" + node.getDisplayName() + " " + status);
+        }
+
+        sender.sendMessage("§6═══════════════════");
+    }
+
+    private void handleSkillGrant(CommandSender sender, String[] args) {
+        if (args.length < 5) {
+            sender.sendMessage("§cUsage: /ev skill grant <player> <point_type> <amount>");
+            return;
+        }
+
+        var target = plugin.getServer().getPlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage("§cPlayer not found: " + args[2]);
+            return;
+        }
+
+        String pointType = args[3];
+        int amount;
+
+        try {
+            amount = Integer.parseInt(args[4]);
+        } catch (NumberFormatException e) {
+            sender.sendMessage("§cAmount must be a number!");
+            return;
+        }
+
+        if (amount <= 0) {
+            sender.sendMessage("§cAmount must be positive!");
+            return;
+        }
+
+        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(target.getUniqueId());
+        skillProgress.addEarnedPoints(pointType, amount);
+
+        plugin.getPlayerDataManager().requestSave(target.getUniqueId(), "skill grant: " + pointType + " x" + amount);
+
+        sender.sendMessage("§a✓ Granted §e" + amount + " §a" + pointType + " to §f" + target.getName());
+        target.sendMessage("§a✓ You received §e" + amount + " §a" + pointType + "!");
+    }
+}

@@ -12,9 +12,11 @@ import com.eventui.core.commands.EventCommandTabCompleter;
 import com.eventui.core.config.*;
 import com.eventui.core.messaging.EventMessenger;
 import com.eventui.core.rewards.RewardManager;
+import com.eventui.core.skill.SkillTreeConfigLoader;
 import com.eventui.core.storage.EventStorage;
 import com.eventui.core.storage.PlayerDataListener;
 import com.eventui.core.storage.PlayerDataManager;
+import com.eventui.core.storage.SkillTreeStorage;
 import com.eventui.core.tracking.ObjectiveTracker;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -33,6 +35,9 @@ public class EventUIPlugin extends JavaPlugin {
 
     private EventConfigLoader configLoader;
     private EventStorage storage;
+    private SkillTreeConfigLoader skillTreeConfigLoader;
+    private SkillTreeStorage skillTreeStorage;
+    private com.eventui.core.storage.SkillProgressStorage skillProgressStorage;
     private PluginEventBridge eventBridge;
     private UIConfigLoader uiConfigLoader;
     private Map<String, UIConfig> uiConfigs;
@@ -51,6 +56,9 @@ public class EventUIPlugin extends JavaPlugin {
         saveDefaultConfig();
         this.adventure = BukkitAudiences.create(this);
         this.configLoader = new EventConfigLoader(getDataFolder());
+        this.skillTreeConfigLoader = new SkillTreeConfigLoader();
+        this.skillTreeStorage = new SkillTreeStorage();
+        this.skillProgressStorage = new com.eventui.core.storage.SkillProgressStorage();
         this.uiConfigLoader = new UIConfigLoader(getDataFolder());
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
         this.fileWatcher = new UIFileWatcher(this);
@@ -64,6 +72,7 @@ public class EventUIPlugin extends JavaPlugin {
         this.playerDataManager = new PlayerDataManager(this);
         getServer().getPluginManager().registerEvents(new PlayerDataListener(this), this);
         loadEvents();
+        loadSkillTrees();
         initializeBridge();
         registerTrackers();
         objectiveTracker.buildObjectiveTypeIndex();
@@ -93,7 +102,8 @@ public class EventUIPlugin extends JavaPlugin {
         LOGGER.info("✓ Auto-save scheduled every 2 minutes");
 
         LOGGER.info("✓ EventUI enabled — " + storage.getAllEventDefinitions().size()
-                + " events, " + uiConfigs.size() + " UIs loaded");
+                + " events, " + skillTreeStorage.getSkillTreeCount() + " skill tree(s), "
+                + uiConfigs.size() + " UIs loaded");
     }
 
     public RewardManager getRewardManager() {
@@ -145,20 +155,36 @@ public class EventUIPlugin extends JavaPlugin {
             );
 
         } catch (IllegalStateException e) {
-            LOGGER.severe("╔════════════════════════════════════════════╗");
-            LOGGER.severe("║  CRITICAL: Invalid event configuration    ║");
-            LOGGER.severe("╚════════════════════════════════════════════╝");
-            LOGGER.severe("");
-            LOGGER.severe("Error: " + e.getMessage());
-            LOGGER.severe("");
-            LOGGER.severe("Fix the dependency cycle in your event YAML files");
-            LOGGER.severe("and restart the server.");
-            LOGGER.severe("");
-
-            getServer().getPluginManager().disablePlugin(this);
-
+            LOGGER.warning("⚠ Dependency cycle detected in event configuration:");
+            LOGGER.warning("  Error: " + e.getMessage());
+            LOGGER.warning("  Fix the cycle in your event YAML files and reload.");
+            // Don't disable plugin — allow resilient operation
         } catch (Exception e) {
             LOGGER.severe("Failed to load events: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void loadSkillTrees() {
+        try {
+            var skillTrees = skillTreeConfigLoader.loadAllSkillTrees(
+                    new java.io.File(getDataFolder(), "skills")
+            );
+
+            if (!skillTrees.isEmpty()) {
+                skillTreeStorage.registerSkillTrees(skillTrees);
+                skillTrees.values().forEach(tree ->
+                        LOGGER.info("  - " + tree.getId() + ": " + tree.getDisplayName())
+                );
+            }
+
+        } catch (IllegalStateException e) {
+            LOGGER.warning("⚠ Dependency cycle detected in skill tree configuration:");
+            LOGGER.warning("  Error: " + e.getMessage());
+            LOGGER.warning("  Fix the cycle in your skill tree YAML files and reload.");
+            // Don't disable plugin — allow resilient operation
+        } catch (Exception e) {
+            LOGGER.severe("Failed to load skill trees: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -187,8 +213,9 @@ public class EventUIPlugin extends JavaPlugin {
     }
 
     public void reloadEvents() {
-        LOGGER.info("Reloading events and UI configuration...");
+        LOGGER.info("Reloading events, skill trees and UI configuration...");
         loadEvents();
+        loadSkillTrees();
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
         LOGGER.info("✓ Reloaded " + uiConfigs.size() + " UI config(s)");
         this.uiConfigManager.reload();
@@ -227,6 +254,8 @@ public class EventUIPlugin extends JavaPlugin {
     public UIConfigLoader getUIConfigLoader() { return uiConfigLoader; }
     public static EventUIPlugin getInstance() { return instance; }
     public EventStorage getStorage() { return storage; }
+    public SkillTreeStorage getSkillTreeStorage() { return skillTreeStorage; }
+    public com.eventui.core.storage.SkillProgressStorage getSkillProgressStorage() { return skillProgressStorage; }
     public EventConfigLoader getConfigLoader() { return configLoader; }
     public PluginEventBridge getEventBridge() { return eventBridge; }
     public ObjectiveTracker getObjectiveTracker() { return objectiveTracker; }

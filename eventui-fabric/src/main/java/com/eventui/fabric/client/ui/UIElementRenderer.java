@@ -38,6 +38,8 @@ public class UIElementRenderer {
     private int designHeight = 0;
 
     private float uiScale = 1.0f;
+    private String currentScreenId = "unknown";
+    public void setScreenId(String id) { this.currentScreenId = (id == null || id.isEmpty()) ? "unknown" : id; }
 
     public void setUiScale(float uiScale) {
         this.uiScale = uiScale;
@@ -89,7 +91,7 @@ public class UIElementRenderer {
             UIBadge badge = com.eventui.api.ui.UIElementHelper.parseBadge(element);
             if (badge != null) {
                 BadgeRenderer.handleBadgeInteraction(element, badge,
-                        BadgeRenderer.InteractionType.HOVER);
+                        BadgeRenderer.InteractionType.HOVER, this.currentScreenId);
             }
         }
 
@@ -575,7 +577,7 @@ public class UIElementRenderer {
 
             com.eventui.api.ui.UIBadge badge = com.eventui.api.ui.UIElementHelper.parseBadge(element);
             if (badge != null) {
-                BadgeRenderer.renderBadge(element, badge, graphics, element.getX(), element.getY(), context);
+                BadgeRenderer.renderBadge(element, badge, graphics, element.getX(), element.getY(), context, this.currentScreenId);
             }
 
             if (shouldApplyTransform) {
