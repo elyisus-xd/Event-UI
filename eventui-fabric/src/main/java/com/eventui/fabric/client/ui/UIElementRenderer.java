@@ -110,6 +110,11 @@ public class UIElementRenderer {
             case ENTITY_RENDER -> renderEntityRender(element, graphics, mouseX, mouseY);
             case ITEM_RENDER   -> renderItemRender(element, graphics);
             case BLOCK_RENDER  -> renderBlockRender(element, graphics);
+            case SKILL_TREE    -> SkillTreeRenderer.render(
+                    graphics, font, element,
+                    element.getX(), element.getY(), element.getWidth(), element.getHeight(),
+                    context
+            );
             default -> LOGGER.warn("Unsupported element type: {}", element.getType());
         }
 

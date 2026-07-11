@@ -17,6 +17,11 @@ public class PlayerDataListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.getPlayerDataManager().loadPlayerData(event.getPlayer().getUniqueId());
+
+        // Enviar datos de skills al cliente
+        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+            plugin.getEventBridge().sendSkillDataToPlayer(event.getPlayer());
+        }, 10L);
     }
 
     @EventHandler

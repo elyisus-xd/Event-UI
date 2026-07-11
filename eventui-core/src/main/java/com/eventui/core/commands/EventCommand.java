@@ -245,7 +245,7 @@ public class EventCommand implements CommandExecutor {
         try {
             plugin.reloadEvents();
             int eventCount = plugin.getStorage().getAllEventDefinitions().size();
-            sender.sendMessage("§a✓ Events reloaded successfully!");
+            sender.sendMessage("§aâœ“ Events reloaded successfully!");
             sender.sendMessage("§7Loaded " + eventCount + " event(s)");
             int notifiedPlayers = notifyAllClientsReload();
 
@@ -302,7 +302,7 @@ public class EventCommand implements CommandExecutor {
             }
 
             plugin.getPlayerDataManager().requestSave(playerId, "reset: events all");
-            sender.sendMessage("§a✓ Reset ALL events for " + target.getName() + " (" + resetCount + " event(s))");
+            sender.sendMessage("§aâœ“ Reset ALL events for " + target.getName() + " (" + resetCount + " event(s))");
             return;
         }
 
@@ -315,7 +315,7 @@ public class EventCommand implements CommandExecutor {
         plugin.getStorage().removeProgress(playerId, eventId);
         notifyStateChange(playerId, eventId, com.eventui.api.event.EventState.AVAILABLE);
         plugin.getPlayerDataManager().requestSave(playerId, "reset: event " + eventId);
-        sender.sendMessage("§a✓ Reset event '" + eventId + "' for " + target.getName());
+        sender.sendMessage("§aâœ“ Reset event '" + eventId + "' for " + target.getName());
     }
 
     private void handleResetSkills(CommandSender sender, Player target, String treeId) {
@@ -330,7 +330,7 @@ public class EventCommand implements CommandExecutor {
             }
 
             plugin.getPlayerDataManager().requestSave(playerId, "reset: skills all");
-            sender.sendMessage("§a✓ Reset ALL skill trees for " + target.getName() + " (points not refunded)");
+            sender.sendMessage("§aâœ“ Reset ALL skill trees for " + target.getName() + " (points not refunded)");
             return;
         }
 
@@ -341,7 +341,7 @@ public class EventCommand implements CommandExecutor {
 
         skillProgress.resetTreeProgress(treeId);
         plugin.getPlayerDataManager().requestSave(playerId, "reset: skill tree " + treeId);
-        sender.sendMessage("§a✓ Reset skill tree '" + treeId + "' for " + target.getName() + " (points not refunded)");
+        sender.sendMessage("§aâœ“ Reset skill tree '" + treeId + "' for " + target.getName() + " (points not refunded)");
     }
         private void handleComplete(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {
@@ -377,7 +377,7 @@ public class EventCommand implements CommandExecutor {
 
             progress.complete();
 
-            sender.sendMessage("§a✓ Event completed: " + eventDef.getDisplayName());
+            sender.sendMessage("§aâœ“ Event completed: " + eventDef.getDisplayName());
             if (sender instanceof Player) {
                 plugin.getRewardManager().giveRewards((Player) sender, eventDef);
             }
@@ -423,7 +423,7 @@ public class EventCommand implements CommandExecutor {
 
         var eventDef = eventDefOpt.get();
 
-        sender.sendMessage("§6═══ DEBUG INFO ═══");
+        sender.sendMessage("§6─── DEBUG INFO ───");
         sender.sendMessage("§eEvent: §f" + eventDef.getDisplayName());
         sender.sendMessage("§eID: §7" + eventId);
         sender.sendMessage("§ePlayer: §7" + player.getName());
@@ -447,7 +447,7 @@ public class EventCommand implements CommandExecutor {
                         .orElse(null);
 
                 if (objProgress != null) {
-                    String status = objProgress.isCompleted() ? "§a✓" : "§7○";
+                    String status = objProgress.isCompleted() ? "§aâœ“" : "§7â—‹";
                     sender.sendMessage(String.format("  %s %s: §f%d/%d §7(%s)",
                             status,
                             objDef.getDescription(),
@@ -459,7 +459,7 @@ public class EventCommand implements CommandExecutor {
             }
         }
 
-        sender.sendMessage("§6═══════════════");
+        sender.sendMessage("§6───────────────");
     }
 
         private void handleSetProgress(CommandSender sender, String[] args) {
@@ -512,7 +512,7 @@ public class EventCommand implements CommandExecutor {
             if (objProgress != null) {
                 objProgress.setProgress(amount);
 
-                sender.sendMessage("§a✓ Progress updated!");
+                sender.sendMessage("§aâœ“ Progress updated!");
                 sender.sendMessage(String.format("§7%s: §f%d/%d",
                         objective.getDescription(),
                         amount,
@@ -533,7 +533,7 @@ public class EventCommand implements CommandExecutor {
 
                 if (progress.areAllObjectivesCompleted()) {
                     progress.complete();
-                    sender.sendMessage("§6§l✓ EVENT COMPLETED!");
+                    sender.sendMessage("§6§lâœ“ EVENT COMPLETED!");
                     notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.COMPLETED);
                 }
             }
@@ -572,7 +572,7 @@ public class EventCommand implements CommandExecutor {
 
             plugin.getStorage().registerEvent(newEventDef);
 
-            sender.sendMessage("§a✓ Event reloaded: " + newEventDef.getDisplayName());
+            sender.sendMessage("§aâœ“ Event reloaded: " + newEventDef.getDisplayName());
             sender.sendMessage("§7File: " + files[0].getName());
             sender.sendMessage("§7Objectives: " + newEventDef.getObjectives().size());
 
@@ -606,7 +606,7 @@ public class EventCommand implements CommandExecutor {
             plugin.getEventBridge().sendMessage(message);
         }
 
-        LOGGER.info("✓ Sent reload notification to " + onlinePlayers.size() + " player(s)");
+        LOGGER.info("âœ“ Sent reload notification to " + onlinePlayers.size() + " player(s)");
 
         return onlinePlayers.size();
     }
@@ -684,7 +684,7 @@ public class EventCommand implements CommandExecutor {
 
             plugin.getObjectiveTracker().unregisterActiveEvent(player.getUniqueId(), eventId);
 
-            sender.sendMessage("§c✘ Event FAILED: §f" + eventDef.getDisplayName());
+            sender.sendMessage("§câœ˜ Event FAILED: §f" + eventDef.getDisplayName());
             sender.sendMessage("§7This event is now marked as failed.");
 
             notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.FAILED);
@@ -744,7 +744,7 @@ public class EventCommand implements CommandExecutor {
             progress.fail();
             plugin.getObjectiveTracker().unregisterActiveEvent(player.getUniqueId(), eventId);
 
-            sender.sendMessage("§c✘ Event FAILED: §f" + eventDef.getDisplayName());
+            sender.sendMessage("§câœ˜ Event FAILED: §f" + eventDef.getDisplayName());
             sender.sendMessage("§7This event is not repeatable and cannot be restarted.");
 
             notifyStateChange(player.getUniqueId(), eventId, com.eventui.api.event.EventState.FAILED);
@@ -769,8 +769,8 @@ public class EventCommand implements CommandExecutor {
             plugin.getUIStateManager().setVariable(target.getUniqueId(), key, value);
         }
 
-        sender.sendMessage("§a✓ UIVar §e" + key + " §7= §f" + value +
-                " §7→ §a" + targets.size() + " jugador(es)");
+        sender.sendMessage("§aâœ“ UIVar §e" + key + " §7= §f" + value +
+                " §7â†’ §a" + targets.size() + " jugador(es)");
     }
 
 
@@ -812,7 +812,7 @@ public class EventCommand implements CommandExecutor {
             plugin.getUIStateManager().clearVariables(target.getUniqueId());
         }
 
-        sender.sendMessage("§a✓ UI state cleared for " + targets.size() + " jugador(es)");
+        sender.sendMessage("§aâœ“ UI state cleared for " + targets.size() + " jugador(es)");
     }
 
 
@@ -832,7 +832,7 @@ public class EventCommand implements CommandExecutor {
 
         sender.sendMessage("§6UIState de " + target.getName() + " (" + vars.size() + " vars):");
         if (vars.isEmpty()) {
-            sender.sendMessage("  §7(vacío)");
+            sender.sendMessage("  §7(vacÃ­o)");
         } else {
             vars.forEach((k, v) -> sender.sendMessage("  §e" + k + " §7= §f" + v));
         }
@@ -911,7 +911,7 @@ public class EventCommand implements CommandExecutor {
         var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
         var tree = treeDef.get();
 
-        sender.sendMessage("§6═══ SKILL TREE: " + tree.getDisplayName() + " ═══");
+        sender.sendMessage("§6 SKILL TREE: " + tree.getDisplayName() + " (§7" + tree.getId() + "§6)");
         sender.sendMessage("§ePlayer: §f" + target.getName());
         sender.sendMessage("§ePoint Type: §f" + tree.getPointType());
 
@@ -927,7 +927,19 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("  §f" + node.getDisplayName() + " " + status);
         }
 
-        sender.sendMessage("§6═══════════════════");
+
+        // Show active point sources configuration
+        var sourcesConfig = plugin.getSkillSourcesConfig();
+        sender.sendMessage("§6────────────────────────────────");
+        sender.sendMessage("§6[Active Point Sources]");
+        if (sourcesConfig.isXpConversionEnabled()) {
+            int levelsPerPoint = sourcesConfig.getLevelsPerPoint();
+            String pointType = sourcesConfig.getXpPointType();
+            sender.sendMessage("§eXP Conversion: §aENABLED §7— cada " + levelsPerPoint + " nivel(es) → 1 " + pointType);
+        } else {
+            sender.sendMessage("§eXP Conversion: §cDISABLED");
+        }
+        sender.sendMessage("§6────────────────────────────────");
     }
 
     private void handleSkillGrant(CommandSender sender, String[] args) {
@@ -957,13 +969,11 @@ public class EventCommand implements CommandExecutor {
             return;
         }
 
-        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(target.getUniqueId());
-        skillProgress.addEarnedPoints(pointType, amount);
+        plugin.getSkillNodeService().grantPoints(target, pointType, amount);
 
-        plugin.getPlayerDataManager().requestSave(target.getUniqueId(), "skill grant: " + pointType + " x" + amount);
-
-        sender.sendMessage("§a✓ Granted §e" + amount + " §a" + pointType + " to §f" + target.getName());
-        target.sendMessage("§a✓ You received §e" + amount + " §a" + pointType + "!");
+        if (!(sender instanceof Player player) || !player.getUniqueId().equals(target.getUniqueId())) {
+            sender.sendMessage("§aApplied grant: §e" + amount + " §a" + pointType + " to §f" + target.getName());
+        }
     }
 
     private void handleSkillSpend(CommandSender sender, String[] args) {
@@ -1002,33 +1012,17 @@ public class EventCommand implements CommandExecutor {
         // Intentar gastar puntos
         var result = plugin.getSkillNodeService().trySpendNode(target.getUniqueId(), treeId, nodeId);
 
-        switch (result) {
-            case SUCCESS -> {
-                var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
-                if (skillProgress.isPresent()) {
-                    int newLevel = skillProgress.get().getNodeLevel(treeId, nodeId);
-                    sender.sendMessage("§a✓ " + target.getName() + " leveled up §e" + node.getDisplayName()
-                            + " §ato level §f" + newLevel + "/" + node.getMaxLevel());
-                    target.sendMessage("§a✓ You leveled up §e" + node.getDisplayName() + " §ato level §f" + newLevel);
-                }
+        if (!(sender instanceof Player player) || !player.getUniqueId().equals(target.getUniqueId())) {
+            switch (result) {
+                case SUCCESS ->
+                        sender.sendMessage("§aApplied spend for §f" + target.getName() + "§a: §e" + result);
+                case ALREADY_MAXED, INSUFFICIENT_POINTS, REQUIREMENTS_NOT_MET ->
+                        sender.sendMessage("§eSpend for §f" + target.getName() + "§e returned: §f" + result);
+                case TREE_NOT_FOUND ->
+                        sender.sendMessage("§cSkill tree not found: " + treeId);
+                case NODE_NOT_FOUND ->
+                        sender.sendMessage("§cNode not found: " + nodeId);
             }
-            case ALREADY_MAXED ->
-                    sender.sendMessage("§cThis node is already at max level (§f" + node.getMaxLevel() + "§c)");
-            case INSUFFICIENT_POINTS -> {
-                var skillProgress = plugin.getSkillProgressStorage().getProgress(target.getUniqueId());
-                if (skillProgress.isPresent()) {
-                    int nextLevel = skillProgress.get().getNodeLevel(treeId, nodeId) + 1;
-                    int cost = node.getCostForLevel(nextLevel);
-                    int available = skillProgress.get().getAvailablePoints(tree.getPointType());
-                    sender.sendMessage("§cNot enough points: costs §f" + cost + "§c, you have §f" + available);
-                }
-            }
-            case REQUIREMENTS_NOT_MET ->
-                    sender.sendMessage("§cRequirements not met for this node");
-            case TREE_NOT_FOUND ->
-                    sender.sendMessage("§cSkill tree not found: " + treeId);
-            case NODE_NOT_FOUND ->
-                    sender.sendMessage("§cNode not found: " + nodeId);
         }
     }
 }

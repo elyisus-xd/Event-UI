@@ -112,7 +112,7 @@ public class UIConfigLoader {
             LOGGER.severe("  Hint: Unknown element type.");
             LOGGER.severe("        Valid types: IMAGE, IMAGE_BUTTON, TEXT, BUTTON,");
             LOGGER.severe("                     PANEL, PROGRESS_BAR, ICON, TOOLTIP,");
-            LOGGER.severe("                     ENTITY_RENDER, ITEM_RENDER, BLOCK_RENDER");
+            LOGGER.severe("                     ENTITY_RENDER, ITEM_RENDER, BLOCK_RENDER, SKILL_TREE"); // Added SKILL_TREE here
         } else if (msg.contains("duplicate")) {
             LOGGER.severe("  Hint: Duplicate key found in YAML.");
             LOGGER.severe("        Each element 'id' must be unique within the file.");
@@ -143,7 +143,9 @@ public class UIConfigLoader {
                 throw new IllegalStateException("Missing required field 'elements' at root level");
             }
 
-            return parseUIConfig(data);
+            UIConfig config = parseUIConfig(data);
+            LOGGER.fine("[UI_PARSE_DEBUG] Returning UIConfig '" + config.getId() + "' with " + config.getRootElements().size() + " root elements");
+            return config;
         }
     }
 
@@ -165,10 +167,17 @@ public class UIConfigLoader {
         List<Map<String, Object>> elementsData = (List<Map<String, Object>>) data.get("elements");
 
         if (elementsData != null) {
+            LOGGER.fine("[UI_PARSE_DEBUG] Parsing " + elementsData.size() + " elements from YAML for config '" + id + "'");
             for (int i = 0; i < elementsData.size(); i++) {
                 Map<String, Object> elementData = elementsData.get(i);
                 try {
-                    elements.add(parseUIElement(elementData));
+                    UIElement parsedElement = parseUIElement(elementData);
+                    if (parsedElement != null) { // Add null check here
+                        elements.add(parsedElement);
+                        LOGGER.fine("[UI_PARSE_DEBUG] Element added to list");
+                    } else {
+                        LOGGER.fine("[UI_PARSE_DEBUG] Element skipped (returned null)");
+                    }
                 } catch (Exception e) {
                     String elemId = elementData.containsKey("id")
                             ? (String) elementData.get("id")
@@ -178,6 +187,7 @@ public class UIConfigLoader {
                     );
                 }
             }
+            LOGGER.fine("[UI_PARSE_DEBUG] Finished parsing elements. Total elements in config: " + elements.size());
         }
 
         return new UIConfigImpl(
@@ -189,6 +199,9 @@ public class UIConfigLoader {
     private UIElement parseUIElement(Map<String, Object> data) {
         String id = (String) data.get("id");
         String typeStr = (String) data.get("type");
+        
+        LOGGER.fine("[UI_PARSE_DEBUG] Parsing element - id='" + id + "', type='" + typeStr + "'");
+        
         if (id == null || id.isBlank()) {
             throw new IllegalStateException("Element is missing required field 'id'");
         }
@@ -199,12 +212,14 @@ public class UIConfigLoader {
         com.eventui.api.ui.UIElementType type;
         try {
             type = com.eventui.api.ui.UIElementType.valueOf(typeStr.toUpperCase());
+            LOGGER.fine("[UI_PARSE_DEBUG] Successfully parsed type '" + typeStr + "' as UIElementType." + type.name());
         } catch (IllegalArgumentException e) {
-            throw new IllegalStateException(
-                    "Element '" + id + "' has unknown type '" + typeStr + "'. " +
-                            "Valid types: IMAGE, IMAGE_BUTTON, TEXT, BUTTON, PANEL, " +
-                            "PROGRESS_BAR, ICON, TOOLTIP, ENTITY_RENDER, ITEM_RENDER, BLOCK_RENDER"
-            );
+            LOGGER.warning("[UI_DEBUG] Unknown UIElementType: '" + typeStr
+                    + "' in element '" + id + "'. "
+                    + "Skipping this element. "
+                    + "(If this is a new type like SKILL_TREE, verify "
+                    + "that eventui-common jar is up to date on the server)");
+            return null;
         }
 
         if (!data.containsKey("x") || !data.containsKey("y")) {
@@ -284,7 +299,10 @@ public class UIConfigLoader {
             for (int i = 0; i < childrenData.size(); i++) {
                 Map<String, Object> childData = childrenData.get(i);
                 try {
-                    children.add(parseUIElement(childData));
+                    UIElement parsedChild = parseUIElement(childData);
+                    if (parsedChild != null) { // Add null check here
+                        children.add(parsedChild);
+                    }
                 } catch (Exception e) {
                     String childId = childData.containsKey("id")
                             ? (String) childData.get("id")

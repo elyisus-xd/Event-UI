@@ -39,6 +39,7 @@ public class ClientEventBridge implements EventBridge {
     private final NetworkHandler network;
     private boolean connected;
     private EventViewModel globalViewModel;
+    public static boolean skillDataDirty = false;
 
     public ClientEventBridge() {
         this.handlers = new ConcurrentHashMap<>();
@@ -299,6 +300,11 @@ public class ClientEventBridge implements EventBridge {
                 }
             });
         });
+
+        // Skill-related handlers
+        registerMessageHandler(MessageType.SKILL_DATA_RESPONSE, this::handleSkillDataResponse);
+        registerMessageHandler(MessageType.SKILL_NODE_UPDATE, this::handleSkillNodeUpdate);
+        registerMessageHandler(MessageType.SKILL_SPEND_ERROR, this::handleSkillSpendError);
     }
 
 
@@ -415,6 +421,96 @@ public class ClientEventBridge implements EventBridge {
             cache.failPendingRequest(replyTo, e);
         }
     }
+
+    private void handleSkillDataResponse(BridgeMessage message) {
+        try {
+            String skillDataPayload = message.getPayload().get("skill_data"); // Obtener el JSON completo
+
+            if (skillDataPayload == null) {
+                LOGGER.error("Invalid SKILL_DATA_RESPONSE payload: 'skill_data' field missing.");
+                return;
+            }
+
+            Gson gson = new Gson();
+            // Primero, parsear la cadena skillDataPayload completa en un mapa genérico
+            Type genericMapType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> fullSkillData = gson.fromJson(skillDataPayload, genericMapType);
+
+            // Ahora extraer las partes 'trees' y 'points' de este mapa
+            // Re-serializar las sub-partes a cadenas JSON y luego deserializarlas
+            String treesJson = gson.toJson(fullSkillData.get("trees"));
+            String pointsJson = gson.toJson(fullSkillData.get("points"));
+
+            if (treesJson == null || pointsJson == null) {
+                LOGGER.error("Invalid SKILL_DATA_RESPONSE payload: 'trees' or 'points' sub-field missing after parsing 'skill_data'.");
+                return;
+            }
+
+            Type treeMapType = new TypeToken<Map<String, SkillTreeData>>() {}.getType();
+            Type pointsMapType = new TypeToken<Map<String, SkillPointsData>>() {}.getType();
+
+            Map<String, SkillTreeData> trees = gson.fromJson(treesJson, treeMapType);
+            Map<String, SkillPointsData> points = gson.fromJson(pointsJson, pointsMapType);
+
+            cache.updateSkillData(trees, points);
+            LOGGER.info("✓ Skill data loaded: {} trees, {} point types", trees.size(), points.size());
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse SKILL_DATA_RESPONSE", e);
+        }
+    }
+
+    private void handleSkillNodeUpdate(BridgeMessage message) {
+        try {
+            String treeId = message.getPayload().get("tree_id");
+            String nodeId = message.getPayload().get("node_id");
+            int newLevel = Integer.parseInt(message.getPayload().get("new_level"));
+            String newState = message.getPayload().get("new_state");
+            int costNextLevel = Integer.parseInt(message.getPayload().get("cost_next_level"));
+            int pointsAvailable = Integer.parseInt(message.getPayload().get("points_available"));
+
+            cache.updateNodeLevel(treeId, nodeId, newLevel, newState, costNextLevel, pointsAvailable);
+            skillDataDirty = true;
+            LOGGER.debug("Node updated: {}.{} → level {}", treeId, nodeId, newLevel);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse SKILL_NODE_UPDATE", e);
+        }
+    }
+
+    private void handleSkillSpendError(BridgeMessage message) {
+        try {
+            String errorType = message.getPayload().get("error");
+            Minecraft client = Minecraft.getInstance();
+            client.execute(() -> {
+                if (client.player != null) {
+                    client.player.displayClientMessage(Component.literal("§cNo se pudo subir de nivel: " + errorType), false);
+                }
+            });
+            LOGGER.warn("Skill spend error: {}", errorType);
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse SKILL_SPEND_ERROR", e);
+        }
+    }
+
+    public void requestSkillSpend(String treeId, String nodeId) {
+        UUID playerId = getLocalPlayerId();
+        Map<String, String> payload = Map.of(
+                "tree_id", treeId,
+                "node_id", nodeId
+        );
+
+        BridgeMessage message = new BridgeMessageImpl(
+                MessageType.REQUEST_SKILL_SPEND,
+                payload,
+                playerId
+        );
+
+        sendMessage(message);
+        LOGGER.debug("Requested skill spend: {}.{}", treeId, nodeId);
+    }
+
     @SuppressWarnings("unchecked")
     private UIConfig deserializeUIConfig(String json) {
         Gson gson = new Gson();

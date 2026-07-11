@@ -54,6 +54,8 @@ public class SkillNodeService {
         // Verificar si ya está al máximo
         int currentLevel = skillProgress.getNodeLevel(treeId, nodeId);
         if (currentLevel >= nodeDef.getMaxLevel()) {
+            sendIfOnline(playerId, player ->
+                    plugin.getMessenger().sendAlreadyMaxed(player, nodeDef.getDisplayName(), nodeDef.getMaxLevel()));
             return SpendResult.ALREADY_MAXED;
         }
 
@@ -61,6 +63,8 @@ public class SkillNodeService {
 
         // 4. Verificar requisitos
         if (!requirementsMet(skillProgress, treeId, nodeDef)) {
+            sendIfOnline(playerId, player ->
+                    plugin.getMessenger().sendRequirementsNotMet(player, nodeDef.getDisplayName(), treeDef.getDisplayName()));
             return SpendResult.REQUIREMENTS_NOT_MET;
         }
 
@@ -70,6 +74,8 @@ public class SkillNodeService {
         int available = skillProgress.getAvailablePoints(pointType);
 
         if (available < cost) {
+            sendIfOnline(playerId, player ->
+                    plugin.getMessenger().sendInsufficientPoints(player, nodeDef.getDisplayName(), cost, available, pointType));
             return SpendResult.INSUFFICIENT_POINTS;
         }
 
@@ -81,6 +87,16 @@ public class SkillNodeService {
         Player player = Bukkit.getPlayer(playerId);
         if (player != null && player.isOnline()) {
             effectApplier.applyNodeEffects(player, nodeDef, nextLevel);
+            plugin.getMessenger().sendNodeLeveledUp(
+                    player,
+                    nodeDef.getDisplayName(),
+                    treeDef.getDisplayName(),
+                    nextLevel,
+                    nodeDef.getMaxLevel(),
+                    pointType);
+            if (nextLevel == nodeDef.getMaxLevel()) {
+                plugin.getMessenger().sendNodeMaxed(player, nodeDef.getDisplayName(), treeDef.getDisplayName());
+            }
         }
 
         // 7. Persistir
@@ -90,6 +106,21 @@ public class SkillNodeService {
         LOGGER.info("Player " + playerId + " upgraded " + treeId + ":" + nodeId + " to level " + nextLevel);
 
         return SpendResult.SUCCESS;
+    }
+
+    public void grantPoints(Player player, String pointType, int amount) {
+        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(player.getUniqueId());
+        skillProgress.addEarnedPoints(pointType, amount);
+
+        plugin.getPlayerDataManager().requestSave(player.getUniqueId(), "skill grant: " + pointType + " x" + amount);
+        plugin.getMessenger().sendPointsGranted(player, amount, pointType);
+    }
+
+    private void sendIfOnline(UUID playerId, java.util.function.Consumer<Player> sender) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player != null && player.isOnline()) {
+            sender.accept(player);
+        }
     }
 
     /**

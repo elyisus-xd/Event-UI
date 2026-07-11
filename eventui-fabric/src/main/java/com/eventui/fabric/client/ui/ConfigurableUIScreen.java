@@ -267,6 +267,17 @@ public class ConfigurableUIScreen extends Screen {
             ));
         }
 
+        // Add skill data for data binding
+        Map<String, Object> skillsMap = new HashMap<>();
+        var cachedPoints = ClientEventBridge.getInstance().getCache().getCachedSkillPoints();
+        for (var entry : cachedPoints.entrySet()) {
+            Map<String, Object> pointData = new HashMap<>();
+            pointData.put("available", entry.getValue().available());
+            pointData.put("total_earned", entry.getValue().totalEarned());
+            skillsMap.put(entry.getKey(), pointData);
+        }
+        context.put("skills", skillsMap);
+
         return context;
     }
 

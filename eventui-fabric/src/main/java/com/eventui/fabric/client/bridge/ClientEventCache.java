@@ -6,6 +6,7 @@ import com.eventui.api.event.EventProgress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -18,12 +19,16 @@ public class ClientEventCache {
     private final Map<String, EventDefinition> eventDefinitions;
     private final Map<String, EventProgress> eventProgress;
     private final Map<UUID, CompletableFuture<?>> pendingRequests;
+    private final Map<String, SkillTreeData> cachedSkillTrees;
+    private final Map<String, SkillPointsData> cachedSkillPoints;
 
     public ClientEventCache() {
         this.eventDefinitions = new ConcurrentHashMap<>();
         this.eventProgress = new ConcurrentHashMap<>();
         this.pendingRequests = new ConcurrentHashMap<>();
         this.uiConfigs = new ConcurrentHashMap<>();
+        this.cachedSkillTrees = new ConcurrentHashMap<>();
+        this.cachedSkillPoints = new ConcurrentHashMap<>();
     }
 
     public void cacheUIConfig(String uiId, String uiDataJson) {
@@ -104,6 +109,8 @@ public class ClientEventCache {
     public void clear() {
         eventDefinitions.clear();
         eventProgress.clear();
+        cachedSkillTrees.clear();
+        cachedSkillPoints.clear();
         pendingRequests.values().forEach(future ->
                 future.completeExceptionally(new IllegalStateException("Bridge disconnected"))
         );
@@ -118,5 +125,45 @@ public class ClientEventCache {
 
     public EventProgress getCachedProgress(String eventId) {
         return eventProgress.get(eventId);
+    }
+
+    public void updateSkillData(Map<String, SkillTreeData> trees, Map<String, SkillPointsData> points) {
+        cachedSkillTrees.clear();
+        cachedSkillTrees.putAll(trees);
+        cachedSkillPoints.clear();
+        cachedSkillPoints.putAll(points);
+        LOGGER.info("Updated skill data: {} trees, {} point types", trees.size(), points.size());
+    }
+
+    public Map<String, SkillTreeData> getCachedSkillTrees() {
+        return new ConcurrentHashMap<>(cachedSkillTrees);
+    }
+
+    public Map<String, SkillPointsData> getCachedSkillPoints() {
+        return new ConcurrentHashMap<>(cachedSkillPoints);
+    }
+
+    public void updateNodeLevel(String treeId, String nodeId, int newLevel, String newState,
+                                int costNextLevel, int pointsAvailable) {
+        SkillTreeData tree = cachedSkillTrees.get(treeId);
+        if (tree != null && tree.nodes().containsKey(nodeId)) {
+            SkillNodeData oldNode = tree.nodes().get(nodeId);
+            SkillNodeData newNode = new SkillNodeData(
+                    oldNode.id(),
+                    oldNode.displayName(),
+                    oldNode.description(),
+                    oldNode.icon(),
+                    oldNode.maxLevel(),
+                    newLevel,
+                    costNextLevel,
+                    newState,
+                    oldNode.requires(),
+                    oldNode.requiresMode(),
+                    oldNode.positionX(),
+                    oldNode.positionY()
+            );
+            tree.nodes().put(nodeId, newNode);
+            LOGGER.debug("Updated node {}.{} to level {}", treeId, nodeId, newLevel);
+        }
     }
 }

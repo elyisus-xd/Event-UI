@@ -1,0 +1,72 @@
+id: "skills-screen"
+title: ""
+screen_width: 860
+screen_height: 600
+
+screen_properties:
+  blur: false
+  pause_game: "false"
+  transition_in: "scale_up"
+  transition_out: "none"
+  transition_duration: "300"
+
+elements:
+  - id: "titulo"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 20
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 30
+      content: "§6§lÁrbol de Habilidades"
+      align: "center"
+      shadow: true
+
+  - id: "points_display"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 16
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 55
+      content: "§ePuntos disponibles: §a{{skills.combat_points.available}}"
+      shadow: true
+
+  - id: "combat_tree"
+    type: SKILL_TREE
+    x: 80
+    y: 80
+    width: 700
+    height: 450
+    properties:
+      tree_id: "combat-tree"
+      node_size: "48"
+      node_spacing_x: "120"
+      node_spacing_y: "100"
+      show_level_text: "true"
+      connection_color_locked: "555555"
+      connection_color_available: "aaaaaa"
+      connection_color_unlocked: "5cb85c"
+
+  - id: "close_btn"
+    type: IMAGE_BUTTON
+    x: 0
+    y: 0
+    width: 50
+    height: 50
+    properties:
+      anchor: "bottom_center"
+      anchor_offset_x: 0
+      anchor_offset_y: -40
+      texture: "eventui:textures/ui/logo/owlsafio_logo.png"
+      hover_animation: "float"
+      hover_sound: "eventui:ui.hover"
+      hover_sound_volume: "0.05"
+      click_sound: "eventui:ui.click"
+      action: "close_screen"

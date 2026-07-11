@@ -67,7 +67,19 @@ public class UIConfigManager {
                 config.getBoolean("messages.event_failed.enabled",        true),
                 config.getString ("messages.event_failed.format",         null),
                 config.getBoolean("messages.event_locked.enabled",        true),
-                config.getString ("messages.event_locked.format",         null)
+                config.getString ("messages.event_locked.format",         null),
+                config.getBoolean("messages.skills.node_leveled_up.enabled", true),
+                config.getString ("messages.skills.node_leveled_up.format", null),
+                config.getBoolean("messages.skills.node_maxed.enabled", true),
+                config.getString ("messages.skills.node_maxed.format", null),
+                config.getBoolean("messages.skills.points_granted.enabled", true),
+                config.getString ("messages.skills.points_granted.format", null),
+                config.getBoolean("messages.skills.insufficient_points.enabled", true),
+                config.getString ("messages.skills.insufficient_points.format", null),
+                config.getBoolean("messages.skills.requirements_not_met.enabled", true),
+                config.getString ("messages.skills.requirements_not_met.format", null),
+                config.getBoolean("messages.skills.already_maxed.enabled", true),
+                config.getString ("messages.skills.already_maxed.format", null)
         );
 
         if (this.messenger == null) {

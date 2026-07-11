@@ -1,35 +1,74 @@
 ui:
-  mode: custom
+  mode: "custom"           # "hardcoded" | "custom"
   custom:
-    screenId: main-menu
-    fallback: true
+    screenId: "main-menu"  # ID del archivo en /uis/ (sin .yml)
+    fallback: true         # true = usa hardcoded si custom falla
+
 events:
-  always_active: true
+  always_active: true      # true = inicio automático de eventos
+
 messages:
-  enabled: false
+  enabled: true            # false = silencia todos los mensajes
+
   progress:
     enabled: true
-    format: >-
-      <dark_gray>[<green>EventUI</green>]</dark_gray> <white><description></white>
-      <gray>(<current>/<target>)</gray>
+    format: "<dark_gray>[<green>EventUI</green>]</dark_gray> <white><description></white> <gray>(<current>/<target>)</gray>"
+
   objective_completed:
     enabled: true
-    format: <gold>[EventUI]</gold> <green>¡Objetivo completado! ✔</green>
+    format: "<gold>[EventUI]</gold> <green>¡Objetivo completado! ✔</green>"
+
   event_started:
     enabled: true
     format: "<yellow>[EventUI]</yellow> <green>Misión iniciada: </green><white><event_name></white>"
+
   event_completed:
     enabled: true
     format: "<gold><bold>[EventUI] ¡Evento completado: <event_name>!</bold></gold>"
+
   event_failed:
     enabled: true
     format: "<red>[EventUI]</red> <dark_red>Evento fallado: <event_name></dark_red>"
+
   event_locked:
     enabled: true
-    format: <red>[EventUI]</red> <gray>Este evento está bloqueado. Completa los anteriores primero.</gray>
+    format: "<red>[EventUI]</red> <gray>Este evento está bloqueado. Completa los anteriores primero.</gray>"
+
+
+  skills:
+    node_leveled_up:
+      enabled: true
+      format: "<dark_gray>[<green>EventUI</green>]</dark_gray> <white><node_name></white> <gray>subió a nivel <current_level>/<max_level></gray>"
+    node_maxed:
+      enabled: true
+      format: "<gold>[EventUI]</gold> <green>¡<node_name> alcanzó el nivel máximo!</green>"
+    points_granted:
+      enabled: true
+      format: "<yellow>[EventUI]</yellow> <green>Recibiste <amount> <point_type>!</green>"
+    insufficient_points:
+      enabled: true
+      format: "<red>[EventUI]</red> <gray>No tienes suficientes puntos. Necesitas <cost>, tienes <available>.</gray>"
+    requirements_not_met:
+      enabled: true
+      format: "<red>[EventUI]</red> <gray>No cumples los requisitos para desbloquear <node_name>.</gray>"
+    already_maxed:
+      enabled: true
+      format: "<red>[EventUI]</red> <gray><node_name> ya está en su nivel máximo.</gray>"
+
+skills:
+  point_sources:
+    xp_conversion:
+      enabled: true
+      levels_per_point: 1
+      point_type: "combat_points"
+      only_on_level_up: true
+
+# ⚠️ Las secciones tracking y debug no están implementadas aún
+
 tracking:
   updateInterval: 40
   locationCheckInterval: 40
+
 debug:
   logMessages: false
   logTracking: false

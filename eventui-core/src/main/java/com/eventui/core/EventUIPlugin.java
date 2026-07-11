@@ -48,6 +48,7 @@ public class EventUIPlugin extends JavaPlugin {
     private UIStateManager uiStateManager;
     private UIFileWatcher fileWatcher;
     private PlayerDataManager playerDataManager;
+    private com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig;
 
     @Override
     public void onEnable() {
@@ -72,7 +73,9 @@ public class EventUIPlugin extends JavaPlugin {
         this.storage = new EventStorage(this);
         this.rewardManager = new RewardManager(this);
         this.playerDataManager = new PlayerDataManager(this);
+        this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
         getServer().getPluginManager().registerEvents(new PlayerDataListener(this), this);
+        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.SkillPointsListener(this, skillSourcesConfig), this);
         loadEvents();
         loadSkillTrees();
         initializeBridge();
@@ -216,6 +219,7 @@ public class EventUIPlugin extends JavaPlugin {
 
     public void reloadEvents() {
         LOGGER.info("Reloading events, skill trees and UI configuration...");
+        this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
         loadEvents();
         loadSkillTrees();
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
@@ -251,6 +255,9 @@ public class EventUIPlugin extends JavaPlugin {
         return uiConfigManager.getMessenger();
     }
 
+    public com.eventui.core.skill.SkillSourcesConfig getSkillSourcesConfig() {
+        return skillSourcesConfig;
+    }
 
     public Map<String, UIConfig> getUIConfigs() { return uiConfigs; }
     public UIConfigLoader getUIConfigLoader() { return uiConfigLoader; }

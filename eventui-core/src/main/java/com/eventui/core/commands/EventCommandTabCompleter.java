@@ -69,7 +69,7 @@ public class EventCommandTabCompleter implements TabCompleter {
                             .collect(Collectors.toList());
                 }
                 case "skill" -> {
-                    completions = Arrays.asList("info", "grant").stream()
+                    completions = Arrays.asList("info", "grant", "spend").stream()
                             .filter(s -> s.startsWith(args[1].toLowerCase()))
                             .collect(Collectors.toList());
                 }
@@ -120,6 +120,8 @@ public class EventCommandTabCompleter implements TabCompleter {
                     completions = getAvailableSkillTreeIds(args[3]);
                 } else if ("grant".equals(skillSubcommand)) {
                     completions = getAvailablePointTypes(args[3]);
+                } else if ("spend".equals(skillSubcommand)) {
+                    completions = getAvailableSkillTreeIds(args[3]);
                 }
             }
 

@@ -266,6 +266,30 @@ public class PluginEventBridge implements EventBridge {
             handleUIConfigRequest(message, player, screenId);
         });
 
+        registerMessageHandler(MessageType.REQUEST_SKILL_DATA, message -> {
+            UUID playerId = message.getPlayerId();
+            Player player = plugin.getServer().getPlayer(playerId);
+
+            if (player == null) {
+                LOGGER.warning("Player not found for REQUEST_SKILL_DATA: " + playerId);
+                return;
+            }
+
+            handleRequestSkillData(player, message);
+        });
+
+        registerMessageHandler(MessageType.REQUEST_SKILL_SPEND, message -> {
+            UUID playerId = message.getPlayerId();
+            Player player = plugin.getServer().getPlayer(playerId);
+
+            if (player == null) {
+                LOGGER.warning("Player not found for REQUEST_SKILL_SPEND: " + playerId);
+                return;
+            }
+
+            handleRequestSkillSpend(player, message);
+        });
+
     }
 
         private com.eventui.api.ui.UIElement findElementById(
@@ -793,8 +817,8 @@ public class PluginEventBridge implements EventBridge {
             String uiConfigJson = gson.toJson(uiData);
 
             Map<String, String> payload = Map.of(
-                    "ui_config", uiConfigJson,
-                    "screen_id", screenId
+                    "ui_id", uiConfig.getId(),
+                    "ui_config", uiConfigJson
             );
 
             BridgeMessage response = new PluginBridgeMessage(
@@ -810,6 +834,251 @@ public class PluginEventBridge implements EventBridge {
         } catch (Exception e) {
             LOGGER.severe("Failed to handle UI config request: " + e.getMessage());
             sendErrorResponse(request, "Internal error", player);
+        }
+    }
+
+    private void handleRequestSkillData(Player player, BridgeMessage message) {
+        try {
+            sendSkillDataToPlayer(player, message.getMessageId());
+        } catch (Exception e) {
+            LOGGER.severe("Failed to handle REQUEST_SKILL_DATA: " + e.getMessage());
+            e.printStackTrace();
+            sendErrorResponse(message, "Failed to load skill data", player);
+        }
+    }
+
+    public void sendSkillDataToPlayer(Player player) {
+        sendSkillDataToPlayer(player, null);
+    }
+
+    private void sendSkillDataToPlayer(Player player, UUID replyToId) {
+        UUID playerId = player.getUniqueId();
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+
+        Map<String, Object> treesMap = new HashMap<>();
+
+        // Construir datos de todos los skill trees
+        for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
+            Map<String, Object> treeData = new HashMap<>();
+            treeData.put("display_name", tree.getDisplayName());
+            treeData.put("point_type", tree.getPointType());
+
+            Map<String, Object> nodesMap = new HashMap<>();
+            var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+
+            for (var node : tree.getNodes()) {
+                Map<String, Object> nodeData = new HashMap<>();
+                nodeData.put("display_name", node.getDisplayName());
+                nodeData.put("description", node.getDescription());
+                nodeData.put("icon", node.getIcon());
+                nodeData.put("max_level", node.getMaxLevel());
+                nodeData.put("position_x", node.getPositionX());
+                nodeData.put("position_y", node.getPositionY());
+
+                int currentLevel = playerProgress.map(p -> p.getNodeLevel(tree.getId(), node.getId())).orElse(0);
+                nodeData.put("current_level", currentLevel);
+
+                // Calcular costo del siguiente nivel
+                int costNextLevel = currentLevel >= node.getMaxLevel() ? -1 : node.getCostForLevel(currentLevel + 1);
+                nodeData.put("cost_next_level", costNextLevel);
+
+                // Calcular estado del nodo
+                String state = calculateNodeState(node, currentLevel, playerProgress.orElse(null), tree.getId());
+                nodeData.put("state", state);
+
+                // Requisitos
+                List<Map<String, Object>> requiresList = new ArrayList<>();
+                for (var req : node.getRequirements()) {
+                    Map<String, Object> reqData = new HashMap<>();
+                    reqData.put("node_id", req.getNodeId());
+                    reqData.put("min_level", req.getMinLevel());
+                    requiresList.add(reqData);
+                }
+                nodeData.put("requires", requiresList);
+                nodeData.put("requires_mode", node.getRequiresMode());
+
+                nodesMap.put(node.getId(), nodeData);
+            }
+
+            treeData.put("nodes", nodesMap);
+            treesMap.put(tree.getId(), treeData);
+        }
+
+        // Construir datos de puntos disponibles
+        Map<String, Object> pointsMap = new HashMap<>();
+        var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+        if (playerProgress.isPresent()) {
+            for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
+                String pointType = tree.getPointType();
+                int available = playerProgress.get().getAvailablePoints(pointType);
+                int totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
+
+                Map<String, Object> pointsData = new HashMap<>();
+                pointsData.put("available", available);
+                pointsData.put("total_earned", totalEarned);
+                pointsMap.put(pointType, pointsData);
+            }
+        }
+
+        Map<String, Object> responseData = new HashMap<>();
+        responseData.put("trees", treesMap);
+        responseData.put("points", pointsMap);
+
+        String jsonData = gson.toJson(responseData);
+
+        Map<String, String> payload = Map.of("skill_data", jsonData);
+
+        LOGGER.info("[SKILL_DEBUG] Sending SKILL_DATA_RESPONSE to player: " + player.getName());
+        BridgeMessage response = new PluginBridgeMessage(
+                MessageType.SKILL_DATA_RESPONSE,
+                payload,
+                playerId,
+                replyToId
+        );
+
+        sendMessage(response);
+        LOGGER.info("[SKILL_DEBUG] SKILL_DATA_RESPONSE sent successfully");
+        LOGGER.fine("Sent skill data to player " + player.getName() + " (" + jsonData.length() + " chars)");
+    }
+
+    private void handleRequestSkillSpend(Player player, BridgeMessage message) {
+        UUID playerId = player.getUniqueId();
+        String treeId = message.getPayload().get("tree_id");
+        String nodeId = message.getPayload().get("node_id");
+
+        if (treeId == null || nodeId == null) {
+            sendErrorResponse(message, "Invalid skill spend request", player);
+            return;
+        }
+
+        try {
+            // Obtener el nodo para información
+            var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
+            if (treeOpt.isEmpty()) {
+                sendSkillSpendError(playerId, treeId, nodeId, "SKILL_TREE_NOT_FOUND", 0, 0);
+                return;
+            }
+
+            var tree = treeOpt.get();
+            var nodeOpt = tree.getNodes().stream()
+                    .filter(n -> n.getId().equals(nodeId))
+                    .findFirst();
+
+            if (nodeOpt.isEmpty()) {
+                sendSkillSpendError(playerId, treeId, nodeId, "NODE_NOT_FOUND", 0, 0);
+                return;
+            }
+
+            var node = nodeOpt.get();
+
+            // Intentar gastar puntos
+            var spendResult = plugin.getSkillNodeService().trySpendNode(playerId, treeId, nodeId);
+
+            if (spendResult == com.eventui.core.skill.SpendResult.SUCCESS) {
+                // Obtener el nuevo nivel y estado
+                var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId).orElse(null);
+                if (playerProgress == null) return;
+
+                int newLevel = playerProgress.getNodeLevel(treeId, nodeId);
+                String newState = calculateNodeState(node, newLevel, playerProgress, treeId);
+                int costNextLevel = newLevel >= node.getMaxLevel() ? -1 : node.getCostForLevel(newLevel + 1);
+                int pointsAvailable = playerProgress.getAvailablePoints(tree.getPointType());
+
+                // Enviar actualización
+                com.google.gson.Gson gson = new com.google.gson.Gson();
+                Map<String, Object> updateData = new HashMap<>();
+                updateData.put("tree_id", treeId);
+                updateData.put("node_id", nodeId);
+                updateData.put("new_level", newLevel);
+                updateData.put("new_state", newState);
+                updateData.put("cost_next_level", costNextLevel);
+                updateData.put("points_available", pointsAvailable);
+
+                String jsonData = gson.toJson(updateData);
+                Map<String, String> payload = Map.of("update_data", jsonData);
+
+                BridgeMessage response = new PluginBridgeMessage(
+                        MessageType.SKILL_NODE_UPDATE,
+                        payload,
+                        playerId,
+                        message.getMessageId()
+                );
+
+                sendMessage(response);
+                plugin.getPlayerDataManager().requestSave(playerId, "skill spend: " + nodeId);
+
+                LOGGER.fine("✓ Player " + player.getName() + " spent on " + nodeId + " (level " + newLevel + ")");
+
+            } else {
+                // Error en el gasto
+                var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+                int currentLevel = playerProgress.map(p -> p.getNodeLevel(treeId, nodeId)).orElse(0);
+                int cost = currentLevel >= node.getMaxLevel() ? 0 : node.getCostForLevel(currentLevel + 1);
+                int available = playerProgress.map(p -> p.getAvailablePoints(tree.getPointType())).orElse(0);
+
+                sendSkillSpendError(playerId, treeId, nodeId, spendResult.name(), cost, available);
+
+                LOGGER.fine("Player " + player.getName() + " failed to spend on " + nodeId + ": " + spendResult.name());
+            }
+
+        } catch (Exception e) {
+            LOGGER.severe("Failed to handle REQUEST_SKILL_SPEND: " + e.getMessage());
+            e.printStackTrace();
+            sendSkillSpendError(playerId, treeId, nodeId, "ERROR", 0, 0);
+        }
+    }
+
+    private String calculateNodeState(
+            com.eventui.api.skill.SkillNodeDefinition node,
+            int currentLevel,
+            com.eventui.api.skill.PlayerSkillProgress playerProgress,
+            String treeId
+    ) {
+        if (currentLevel >= node.getMaxLevel()) {
+            return "MAXED";
+        }
+
+        if (currentLevel > 0) {
+            return "PARTIAL";
+        }
+
+        // currentLevel == 0, verificar requisitos
+        if (playerProgress == null) {
+            return "LOCKED"; // Sin progreso, asumir que no cumple requisitos
+        }
+
+        for (var req : node.getRequirements()) {
+            int reqLevel = playerProgress.getNodeLevel(treeId, req.getNodeId());
+            if (reqLevel < req.getMinLevel()) {
+                return "LOCKED";
+            }
+        }
+
+        return "AVAILABLE";
+    }
+
+    private void sendSkillSpendError(UUID playerId, String treeId, String nodeId, String errorType, int cost, int available) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> errorData = new HashMap<>();
+            errorData.put("tree_id", treeId);
+            errorData.put("node_id", nodeId);
+            errorData.put("error", errorType);
+            errorData.put("cost", cost);
+            errorData.put("available", available);
+
+            String jsonData = gson.toJson(errorData);
+            Map<String, String> payload = Map.of("error_data", jsonData);
+
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.SKILL_SPEND_ERROR,
+                    payload,
+                    playerId
+            );
+
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send skill spend error: " + e.getMessage());
         }
     }
 }
