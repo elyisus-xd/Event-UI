@@ -4,7 +4,6 @@ import com.eventui.api.ui.UIElement;
 import com.eventui.fabric.client.bridge.ClientEventBridge;
 import com.eventui.fabric.client.bridge.SkillNodeData;
 import com.eventui.fabric.client.bridge.SkillRequirementData;
-import com.eventui.fabric.client.bridge.SkillTreeData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -14,15 +13,14 @@ import net.minecraft.world.item.Items; // Assuming this is how to get ItemStacks
 import net.minecraft.core.registries.BuiltInRegistries; // For getting Item from ResourceLocation
 import net.minecraft.world.item.Item;
 
-import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.eventui.api.ui.TooltipConfig;
-import com.eventui.fabric.client.ui.sound.UISoundHandler;
+import org.jetbrains.annotations.NotNull;
 
 public class SkillTreeRenderer {
 
@@ -34,22 +32,6 @@ public class SkillTreeRenderer {
     private static final java.util.Set<String> previouslyHoveredNodes =
             java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
 
-    private static TooltipConfig pendingNodeTooltip = null;
-    private static int pendingTooltipMouseX = 0;
-    private static int pendingTooltipMouseY = 0;
-
-    /**
-     * Returns the pending node tooltip built during the last render() call,
-     * then clears it. Returns null if no node was hovered.
-     */
-    public static TooltipConfig consumePendingTooltip() {
-        TooltipConfig tooltip = pendingNodeTooltip;
-        pendingNodeTooltip = null;
-        return tooltip;
-    }
-
-    public static int getPendingTooltipMouseX() { return pendingTooltipMouseX; }
-    public static int getPendingTooltipMouseY() { return pendingTooltipMouseY; }
 
     public static void render(GuiGraphics graphics, Font font,
                               UIElement element, int elementX, int elementY,
@@ -58,10 +40,6 @@ public class SkillTreeRenderer {
                               int mouseX, int mouseY,
                               int screenMouseX, int screenMouseY) {
 
-        // Clear pending tooltip from previous frame
-        pendingNodeTooltip = null;
-        pendingTooltipMouseX = screenMouseX;
-        pendingTooltipMouseY = screenMouseY;
 
         // Paso 1: Verificar si skillDataDirty y resetear
         if (ClientEventBridge.skillDataDirty) {
@@ -184,13 +162,6 @@ public class SkillTreeRenderer {
             }
         }
 
-        // Build tooltip for hovered node
-        if (hoveredNodeId != null) {
-            SkillNodeData hoveredNode = tree.nodes().get(hoveredNodeId);
-            if (hoveredNode != null) {
-                pendingNodeTooltip = buildNodeTooltip(hoveredNode, tree.nodes());
-            }
-        }
 
         // Paso 4: Dibujar líneas de conexión en L (ANTES que los nodos)
         for (Map.Entry<String, SkillNodeData> entry : tree.nodes().entrySet()) {
@@ -203,22 +174,12 @@ public class SkillTreeRenderer {
                 int childCenterX = childPos[0] + nodeSize / 2;
                 int childCenterY = childPos[1] + nodeSize / 2;
 
-                int connectionColor;
-                switch (node.state()) {
-                    case "LOCKED":
-                        connectionColor = connectionColorLocked;
-                        break;
-                    case "AVAILABLE":
-                        connectionColor = connectionColorAvailable;
-                        break;
-                    case "PARTIAL":
-                    case "MAXED":
-                        connectionColor = connectionColorUnlocked;
-                        break;
-                    default:
-                        connectionColor = 0xFF555555; // Default to locked color
-                        break;
-                }
+                int connectionColor = switch (node.state()) {
+                    case "LOCKED" -> connectionColorLocked;
+                    case "AVAILABLE" -> connectionColorAvailable;
+                    case "PARTIAL", "MAXED" -> connectionColorUnlocked;
+                    default -> 0xFF555555; // Default to locked color
+                };
 
                 for (SkillRequirementData requirement : node.requires()) {
                     String requiredNodeId = requirement.nodeId(); // Corrected from requirement.id() to requirement.nodeId()
@@ -353,20 +314,6 @@ public class SkillTreeRenderer {
                 }
             }
 
-            // e) Hover highlight
-            if (isHovered) {
-                graphics.fill(nodePixelX + 1, nodePixelY + 1,
-                        nodePixelX + nodeSize - 1, nodePixelY + nodeSize - 1, 0x40FFFFFF);
-                int highlightColor = 0xFFFFFFBB;
-                graphics.fill(nodePixelX, nodePixelY,
-                        nodePixelX + nodeSize, nodePixelY + 2, highlightColor);
-                graphics.fill(nodePixelX, nodePixelY + nodeSize - 2,
-                        nodePixelX + nodeSize, nodePixelY + nodeSize, highlightColor);
-                graphics.fill(nodePixelX, nodePixelY,
-                        nodePixelX + 2, nodePixelY + nodeSize, highlightColor);
-                graphics.fill(nodePixelX + nodeSize - 2, nodePixelY,
-                        nodePixelX + nodeSize, nodePixelY + nodeSize, highlightColor);
-            }
 
             if (hasTransform) {
                 graphics.pose().popPose();
@@ -384,6 +331,59 @@ public class SkillTreeRenderer {
         // Update hover tracking for next frame
         previouslyHoveredNodes.clear();
         previouslyHoveredNodes.addAll(currentlyHovered);
+
+        // Detectar nodo bajo el cursor y renderizar tooltip vanilla
+        if (context.containsKey("mouseX") && context.containsKey("mouseY")) {
+            int mx = (int) context.get("mouseX");
+            int my = (int) context.get("mouseY");
+            
+            for (SkillNodeData node : tree.nodes().values()) {
+                int[] pos = nodePosMap.get(node.id());
+                if (pos == null) continue;
+                if (mx >= pos[0] && mx <= pos[0] + nodeSize 
+                        && my >= pos[1] && my <= pos[1] + nodeSize) {
+                    // Construir tooltip vanilla
+                    List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
+                    lines.add(net.minecraft.network.chat.Component.literal("§6" + node.displayName()));
+                    lines.add(net.minecraft.network.chat.Component.literal("§7" + node.description()));
+                    lines.add(net.minecraft.network.chat.Component.literal(""));
+                    lines.add(net.minecraft.network.chat.Component.literal(
+                        "§eNivel: §f" + node.currentLevel() + "/" + node.maxLevel()));
+                    if (!"MAXED".equals(node.state()) && node.costNextLevel() > 0) {
+                        lines.add(net.minecraft.network.chat.Component.literal(
+                            "§eCosto siguiente nivel: §f" + node.costNextLevel()));
+                    }
+                    
+                    // Requisitos
+                    List<SkillRequirementData> requires = node.requires();
+                    if (requires != null && !requires.isEmpty()) {
+                        lines.add(net.minecraft.network.chat.Component.literal(""));
+                        lines.add(net.minecraft.network.chat.Component.literal("§7Requisitos:"));
+                        
+                        for (SkillRequirementData req : requires) {
+                            SkillNodeData reqNode = tree.nodes().get(req.nodeId());
+                            String reqText = getString(req, reqNode);
+                            lines.add(net.minecraft.network.chat.Component.literal(reqText));
+                        }
+                    }
+                    
+                    graphics.renderTooltip(font, lines, java.util.Optional.empty(), mx, my);
+                    break;
+                }
+            }
+        }
+    }
+
+    private static @NotNull String getString(SkillRequirementData req, SkillNodeData reqNode) {
+        int reqCurrentLevel = (reqNode != null) ? reqNode.currentLevel() : 0;
+        boolean met = reqCurrentLevel >= req.minLevel();
+
+        String reqName = (reqNode != null) ? reqNode.displayName() : req.nodeId();
+        String checkmark = met ? "§a✔ " : "§c✘ ";
+        String reqText = checkmark + "§f" + reqName
+                + " §7(Nivel " + req.minLevel() + ")"
+                + (met ? "" : " §8[" + reqCurrentLevel + "/" + req.minLevel() + "]");
+        return reqText;
     }
 
     private static int parseHexColor(String hexColor) {
@@ -513,92 +513,4 @@ public class SkillTreeRenderer {
         return null;
     }
 
-    private static TooltipConfig buildNodeTooltip(SkillNodeData node,
-                                                   Map<String, SkillNodeData> allNodes) {
-        List<TooltipConfig.TooltipSection> sections = new ArrayList<>();
-
-        // Section 1: Node name (bold, yellow)
-        sections.add(new TooltipConfig.TooltipSection(
-                TooltipConfig.TooltipSection.SectionType.TEXT,
-                Map.of("content", "§e§l" + node.displayName())
-        ));
-
-        // Section 2: Description (if present)
-        if (node.description() != null && !node.description().isBlank()) {
-            sections.add(new TooltipConfig.TooltipSection(
-                    TooltipConfig.TooltipSection.SectionType.TEXT,
-                    Map.of("content", "§7" + node.description())
-            ));
-        }
-
-        // Section 3: Separator
-        sections.add(new TooltipConfig.TooltipSection(
-                TooltipConfig.TooltipSection.SectionType.SEPARATOR,
-                Map.of()
-        ));
-
-        // Section 4: Current level
-        String levelText;
-        if ("MAXED".equals(node.state())) {
-            levelText = "§fNivel: §a§lMAX §7(" + node.maxLevel() + "/" + node.maxLevel() + ")";
-        } else {
-            levelText = "§fNivel: §a" + node.currentLevel() + " §7/ §f" + node.maxLevel();
-        }
-        sections.add(new TooltipConfig.TooltipSection(
-                TooltipConfig.TooltipSection.SectionType.TEXT,
-                Map.of("content", levelText)
-        ));
-
-        // Section 5: Cost
-        String costText;
-        if ("MAXED".equals(node.state())) {
-            costText = "§7Nivel máximo alcanzado";
-        } else if (node.costNextLevel() > 0) {
-            costText = "§fCosto siguiente: §e" + node.costNextLevel() + " §7punto"
-                    + (node.costNextLevel() == 1 ? "" : "s");
-        } else {
-            costText = "§7Sin costo";
-        }
-        sections.add(new TooltipConfig.TooltipSection(
-                TooltipConfig.TooltipSection.SectionType.TEXT,
-                Map.of("content", costText)
-        ));
-
-        // Section 6+: Requirements (if any)
-        List<SkillRequirementData> requires = node.requires();
-        if (requires != null && !requires.isEmpty()) {
-            sections.add(new TooltipConfig.TooltipSection(
-                    TooltipConfig.TooltipSection.SectionType.SEPARATOR,
-                    Map.of()
-            ));
-            sections.add(new TooltipConfig.TooltipSection(
-                    TooltipConfig.TooltipSection.SectionType.TEXT,
-                    Map.of("content", "§7Requisitos:")
-            ));
-
-            for (SkillRequirementData req : requires) {
-                SkillNodeData reqNode = allNodes.get(req.nodeId());
-                int reqCurrentLevel = (reqNode != null) ? reqNode.currentLevel() : 0;
-                boolean met = reqCurrentLevel >= req.minLevel();
-
-                String reqName = (reqNode != null) ? reqNode.displayName() : req.nodeId();
-                String checkmark = met ? "§a✔ " : "§c✘ ";
-                String reqText = checkmark + "§f" + reqName
-                        + " §7(Nivel " + req.minLevel() + ")"
-                        + (met ? "" : " §8[" + reqCurrentLevel + "/" + req.minLevel() + "]");
-
-                sections.add(new TooltipConfig.TooltipSection(
-                        TooltipConfig.TooltipSection.SectionType.TEXT,
-                        Map.of("content", reqText)
-                ));
-            }
-        }
-
-        return new TooltipConfig(
-                TooltipConfig.RenderType.ADVANCED,
-                null,
-                Map.of("show_tooltip_background", "true"),
-                sections
-        );
-    }
 }

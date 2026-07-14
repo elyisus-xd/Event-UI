@@ -27,7 +27,6 @@ public class UIElementRenderer {
     private final com.eventui.fabric.client.ui.animation.AnimationManager animationManager =
             new com.eventui.fabric.client.ui.animation.AnimationManager();
 
-    private final Map<String, Float> hoverAlphas = new HashMap<>();
 
     private UIElement hoveredElement = null;
     private int lastScreenMouseX = 0;
@@ -81,6 +80,11 @@ public class UIElementRenderer {
         animationManager.tick();
         boolean isHovered = isMouseOver(element, mouseX, mouseY);
 
+        // Don't apply hover effects to SKILL_TREE elements (nodes handle their own hover)
+        if (element.getType() == UIElementType.SKILL_TREE) {
+            isHovered = false;
+        }
+
         if (isHovered) {
 
             boolean hasTooltip = element.getChildren().stream()
@@ -111,13 +115,18 @@ public class UIElementRenderer {
             case ENTITY_RENDER -> renderEntityRender(element, graphics, mouseX, mouseY);
             case ITEM_RENDER   -> renderItemRender(element, graphics);
             case BLOCK_RENDER  -> renderBlockRender(element, graphics);
-            case SKILL_TREE    -> SkillTreeRenderer.render(
-                    graphics, font, element,
-                    element.getX(), element.getY(), element.getWidth(), element.getHeight(),
-                    context,
-                    mouseX, mouseY,
-                    lastScreenMouseX, lastScreenMouseY
-            );
+            case SKILL_TREE    -> {
+                Map<String, Object> skillContext = new HashMap<>(context);
+                skillContext.put("mouseX", mouseX);
+                skillContext.put("mouseY", mouseY);
+                SkillTreeRenderer.render(
+                        graphics, font, element,
+                        element.getX(), element.getY(), element.getWidth(), element.getHeight(),
+                        skillContext,
+                        mouseX, mouseY,
+                        lastScreenMouseX, lastScreenMouseY
+                );
+            }
             default -> LOGGER.warn("Unsupported element type: {}", element.getType());
         }
 
@@ -164,6 +173,11 @@ public class UIElementRenderer {
     private boolean applyHoverTransform(UIElement element, GuiGraphics graphics, boolean isHovered) {
         String hoverAnim = element.getProperties().get("hover_animation");
         if (hoverAnim == null || hoverAnim.isEmpty() || hoverAnim.equals("none")) {
+            return false;
+        }
+        
+        // Don't apply hover transform to SKILL_TREE elements
+        if (element.getType() == UIElementType.SKILL_TREE) {
             return false;
         }
 
@@ -593,9 +607,6 @@ public class UIElementRenderer {
                 poseStack.popPose();
             }
 
-            if (hasEffect(effects)) {
-                renderGlowEffect(element, graphics, elementId, isHovered);
-            }
 
             if (isHovered && !wasHoveredLastFrame(element.getId())) {
                 String hoverSound = element.getProperties().get("hover_sound");
@@ -639,7 +650,7 @@ public class UIElementRenderer {
                 }
             }
 
-            if (isHovered && effects.isEmpty()) {
+            if (isHovered && effects.isEmpty() && element.getType() != UIElementType.SKILL_TREE) {
                 graphics.fill(
                         element.getX(),
                         element.getY(),
@@ -652,7 +663,7 @@ public class UIElementRenderer {
                 hoverAnimationManager.stopAnimation(element.getId() + "_overlay");
             }
 
-            if (effects.isEmpty()) {
+            if (effects.isEmpty() && element.getType() != UIElementType.SKILL_TREE) {
                 if (isHovered) {
                     hoverAnimationManager.startAnimation(element.getId() + "_overlay",
                             new HoverAnimation(HoverAnimation.AnimationType.ZOOM_IN, 150, 1.0f, "ease_out"));
@@ -804,39 +815,7 @@ public class UIElementRenderer {
         }
     }
 
-    private void renderGlowEffect(UIElement element, GuiGraphics graphics,
-                                  String elementId, boolean isHovered) {
 
-        float glowAlpha = hoverAlphas.getOrDefault(elementId + "_glow", 0.0f);
-
-        if (isHovered) {
-            if (glowAlpha < 0.4f) {
-                glowAlpha = Math.min(0.4f, glowAlpha + 0.05f);
-                hoverAlphas.put(elementId + "_glow", glowAlpha);
-            }
-        } else {
-            if (glowAlpha > 0.0f) {
-                glowAlpha = Math.max(0.0f, glowAlpha - 0.05f);
-                hoverAlphas.put(elementId + "_glow", glowAlpha);
-            }
-        }
-
-        if (glowAlpha > 0.01f) {
-            int alpha = (int)(glowAlpha * 150);
-            int glowColor = (alpha << 24) | 0xFFD700;
-            graphics.fill(
-                    element.getX() - 3,
-                    element.getY() - 3,
-                    element.getX() + element.getWidth() + 3,
-                    element.getY() + element.getHeight() + 3,
-                    glowColor
-            );
-        }
-    }
-
-    private boolean hasEffect(List<HoverEffect> effects) {
-        return effects.stream().anyMatch(e -> e.getType().equalsIgnoreCase("glow"));
-    }
 
     private void renderOverlay(UIElement element, GuiGraphics graphics, String overlayTexture) {
         try {

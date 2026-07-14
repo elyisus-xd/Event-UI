@@ -3,12 +3,8 @@ package com.eventui.fabric.client.ui;
 import com.eventui.api.ui.UIConfig;
 import com.eventui.api.ui.UIElement;
 import com.eventui.api.ui.UIElementType;
-import com.eventui.api.ui.TooltipConfig;
 import com.eventui.fabric.client.bridge.ClientEventBridge;
 import com.eventui.fabric.client.bridge.UIStateCache;
-import com.eventui.fabric.client.ui.ClickAnimationManager;
-import com.eventui.fabric.client.ui.SkillTreeRenderer;
-import com.eventui.fabric.client.ui.TooltipRenderer;
 import com.eventui.fabric.client.ui.animation.Easing;
 import com.eventui.fabric.client.ui.sound.UISoundHandler;
 import com.eventui.fabric.client.ui.transition.ScreenTransition;
@@ -219,22 +215,6 @@ public class ConfigurableUIScreen extends Screen {
         graphics.pose().popPose();
 
         renderer.renderPendingTooltips(graphics, this.font, localMouseX, localMouseY, context);
-
-        // Render skill node tooltip if a node is hovered
-        TooltipConfig nodeTooltip = SkillTreeRenderer.consumePendingTooltip();
-        if (nodeTooltip != null) {
-            TooltipRenderer.renderTooltip(
-                    nodeTooltip,
-                    graphics,
-                    this.font,
-                    mouseX,   // screen coordinates (raw, not scaled)
-                    mouseY
-            );
-        }
-
-        if (hasTransform) {
-            graphics.pose().popPose();
-        }
 
         if (activeTransition == ScreenTransition.FADE && transitionProgress < 1.0f) {
             int alpha;
