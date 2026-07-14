@@ -3,10 +3,10 @@ package com.eventui.fabric.client.bridge;
 import com.eventui.api.bridge.BridgeMessage;
 import com.eventui.api.event.EventDefinition;
 import com.eventui.api.event.EventProgress;
+import com.eventui.fabric.client.bridge.ClientEventBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -160,10 +160,101 @@ public class ClientEventCache {
                     oldNode.requires(),
                     oldNode.requiresMode(),
                     oldNode.positionX(),
-                    oldNode.positionY()
+                    oldNode.positionY(),
+                    oldNode.textureOverrideLocked(),
+                    oldNode.textureOverrideAvailable(),
+                    oldNode.textureOverridePartial(),
+                    oldNode.textureOverrideMaxed()
             );
             tree.nodes().put(nodeId, newNode);
             LOGGER.debug("Updated node {}.{} to level {}", treeId, nodeId, newLevel);
+            
+            // Also update available points for the relevant point type
+            if (tree.pointType() != null) {
+                String pointType = tree.pointType();
+                SkillPointsData oldPoints = cachedSkillPoints.get(pointType);
+                int totalEarned = (oldPoints != null) ? oldPoints.totalEarned() : 0;
+                cachedSkillPoints.put(pointType, new SkillPointsData(pointsAvailable, totalEarned));
+                LOGGER.debug("Updated points for type '{}': available={}", pointType, pointsAvailable);
+            }
+
+            // Recalculate states for all nodes in this tree
+            // so neighboring nodes that depend on this node update immediately
+            recalculateAllNodeStates(treeId);
+            ClientEventBridge.skillDataDirty = true;
         }
+    }
+
+    /**
+     * Recalculates the state of every node in a tree based on current node levels.
+     * Called after any node level change so neighboring nodes update immediately
+     * (e.g. a LOCKED node that just became AVAILABLE because its requirement was met).
+     */
+    private void recalculateAllNodeStates(String treeId) {
+        SkillTreeData tree = cachedSkillTrees.get(treeId);
+        if (tree == null) return;
+
+        Map<String, SkillNodeData> nodes = tree.nodes();
+
+        boolean changed = true;
+        int maxPasses = 10; // safety limit to prevent infinite loops
+        int pass = 0;
+        while (changed && pass < maxPasses) {
+            changed = false;
+            pass++;
+            for (Map.Entry<String, SkillNodeData> entry : nodes.entrySet()) {
+                String nodeId = entry.getKey();
+                SkillNodeData node = entry.getValue();
+                String newState = calculateClientNodeState(node, nodes);
+
+                if (!newState.equals(node.state())) {
+                    SkillNodeData updated = new SkillNodeData(
+                            node.id(), node.displayName(), node.description(), node.icon(),
+                            node.maxLevel(), node.currentLevel(), node.costNextLevel(),
+                            newState, node.requires(), node.requiresMode(),
+                            node.positionX(), node.positionY(),
+                            node.textureOverrideLocked(),
+                            node.textureOverrideAvailable(),
+                            node.textureOverridePartial(),
+                            node.textureOverrideMaxed()
+                    );
+                    nodes.put(nodeId, updated);
+                    LOGGER.debug("Pass {}: recalculated state for {}.{}: {} -> {}",
+                            pass, treeId, nodeId, node.state(), newState);
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculates the state of a single node based on its current level
+     * and the levels of its required nodes.
+     */
+    private String calculateClientNodeState(SkillNodeData node,
+                                            Map<String, SkillNodeData> allNodes) {
+        int currentLevel = node.currentLevel();
+
+        if (currentLevel >= node.maxLevel()) return "MAXED";
+        if (currentLevel > 0) return "PARTIAL";
+
+        // currentLevel == 0: check requirements
+        java.util.List<SkillRequirementData> requires = node.requires();
+        if (requires == null || requires.isEmpty()) return "AVAILABLE";
+
+        boolean isAll = !"any".equalsIgnoreCase(node.requiresMode());
+
+        for (SkillRequirementData req : requires) {
+            SkillNodeData reqNode = allNodes.get(req.nodeId());
+            int reqCurrentLevel = (reqNode != null) ? reqNode.currentLevel() : 0;
+            boolean met = reqCurrentLevel >= req.minLevel();
+
+            if (isAll && !met) return "LOCKED";
+            if (!isAll && met) return "AVAILABLE";
+        }
+
+        // All mode: all requirements passed -> AVAILABLE
+        // Any mode: no requirement passed -> LOCKED
+        return isAll ? "AVAILABLE" : "LOCKED";
     }
 }

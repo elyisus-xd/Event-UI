@@ -83,6 +83,7 @@ public class EventViewModel {
             requestEvents();
         });
         LOGGER.info("Bridge subscriptions registered");
+        ClientEventBridge.getInstance().requestSkillData();
     }
 
 

@@ -21,7 +21,7 @@ public class PlayerDataListener implements Listener {
         // Enviar datos de skills al cliente
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             plugin.getEventBridge().sendSkillDataToPlayer(event.getPlayer());
-        }, 10L);
+        }, 60L);
     }
 
     @EventHandler

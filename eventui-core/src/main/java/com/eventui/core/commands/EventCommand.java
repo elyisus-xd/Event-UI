@@ -971,6 +971,13 @@ public class EventCommand implements CommandExecutor {
 
         plugin.getSkillNodeService().grantPoints(target, pointType, amount);
 
+        // Push updated skill data to client immediately
+        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+            if (target.isOnline()) {
+                plugin.getEventBridge().sendSkillDataToPlayer(target);
+            }
+        }, 2L);
+
         if (!(sender instanceof Player player) || !player.getUniqueId().equals(target.getUniqueId())) {
             sender.sendMessage("§aApplied grant: §e" + amount + " §a" + pointType + " to §f" + target.getName());
         }
@@ -1011,6 +1018,15 @@ public class EventCommand implements CommandExecutor {
 
         // Intentar gastar puntos
         var result = plugin.getSkillNodeService().trySpendNode(target.getUniqueId(), treeId, nodeId);
+
+        if (result == com.eventui.core.skill.SpendResult.SUCCESS) {
+            // Push updated skill data to client immediately
+            plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
+                if (target.isOnline()) {
+                    plugin.getEventBridge().sendSkillDataToPlayer(target);
+                }
+            }, 2L);
+        }
 
         if (!(sender instanceof Player player) || !player.getUniqueId().equals(target.getUniqueId())) {
             switch (result) {

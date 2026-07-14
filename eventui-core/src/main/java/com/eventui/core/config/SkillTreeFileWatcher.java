@@ -1,6 +1,6 @@
 package com.eventui.core.config;
 
-import com.eventui.api.ui.UIConfig;
+import com.eventui.api.skill.SkillTreeDefinition;
 import com.eventui.core.EventUIPlugin;
 
 import java.io.File;
@@ -9,52 +9,52 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
-public class UIFileWatcher {
+public class SkillTreeFileWatcher {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI");
-    private static final long POLL_INTERVAL_MS = 1000;
+    private static final long POLL_INTERVAL_MS = 1000;   // check every second
     private static final long DEBOUNCE_MS = 300;
 
     private final EventUIPlugin plugin;
-    private final File uisFolder;
+    private final File skillsFolder;
     private Thread pollThread;
     private volatile boolean running = false;
     private final ScheduledExecutorService debouncer;
     private final Map<String, ScheduledFuture<?>> pending = new HashMap<>();
 
-    public UIFileWatcher(EventUIPlugin plugin) {
+    public SkillTreeFileWatcher(EventUIPlugin plugin) {
         this.plugin = plugin;
-        this.uisFolder = plugin.getUIConfigLoader().getUisDirectory();
+        this.skillsFolder = new File(plugin.getDataFolder(), "skills");
         this.debouncer = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "EventUI-HotReload-Debounce");
+            Thread t = new Thread(r, "EventUI-SkillTreeHotReload-Debounce");
             t.setDaemon(true);
             return t;
         });
     }
 
     public void start() {
-        if (!uisFolder.exists()) {
-            uisFolder.mkdirs();
+        if (!skillsFolder.exists()) {
+            skillsFolder.mkdirs();
         }
 
         running = true;
-        pollThread = new Thread(this::pollLoop, "EventUI-FileWatcher");
+        pollThread = new Thread(this::pollLoop, "EventUI-SkillTreeFileWatcher");
         pollThread.setDaemon(true);
         pollThread.start();
 
-        LOGGER.info("[EventUI] Hot Reload activo (polling), vigilando: "
-                + uisFolder.getAbsolutePath());
+        LOGGER.info("[EventUI] Skill Tree Hot Reload activo (polling), vigilando: "
+                + skillsFolder.getAbsolutePath());
     }
 
     public void stop() {
         running = false;
         if (pollThread != null) pollThread.interrupt();
         debouncer.shutdownNow();
-        LOGGER.info("[EventUI] Hot Reload detenido.");
+        LOGGER.info("[EventUI] Skill Tree Hot Reload detenido.");
     }
 
     private void pollLoop() {
-        // Snapshot inicial para no recargar todo al arrancar
+        // Snapshot inicial de lastModified para no recargar todo al arrancar
         Map<String, Long> lastModified = new HashMap<>();
         File[] initialFiles = listYamlFiles();
         if (initialFiles != null) {
@@ -83,7 +83,7 @@ public class UIFileWatcher {
 
                     if (previousTs != null) { // skip on first detection (startup)
                         String fileName = file.getName();
-                        LOGGER.info("[UIWatcher] Change detected: " + fileName);
+                        LOGGER.info("[SkillTreeWatcher] Change detected: " + fileName);
 
                         ScheduledFuture<?> prev = pending.get(path);
                         if (prev != null && !prev.isDone()) prev.cancel(false);
@@ -99,22 +99,23 @@ public class UIFileWatcher {
     }
 
     private File[] listYamlFiles() {
-        return uisFolder.listFiles((dir, name) ->
+        return skillsFolder.listFiles((dir, name) ->
                 name.endsWith(".yml") || name.endsWith(".yaml"));
     }
 
     private void reloadOnMainThread(File file, String fileName) {
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             try {
-                UIConfig newConfig = plugin.getUIConfigLoader().loadUIConfigFromFile(file);
-                plugin.getUIConfigs().put(newConfig.getId(), newConfig);
-                LOGGER.info("[EventUI] Hot Reload: '"
-                        + newConfig.getId() + "' recargado desde " + fileName);
-                plugin.notifyHotReload(newConfig.getId());
+                SkillTreeDefinition newTree =
+                        plugin.getSkillTreeConfigLoader().loadSkillTreeFromFile(file);
+                plugin.getSkillTreeStorage().registerSkillTree(newTree);
+                LOGGER.info("[EventUI] Skill Tree Hot Reload: '"
+                        + newTree.getId() + "' recargado desde " + fileName);
+                plugin.notifySkillTreeHotReload(newTree.getId());
             } catch (Exception e) {
-                LOGGER.severe("[EventUI] Hot Reload: error en "
+                LOGGER.severe("[EventUI] Skill Tree Hot Reload: error en "
                         + fileName + " - " + e.getMessage());
-                LOGGER.severe("[EventUI] La UI anterior sigue activa"
+                LOGGER.severe("[EventUI] El skill tree anterior sigue activo"
                         + " hasta que el archivo sea válido.");
             }
         });

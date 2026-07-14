@@ -225,7 +225,8 @@ public class ClientEventBridge implements EventBridge {
         registerMessageHandler(MessageType.EVENT_RELOAD_NOTIFICATION, message -> {
             String reason = message.getPayload().get("reason");
             String screenId = message.getPayload().get("screenId");
-            LOGGER.info("[RELOAD_NOTIF] === EVENT_RELOAD_NOTIFICATION === reason='{}', screenId='{}'", reason, screenId);
+            String treeId = message.getPayload().get("treeId");
+            LOGGER.info("[RELOAD_NOTIF] === EVENT_RELOAD_NOTIFICATION === reason='{}', screenId='{}', treeId='{}'", reason, screenId, treeId);
 
             if ("hotreload".equals(reason) && screenId != null) {
                 Minecraft client = Minecraft.getInstance();
@@ -239,6 +240,13 @@ public class ClientEventBridge implements EventBridge {
                         EventUIKeybinds.invalidateCache();
                         RecipeCache.clear();
                     }
+                });
+            } else if ("skilltreereload".equals(reason) && treeId != null) {
+                Minecraft client = Minecraft.getInstance();
+                client.execute(() -> {
+                    LOGGER.info("[RELOAD_NOTIF] Skill tree hot reload: {}", treeId);
+                    // Request skill data again to get the updated tree
+                    requestSkillData();
                 });
             } else {
                 LOGGER.info("[RELOAD_NOTIF] Config reload (non-hotreload), invalidating keybind cache");
@@ -423,26 +431,32 @@ public class ClientEventBridge implements EventBridge {
     }
 
     private void handleSkillDataResponse(BridgeMessage message) {
+        LOGGER.info("[SKILL_DEBUG] ========== handleSkillDataResponse START ==========");
         try {
-            String skillDataPayload = message.getPayload().get("skill_data"); // Obtener el JSON completo
+            String skillDataPayload = message.getPayload().get("skill_data");
 
             if (skillDataPayload == null) {
-                LOGGER.error("Invalid SKILL_DATA_RESPONSE payload: 'skill_data' field missing.");
+                LOGGER.error("[SKILL_DEBUG] Invalid SKILL_DATA_RESPONSE: 'skill_data' field missing.");
+                LOGGER.error("[SKILL_DEBUG] Available keys: {}", message.getPayload().keySet());
                 return;
             }
 
+            LOGGER.info("[SKILL_DEBUG] Payload size: {} chars", skillDataPayload.length());
+            
             Gson gson = new Gson();
-            // Primero, parsear la cadena skillDataPayload completa en un mapa genérico
             Type genericMapType = new TypeToken<Map<String, Object>>() {}.getType();
             Map<String, Object> fullSkillData = gson.fromJson(skillDataPayload, genericMapType);
 
-            // Ahora extraer las partes 'trees' y 'points' de este mapa
-            // Re-serializar las sub-partes a cadenas JSON y luego deserializarlas
+            LOGGER.info("[SKILL_DEBUG] Parsed fullSkillData keys: {}", fullSkillData.keySet());
+
             String treesJson = gson.toJson(fullSkillData.get("trees"));
             String pointsJson = gson.toJson(fullSkillData.get("points"));
 
+            LOGGER.info("[SKILL_DEBUG] Trees JSON: {} chars", treesJson.length());
+            LOGGER.info("[SKILL_DEBUG] Points JSON: {} chars", pointsJson.length());
+
             if (treesJson == null || pointsJson == null) {
-                LOGGER.error("Invalid SKILL_DATA_RESPONSE payload: 'trees' or 'points' sub-field missing after parsing 'skill_data'.");
+                LOGGER.error("[SKILL_DEBUG] Invalid SKILL_DATA_RESPONSE: 'trees' or 'points' missing");
                 return;
             }
 
@@ -452,22 +466,38 @@ public class ClientEventBridge implements EventBridge {
             Map<String, SkillTreeData> trees = gson.fromJson(treesJson, treeMapType);
             Map<String, SkillPointsData> points = gson.fromJson(pointsJson, pointsMapType);
 
+            LOGGER.info("[SKILL_DEBUG] Deserialized {} trees, {} point types", 
+                trees != null ? trees.size() : "null",
+                points != null ? points.size() : "null");
+
             cache.updateSkillData(trees, points);
-            LOGGER.info("✓ Skill data loaded: {} trees, {} point types", trees.size(), points.size());
+            skillDataDirty = true;
+            LOGGER.info("[SKILL_DEBUG] ✓ Skill data cached successfully");
+            LOGGER.info("[SKILL_DEBUG] ========== handleSkillDataResponse END ==========");
 
         } catch (Exception e) {
-            LOGGER.error("Failed to parse SKILL_DATA_RESPONSE", e);
+            LOGGER.error("[SKILL_DEBUG] ✗ Failed to parse SKILL_DATA_RESPONSE", e);
         }
     }
 
     private void handleSkillNodeUpdate(BridgeMessage message) {
         try {
-            String treeId = message.getPayload().get("tree_id");
-            String nodeId = message.getPayload().get("node_id");
-            int newLevel = Integer.parseInt(message.getPayload().get("new_level"));
-            String newState = message.getPayload().get("new_state");
-            int costNextLevel = Integer.parseInt(message.getPayload().get("cost_next_level"));
-            int pointsAvailable = Integer.parseInt(message.getPayload().get("points_available"));
+            String updateDataJson = message.getPayload().get("update_data");
+            if (updateDataJson == null) {
+                LOGGER.error("[SKILL_DEBUG] SKILL_NODE_UPDATE missing 'update_data' key. Keys: {}", 
+                    message.getPayload().keySet());
+                return;
+            }
+            Gson gson = new Gson();
+            Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> updateData = gson.fromJson(updateDataJson, mapType);
+            
+            String treeId = (String) updateData.get("tree_id");
+            String nodeId = (String) updateData.get("node_id");
+            int newLevel = ((Number) updateData.get("new_level")).intValue();
+            String newState = (String) updateData.get("new_state");
+            int costNextLevel = ((Number) updateData.get("cost_next_level")).intValue();
+            int pointsAvailable = ((Number) updateData.get("points_available")).intValue();
 
             cache.updateNodeLevel(treeId, nodeId, newLevel, newState, costNextLevel, pointsAvailable);
             skillDataDirty = true;
@@ -480,7 +510,16 @@ public class ClientEventBridge implements EventBridge {
 
     private void handleSkillSpendError(BridgeMessage message) {
         try {
-            String errorType = message.getPayload().get("error");
+            String errorDataJson = message.getPayload().get("error_data");
+            if (errorDataJson == null) {
+                LOGGER.error("[SKILL_DEBUG] SKILL_SPEND_ERROR missing 'error_data' key.");
+                return;
+            }
+            Gson gson = new Gson();
+            Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
+            Map<String, Object> errorData = gson.fromJson(errorDataJson, mapType);
+            String errorType = (String) errorData.get("error");
+            
             Minecraft client = Minecraft.getInstance();
             client.execute(() -> {
                 if (client.player != null) {
@@ -509,6 +548,21 @@ public class ClientEventBridge implements EventBridge {
 
         sendMessage(message);
         LOGGER.debug("Requested skill spend: {}.{}", treeId, nodeId);
+    }
+
+    public void requestSkillData() {
+        try {
+            UUID playerId = getLocalPlayerId();
+            BridgeMessage request = new BridgeMessageImpl(
+                    MessageType.REQUEST_SKILL_DATA,
+                    Map.of(),
+                    playerId
+            );
+            sendMessage(request);
+            LOGGER.info("[SKILL_DEBUG] Sent REQUEST_SKILL_DATA to server");
+        } catch (Exception e) {
+            LOGGER.warn("[SKILL_DEBUG] Could not request skill data yet: {}", e.getMessage());
+        }
     }
 
     @SuppressWarnings("unchecked")

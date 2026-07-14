@@ -15,6 +15,10 @@ public record SkillNodeData(
         String state,
         List<SkillRequirementData> requires,
         String requiresMode,
-        @SerializedName("position_x") int positionX,
-        @SerializedName("position_y") int positionY
+        int positionX,
+        int positionY,
+        String textureOverrideLocked,
+        String textureOverrideAvailable,
+        String textureOverridePartial,
+        String textureOverrideMaxed
 ) {}

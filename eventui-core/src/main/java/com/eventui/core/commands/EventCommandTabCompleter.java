@@ -132,6 +132,16 @@ public class EventCommandTabCompleter implements TabCompleter {
                     completions = getAvailableSkillTreeIdsWithAll(args[3]);
                 }
             }
+        } else if (args.length == 5) {
+            String subcommand = args[0].toLowerCase();
+
+            if ("skill".equals(subcommand)) {
+                String skillSubcommand = args[1].toLowerCase();
+                if ("spend".equals(skillSubcommand)) {
+                    String treeId = args[3];
+                    completions = getAvailableNodeIds(treeId, args[4]);
+                }
+            }
         }
 
         return completions;
@@ -230,6 +240,18 @@ public class EventCommandTabCompleter implements TabCompleter {
                 .map(tree -> tree.getPointType())
                 .distinct()
                 .filter(type -> type.toLowerCase().startsWith(partial.toLowerCase()))
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
+    private List<String> getAvailableNodeIds(String treeId, String partial) {
+        var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
+        if (treeOpt.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return treeOpt.get().getNodes().stream()
+                .map(node -> node.getId())
+                .filter(id -> id.toLowerCase().startsWith(partial.toLowerCase()))
                 .sorted()
                 .collect(Collectors.toList());
     }

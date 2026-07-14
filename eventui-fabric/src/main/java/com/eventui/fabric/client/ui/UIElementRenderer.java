@@ -1,6 +1,7 @@
 package com.eventui.fabric.client.ui;
 
 import com.eventui.api.ui.*;
+import com.eventui.fabric.client.ui.ClickAnimationManager;
 import com.eventui.fabric.client.ui.sound.UISoundHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -113,7 +114,9 @@ public class UIElementRenderer {
             case SKILL_TREE    -> SkillTreeRenderer.render(
                     graphics, font, element,
                     element.getX(), element.getY(), element.getWidth(), element.getHeight(),
-                    context
+                    context,
+                    mouseX, mouseY,
+                    lastScreenMouseX, lastScreenMouseY
             );
             default -> LOGGER.warn("Unsupported element type: {}", element.getType());
         }
@@ -149,6 +152,7 @@ public class UIElementRenderer {
                 poseStack.popPose();
             }
         }
+
 
 
 
@@ -603,6 +607,38 @@ public class UIElementRenderer {
             }
             updateHoverState(element.getId(), isHovered);
 
+            // Click animation for image buttons
+            float clickProgress = ClickAnimationManager.getInstance().getProgress(element.getId());
+            if (clickProgress > 0f) {
+                String clickAnimType = ClickAnimationManager.getInstance()
+                        .getAnimationType(element.getId());
+                float cx = element.getX() + element.getWidth() / 2f;
+                float cy = element.getY() + element.getHeight() / 2f;
+                float t = 1f - clickProgress;
+
+                switch (clickAnimType) {
+                    case "punch" -> {
+                        float shrink = (float) Math.sin(t * Math.PI) * 0.18f;
+                        float scale = 1f - shrink;
+                        poseStack.pushPose();
+                        poseStack.translate(cx, cy, 0);
+                        poseStack.scale(scale, scale, 1f);
+                        poseStack.translate(-cx, -cy, 0);
+                        // NOTE: must pop after drawing — handled below
+                    }
+                    case "shake" -> {
+                        float offsetX = (float) Math.sin(t * Math.PI * 5) * 3f * clickProgress;
+                        poseStack.pushPose();
+                        poseStack.translate(offsetX, 0, 0);
+                    }
+                    case "bounce" -> {
+                        float offsetY = -(float) Math.abs(Math.sin(t * Math.PI)) * 5f * clickProgress;
+                        poseStack.pushPose();
+                        poseStack.translate(0, offsetY, 0);
+                    }
+                }
+            }
+
             if (isHovered && effects.isEmpty()) {
                 graphics.fill(
                         element.getX(),
@@ -630,6 +666,23 @@ public class UIElementRenderer {
                             element.getY() + element.getHeight(),
                             (overlayAlpha << 24) | 0xFFFFFF
                     );
+                }
+            }
+
+            // Pop click animation transform if active
+            if (clickProgress > 0f) {
+                String clickAnimType = ClickAnimationManager.getInstance()
+                        .getAnimationType(element.getId());
+                if (!"flash".equals(clickAnimType) && !"none".equals(clickAnimType)) {
+                    poseStack.popPose();
+                }
+                // Flash overlay
+                if ("flash".equals(clickAnimType)) {
+                    int flashAlpha = (int)(clickProgress * 160);
+                    graphics.fill(element.getX(), element.getY(),
+                            element.getX() + element.getWidth(),
+                            element.getY() + element.getHeight(),
+                            (flashAlpha << 24) | 0xFFFFFF);
                 }
             }
 

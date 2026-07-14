@@ -859,28 +859,31 @@ public class PluginEventBridge implements EventBridge {
 
         // Construir datos de todos los skill trees
         for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
+            LOGGER.info("[SKILL_DEBUG] Processing tree: " + tree.getId() + " with " + tree.getNodes().size() + " nodes");
             Map<String, Object> treeData = new HashMap<>();
-            treeData.put("display_name", tree.getDisplayName());
-            treeData.put("point_type", tree.getPointType());
+            treeData.put("id", tree.getId());
+            treeData.put("displayName", tree.getDisplayName());
+            treeData.put("pointType", tree.getPointType());
 
             Map<String, Object> nodesMap = new HashMap<>();
             var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
 
             for (var node : tree.getNodes()) {
                 Map<String, Object> nodeData = new HashMap<>();
-                nodeData.put("display_name", node.getDisplayName());
+                nodeData.put("id", node.getId());
+                nodeData.put("displayName", node.getDisplayName());
                 nodeData.put("description", node.getDescription());
                 nodeData.put("icon", node.getIcon());
-                nodeData.put("max_level", node.getMaxLevel());
-                nodeData.put("position_x", node.getPositionX());
-                nodeData.put("position_y", node.getPositionY());
+                nodeData.put("maxLevel", node.getMaxLevel());
+                nodeData.put("positionX", node.getPositionX());
+                nodeData.put("positionY", node.getPositionY());
 
                 int currentLevel = playerProgress.map(p -> p.getNodeLevel(tree.getId(), node.getId())).orElse(0);
-                nodeData.put("current_level", currentLevel);
+                nodeData.put("currentLevel", currentLevel);
 
                 // Calcular costo del siguiente nivel
                 int costNextLevel = currentLevel >= node.getMaxLevel() ? -1 : node.getCostForLevel(currentLevel + 1);
-                nodeData.put("cost_next_level", costNextLevel);
+                nodeData.put("costNextLevel", costNextLevel);
 
                 // Calcular estado del nodo
                 String state = calculateNodeState(node, currentLevel, playerProgress.orElse(null), tree.getId());
@@ -890,12 +893,21 @@ public class PluginEventBridge implements EventBridge {
                 List<Map<String, Object>> requiresList = new ArrayList<>();
                 for (var req : node.getRequirements()) {
                     Map<String, Object> reqData = new HashMap<>();
-                    reqData.put("node_id", req.getNodeId());
-                    reqData.put("min_level", req.getMinLevel());
+                    reqData.put("nodeId", req.getNodeId());
+                    reqData.put("minLevel", req.getMinLevel());
                     requiresList.add(reqData);
                 }
                 nodeData.put("requires", requiresList);
-                nodeData.put("requires_mode", node.getRequiresMode());
+                nodeData.put("requiresMode", node.getRequiresMode());
+
+                // Texture overrides
+                Map<String, String> textureOverrides = node.getTextureOverrides();
+                if (textureOverrides != null && !textureOverrides.isEmpty()) {
+                    nodeData.put("textureOverrideLocked", textureOverrides.get("locked"));
+                    nodeData.put("textureOverrideAvailable", textureOverrides.get("available"));
+                    nodeData.put("textureOverridePartial", textureOverrides.get("partial"));
+                    nodeData.put("textureOverrideMaxed", textureOverrides.get("maxed"));
+                }
 
                 nodesMap.put(node.getId(), nodeData);
             }
@@ -903,6 +915,7 @@ public class PluginEventBridge implements EventBridge {
             treeData.put("nodes", nodesMap);
             treesMap.put(tree.getId(), treeData);
         }
+        LOGGER.info("[SKILL_DEBUG] Built " + treesMap.size() + " trees for player " + player.getName());
 
         // Construir datos de puntos disponibles
         Map<String, Object> pointsMap = new HashMap<>();
@@ -915,7 +928,7 @@ public class PluginEventBridge implements EventBridge {
 
                 Map<String, Object> pointsData = new HashMap<>();
                 pointsData.put("available", available);
-                pointsData.put("total_earned", totalEarned);
+                pointsData.put("totalEarned", totalEarned);
                 pointsMap.put(pointType, pointsData);
             }
         }
@@ -925,6 +938,14 @@ public class PluginEventBridge implements EventBridge {
         responseData.put("points", pointsMap);
 
         String jsonData = gson.toJson(responseData);
+
+        LOGGER.info("[SKILL_DEBUG] ========== SKILL_DATA_RESPONSE ==========");
+        LOGGER.info("[SKILL_DEBUG] Player: " + player.getName());
+        LOGGER.info("[SKILL_DEBUG] Trees: " + treesMap.keySet());
+        LOGGER.info("[SKILL_DEBUG] Points: " + pointsMap.keySet());
+        LOGGER.info("[SKILL_DEBUG] JSON size: " + jsonData.length() + " chars");
+        LOGGER.info("[SKILL_DEBUG] JSON PAYLOAD: " + jsonData);
+        LOGGER.info("[SKILL_DEBUG] ==========================================");
 
         Map<String, String> payload = Map.of("skill_data", jsonData);
 

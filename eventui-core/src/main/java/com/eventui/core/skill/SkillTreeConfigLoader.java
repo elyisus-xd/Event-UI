@@ -88,7 +88,7 @@ public class SkillTreeConfigLoader {
     /**
      * Carga un árbol de habilidades desde un archivo YAML.
      */
-    private SkillTreeDefinition loadSkillTreeFromFile(File file) throws IOException {
+    public SkillTreeDefinition loadSkillTreeFromFile(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             Map<String, Object> data = yaml.load(fis);
             return parseSkillTree(data);

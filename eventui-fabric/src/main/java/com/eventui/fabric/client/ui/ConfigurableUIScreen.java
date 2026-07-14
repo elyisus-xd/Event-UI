@@ -3,8 +3,12 @@ package com.eventui.fabric.client.ui;
 import com.eventui.api.ui.UIConfig;
 import com.eventui.api.ui.UIElement;
 import com.eventui.api.ui.UIElementType;
+import com.eventui.api.ui.TooltipConfig;
 import com.eventui.fabric.client.bridge.ClientEventBridge;
 import com.eventui.fabric.client.bridge.UIStateCache;
+import com.eventui.fabric.client.ui.ClickAnimationManager;
+import com.eventui.fabric.client.ui.SkillTreeRenderer;
+import com.eventui.fabric.client.ui.TooltipRenderer;
 import com.eventui.fabric.client.ui.animation.Easing;
 import com.eventui.fabric.client.ui.sound.UISoundHandler;
 import com.eventui.fabric.client.ui.transition.ScreenTransition;
@@ -76,6 +80,15 @@ public class ConfigurableUIScreen extends Screen {
         ClientEventBridge.getInstance().requestUIState();
         LOGGER.info("Created ConfigurableUIScreen with config: {} ({} events)",
                 config.getId(), events.size());
+        
+        // If this screen contains a SKILL_TREE element, request fresh skill data from server
+        boolean hasSkillTree = uiConfig.getRootElements().stream()
+            .anyMatch(e -> e.getType() == UIElementType.SKILL_TREE);
+        if (hasSkillTree) {
+            ClientEventBridge.getInstance().requestSkillData();
+            LOGGER.info("[SKILL_DEBUG] Screen '{}' has SKILL_TREE, requesting fresh skill data", 
+                config.getId());
+        }
     }
 
     private void parseTransitionConfig() {
@@ -207,6 +220,18 @@ public class ConfigurableUIScreen extends Screen {
 
         renderer.renderPendingTooltips(graphics, this.font, localMouseX, localMouseY, context);
 
+        // Render skill node tooltip if a node is hovered
+        TooltipConfig nodeTooltip = SkillTreeRenderer.consumePendingTooltip();
+        if (nodeTooltip != null) {
+            TooltipRenderer.renderTooltip(
+                    nodeTooltip,
+                    graphics,
+                    this.font,
+                    mouseX,   // screen coordinates (raw, not scaled)
+                    mouseY
+            );
+        }
+
         if (hasTransform) {
             graphics.pose().popPose();
         }
@@ -273,10 +298,13 @@ public class ConfigurableUIScreen extends Screen {
         for (var entry : cachedPoints.entrySet()) {
             Map<String, Object> pointData = new HashMap<>();
             pointData.put("available", entry.getValue().available());
-            pointData.put("total_earned", entry.getValue().totalEarned());
+            pointData.put("totalEarned", entry.getValue().totalEarned());
             skillsMap.put(entry.getKey(), pointData);
         }
         context.put("skills", skillsMap);
+        if (!skillsMap.isEmpty()) {
+            org.slf4j.LoggerFactory.getLogger(getClass()).debug("Added {} skill point types to context", skillsMap.size());
+        }
 
         return context;
     }
@@ -338,6 +366,39 @@ public class ConfigurableUIScreen extends Screen {
             }
         }
 
+        if (element.getType() == UIElementType.SKILL_TREE) {
+            // Check if click lands inside the SKILL_TREE bounding box
+            if (mouseX >= resolvedX && mouseX <= resolvedX + element.getWidth() &&
+                    mouseY >= resolvedY && mouseY <= resolvedY + element.getHeight()) {
+                // Convert to coordinates relative to the tree's top-left corner
+                int localX = mouseX - resolvedX;
+                int localY = mouseY - resolvedY;
+                String clickedNodeId = SkillTreeRenderer.getClickedNodeId(element, localX, localY);
+                if (clickedNodeId != null) {
+                    String treeId = element.getProperties().get("tree_id");
+                    LOGGER.info("[SKILL_DEBUG] Node clicked: {}.{}", treeId, clickedNodeId);
+                    ClientEventBridge.getInstance().requestSkillSpend(treeId, clickedNodeId);
+
+                    // Click animation
+                    String clickAnim = element.getProperties().getOrDefault("click_animation", "none");
+                    if (!"none".equals(clickAnim)) {
+                        int clickDuration = Integer.parseInt(
+                                element.getProperties().getOrDefault("click_animation_duration", "150"));
+                        ClickAnimationManager.getInstance().triggerClick(
+                                "click:" + treeId + ":" + clickedNodeId, clickAnim, clickDuration);
+                    }
+
+                    // Click sound
+                    String clickSound = element.getProperties().get("click_sound");
+                    if (clickSound != null && !clickSound.isEmpty()) {
+                        float vol   = parseFloat(element.getProperties().get("click_sound_volume"),  1.0f);
+                        float pitch = parseFloat(element.getProperties().get("click_sound_pitch"), 1.0f);
+                        UISoundHandler.playSound(clickSound, vol, pitch);
+                    }
+                    return true;
+                }
+            }
+        }
 
         for (UIElement child : element.getChildren()) {
             if (checkElementClickInternal(
@@ -365,6 +426,15 @@ public class ConfigurableUIScreen extends Screen {
             UISoundHandler.playSound(clickSound, volume, pitch);
         } else {
             UISoundHandler.playSound(UISoundHandler.Sounds.BUTTON_CLICK);
+        }
+
+        // Trigger click animation if configured
+        String clickAnim = button.getProperties().getOrDefault("click_animation", "none");
+        if (!"none".equals(clickAnim)) {
+            int clickDuration = Integer.parseInt(
+                    button.getProperties().getOrDefault("click_animation_duration", "150"));
+            ClickAnimationManager.getInstance().triggerClick(
+                    button.getId(), clickAnim, clickDuration);
         }
 
         if (action == null || action.isBlank() || action.equalsIgnoreCase("none")) return;

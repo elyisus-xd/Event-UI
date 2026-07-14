@@ -47,6 +47,7 @@ public class EventUIPlugin extends JavaPlugin {
     private UIConfigManager uiConfigManager;
     private UIStateManager uiStateManager;
     private UIFileWatcher fileWatcher;
+    private SkillTreeFileWatcher skillTreeFileWatcher;
     private PlayerDataManager playerDataManager;
     private com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig;
 
@@ -64,8 +65,6 @@ public class EventUIPlugin extends JavaPlugin {
         this.skillNodeService = new com.eventui.core.skill.SkillNodeService(this);
         this.uiConfigLoader = new UIConfigLoader(getDataFolder());
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
-        this.fileWatcher = new UIFileWatcher(this);
-        this.fileWatcher.start();
         this.uiConfigManager = new UIConfigManager(this);
         this.uiConfigManager.loadConfig();
         this.uiConfigManager.startConfigWatcher();
@@ -79,6 +78,13 @@ public class EventUIPlugin extends JavaPlugin {
         loadEvents();
         loadSkillTrees();
         initializeBridge();
+
+        // Start hot reload watchers
+        this.fileWatcher = new UIFileWatcher(this);
+        this.fileWatcher.start();
+
+        this.skillTreeFileWatcher = new SkillTreeFileWatcher(this);
+        this.skillTreeFileWatcher.start();
         registerTrackers();
         objectiveTracker.buildObjectiveTypeIndex();
         objectiveTracker.initializeActiveEventsIndex();
@@ -126,6 +132,7 @@ public class EventUIPlugin extends JavaPlugin {
         }
 
         if (fileWatcher != null) fileWatcher.stop();
+        if (skillTreeFileWatcher != null) skillTreeFileWatcher.stop();
 
         if (playerDataManager != null) {
             playerDataManager.saveAll();
@@ -251,6 +258,17 @@ public class EventUIPlugin extends JavaPlugin {
                 + " jugadores del hot reload de: " + screenId);
     }
 
+    public void notifySkillTreeHotReload(String treeId) {
+        for (Player player : getServer().getOnlinePlayers()) {
+            Map<String, String> payload = Map.of("reason", "skilltreereload", "treeId", treeId);
+            BridgeMessage message = new PluginBridgeMessage(
+                    MessageType.EVENT_RELOAD_NOTIFICATION, payload, player.getUniqueId());
+            eventBridge.sendMessage(message);
+        }
+        LOGGER.info("[EventUI] Notificados " + getServer().getOnlinePlayers().size()
+                + " jugadores del skill tree hot reload de: " + treeId);
+    }
+
     public EventMessenger getMessenger() {
         return uiConfigManager.getMessenger();
     }
@@ -261,6 +279,7 @@ public class EventUIPlugin extends JavaPlugin {
 
     public Map<String, UIConfig> getUIConfigs() { return uiConfigs; }
     public UIConfigLoader getUIConfigLoader() { return uiConfigLoader; }
+    public SkillTreeConfigLoader getSkillTreeConfigLoader() { return skillTreeConfigLoader; }
     public static EventUIPlugin getInstance() { return instance; }
     public EventStorage getStorage() { return storage; }
     public SkillTreeStorage getSkillTreeStorage() { return skillTreeStorage; }
