@@ -82,8 +82,6 @@ public class ConfigurableUIScreen extends Screen {
             .anyMatch(e -> e.getType() == UIElementType.SKILL_TREE);
         if (hasSkillTree) {
             ClientEventBridge.getInstance().requestSkillData();
-            LOGGER.info("[SKILL_DEBUG] Screen '{}' has SKILL_TREE, requesting fresh skill data", 
-                config.getId());
         }
     }
 
@@ -212,9 +210,9 @@ public class ConfigurableUIScreen extends Screen {
             renderer.render(element, graphics, this.font, localMouseX, localMouseY, context);
         }
 
-        graphics.pose().popPose();
-
         renderer.renderPendingTooltips(graphics, this.font, localMouseX, localMouseY, context);
+
+        graphics.pose().popPose();
 
         if (activeTransition == ScreenTransition.FADE && transitionProgress < 1.0f) {
             int alpha;
@@ -296,6 +294,25 @@ public class ConfigurableUIScreen extends Screen {
             int localX = (int)((mouseX - offsetX) / uiScale);
             int localY = (int)((mouseY - offsetY) / uiScale);
 
+            // Handle skill tree drag start
+            for (UIElement element : uiConfig.getRootElements()) {
+                if (element.getType() == UIElementType.SKILL_TREE) {
+                    int resolvedX = element.getX();
+                    int resolvedY = element.getY();
+                    if (element.getProperties().containsKey("anchor")) {
+                        AnchorResolver.ResolvedPos resolved = 
+                                AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
+                        resolvedX = resolved.x();
+                        resolvedY = resolved.y();
+                    }
+
+                    if (localX >= resolvedX && localX <= resolvedX + element.getWidth() &&
+                            localY >= resolvedY && localY <= resolvedY + element.getHeight()) {
+                        SkillTreeRenderer.handleMousePress(element, (int)mouseX, (int)mouseY, button, resolvedX, resolvedY);
+                    }
+                }
+            }
+
             for (UIElement element : uiConfig.getRootElements()) {
                 if (checkElementClick(element, localX, localY)) return true;
             }
@@ -312,6 +329,72 @@ public class ConfigurableUIScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
+        // Check if mouse is over a SKILL_TREE element
+        int localX = (int)((mouseX - offsetX) / uiScale);
+        int localY = (int)((mouseY - offsetY) / uiScale);
+
+        for (UIElement element : uiConfig.getRootElements()) {
+            if (element.getType() == UIElementType.SKILL_TREE) {
+                int resolvedX = element.getX();
+                int resolvedY = element.getY();
+                if (element.getProperties().containsKey("anchor")) {
+                    AnchorResolver.ResolvedPos resolved = 
+                            AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
+                    resolvedX = resolved.x();
+                    resolvedY = resolved.y();
+                }
+
+                if (localX >= resolvedX && localX <= resolvedX + element.getWidth() &&
+                        localY >= resolvedY && localY <= resolvedY + element.getHeight()) {
+                    boolean ctrlPressed = hasControlDown();
+                    SkillTreeRenderer.handleMouseWheel(element, (int)mouseX, (int)mouseY, 
+                            horizontal, vertical, ctrlPressed);
+                    return true;
+                }
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        // Check if mouse is over a SKILL_TREE element
+        int localX = (int)((mouseX - offsetX) / uiScale);
+        int localY = (int)((mouseY - offsetY) / uiScale);
+
+        for (UIElement element : uiConfig.getRootElements()) {
+            if (element.getType() == UIElementType.SKILL_TREE) {
+                int resolvedX = element.getX();
+                int resolvedY = element.getY();
+                if (element.getProperties().containsKey("anchor")) {
+                    AnchorResolver.ResolvedPos resolved = 
+                            AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
+                    resolvedX = resolved.x();
+                    resolvedY = resolved.y();
+                }
+
+                SkillTreeRenderer.handleMouseDrag(element, (int)mouseX, (int)mouseY, button);
+            }
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // Check if mouse is over a SKILL_TREE element
+        int localX = (int)((mouseX - offsetX) / uiScale);
+        int localY = (int)((mouseY - offsetY) / uiScale);
+
+        for (UIElement element : uiConfig.getRootElements()) {
+            if (element.getType() == UIElementType.SKILL_TREE) {
+                SkillTreeRenderer.handleMouseRelease(element, (int)mouseX, (int)mouseY, button);
+            }
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private boolean checkElementClick(UIElement element, int mouseX, int mouseY) {
@@ -356,7 +439,6 @@ public class ConfigurableUIScreen extends Screen {
                 String clickedNodeId = SkillTreeRenderer.getClickedNodeId(element, localX, localY);
                 if (clickedNodeId != null) {
                     String treeId = element.getProperties().get("tree_id");
-                    LOGGER.info("[SKILL_DEBUG] Node clicked: {}.{}", treeId, clickedNodeId);
                     ClientEventBridge.getInstance().requestSkillSpend(treeId, clickedNodeId);
 
                     // Click animation

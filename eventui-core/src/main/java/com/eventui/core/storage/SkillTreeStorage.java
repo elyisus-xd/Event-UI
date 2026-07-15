@@ -27,7 +27,6 @@ public class SkillTreeStorage {
      */
     public void registerSkillTree(SkillTreeDefinition definition) {
         skillTreeDefinitions.put(definition.getId(), definition);
-        LOGGER.info("Registered skill tree definition: " + definition.getId());
     }
 
     /**
@@ -35,7 +34,6 @@ public class SkillTreeStorage {
      */
     public void registerSkillTrees(Map<String, SkillTreeDefinition> trees) {
         skillTreeDefinitions.putAll(trees);
-        LOGGER.info("Registered " + trees.size() + " skill tree definitions");
     }
 
     /**

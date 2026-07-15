@@ -802,7 +802,7 @@ public class UIElementRenderer {
             float centerY = element.getY() + element.getHeight() / 2f + offsetY;
 
             poseStack.pushPose();
-            poseStack.translate(centerX, centerY, 200f);
+            poseStack.translate(centerX, centerY, -200f);
             poseStack.scale(scale, scale, scale);
             poseStack.translate(-8, -8, 0);
 

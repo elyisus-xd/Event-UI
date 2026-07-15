@@ -39,34 +39,35 @@ public abstract class StaticRecipeRenderer {
         int idx = (int) (time % items.size());
         ItemStack stack = items.get(idx);
         graphics.renderItem(stack, slotX, slotY);
-        if (stack.getCount() > 1) {
-            graphics.renderItemDecorations(font, stack, slotX, slotY);
-        }
+        graphics.renderItemDecorations(font, stack, slotX, slotY);
     }
 
     protected static List<ItemStack> resolveItems(Object raw) {
-        if (raw == null) return List.of();
-
-        if (raw instanceof String string) {
-            return resolveItemsFromString(string);
-        }
-
-        if (raw instanceof CharSequence sequence) {
-            return resolveItemsFromString(sequence.toString());
-        }
-
-        if (raw instanceof Iterable<?> iterable) {
-            List<ItemStack> stacks = new ArrayList<>();
-            for (Object entry : iterable) {
-                if (entry instanceof String string) {
-                    stacks.addAll(resolveItemsFromString(string));
-                } else if (entry instanceof CharSequence sequence) {
-                    stacks.addAll(resolveItemsFromString(sequence.toString()));
-                } else {
-                    LOGGER.warn("Unsupported item entry type: {}", entry == null ? "null" : entry.getClass().getName());
-                }
+        switch (raw) {
+            case null -> {
+                return List.of();
             }
-            return stacks;
+            case String string -> {
+                return resolveItemsFromString(string);
+            }
+            case CharSequence sequence -> {
+                return resolveItemsFromString(sequence.toString());
+            }
+            case Iterable<?> iterable -> {
+                List<ItemStack> stacks = new ArrayList<>();
+                for (Object entry : iterable) {
+                    if (entry instanceof String string) {
+                        stacks.addAll(resolveItemsFromString(string));
+                    } else if (entry instanceof CharSequence sequence) {
+                        stacks.addAll(resolveItemsFromString(sequence.toString()));
+                    } else {
+                        LOGGER.warn("Unsupported item entry type: {}", entry == null ? "null" : entry.getClass().getName());
+                    }
+                }
+                return stacks;
+            }
+            default -> {
+            }
         }
 
         LOGGER.warn("Unsupported item data type: {}", raw.getClass().getName());
@@ -87,10 +88,6 @@ public abstract class StaticRecipeRenderer {
             try {
                 ResourceLocation location = ResourceLocation.parse(itemId);
                 Item item = BuiltInRegistries.ITEM.get(location);
-                if (item == null) {
-                    LOGGER.warn("Item not found for id: {}", itemId);
-                    continue;
-                }
                 stacks.add(new ItemStack(item));
             } catch (Exception e) {
                 LOGGER.warn("Failed to resolve item '{}': {}", itemId, e.getMessage());

@@ -55,7 +55,7 @@ public class EventUIPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        LOGGER.info("  EventUI Plugin initialization...");
+        LOGGER.info("EventUI v" + getDescription().getVersion() + " initializing...");
         saveDefaultConfig();
         this.adventure = BukkitAudiences.create(this);
         this.configLoader = new EventConfigLoader(getDataFolder());
@@ -110,11 +110,9 @@ public class EventUIPlugin extends JavaPlugin {
                         playerDataManager.savePlayerData(player.getUniqueId())
                 ), 2400L, 2400L); // delay inicial = 2 min, intervalo = 2 min
 
-        LOGGER.info("✓ Auto-save scheduled every 2 minutes");
-
-        LOGGER.info("✓ EventUI enabled — " + storage.getAllEventDefinitions().size()
-                + " events, " + skillTreeStorage.getSkillTreeCount() + " skill tree(s), "
-                + uiConfigs.size() + " UIs loaded");
+        LOGGER.info("EventUI enabled — " + storage.getAllEventDefinitions().size()
+                + " events, " + skillTreeStorage.getSkillTreeCount()
+                + " skill tree(s), " + uiConfigs.size() + " UIs");
     }
 
     public RewardManager getRewardManager() {
@@ -161,11 +159,6 @@ public class EventUIPlugin extends JavaPlugin {
 
             storage.registerEvents(events);
 
-            LOGGER.info("Successfully loaded events:");
-            events.values().forEach(event ->
-                    LOGGER.info("  - " + event.getId() + ": " + event.getDisplayName())
-            );
-
         } catch (IllegalStateException e) {
             LOGGER.warning("⚠ Dependency cycle detected in event configuration:");
             LOGGER.warning("  Error: " + e.getMessage());
@@ -185,9 +178,6 @@ public class EventUIPlugin extends JavaPlugin {
 
             if (!skillTrees.isEmpty()) {
                 skillTreeStorage.registerSkillTrees(skillTrees);
-                skillTrees.values().forEach(tree ->
-                        LOGGER.info("  - " + tree.getId() + ": " + tree.getDisplayName())
-                );
             }
 
         } catch (IllegalStateException e) {
@@ -203,13 +193,11 @@ public class EventUIPlugin extends JavaPlugin {
 
     private void initializeBridge() {
         this.eventBridge = new PluginEventBridge(this);
-        LOGGER.info("EventBridge initialized");
     }
 
     private void registerTrackers() {
         this.objectiveTracker = new ObjectiveTracker(this);
         getServer().getPluginManager().registerEvents(objectiveTracker, this);
-        LOGGER.info("Registered objective trackers");
     }
 
     private void registerCommands() {
@@ -218,7 +206,6 @@ public class EventUIPlugin extends JavaPlugin {
             EventCommand executor = new EventCommand(this);
             command.setExecutor(executor);
             command.setTabCompleter(new EventCommandTabCompleter(this));
-            LOGGER.info("Registered commands with tab completion");
         } else {
             LOGGER.warning("Failed to register eventui command - command not found in plugin.yml!");
         }

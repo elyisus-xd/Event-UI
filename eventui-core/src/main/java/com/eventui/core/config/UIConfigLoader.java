@@ -38,8 +38,6 @@ public class UIConfigLoader {
             return configs;
         }
 
-        LOGGER.info("Found " + allFiles.size() + " UI file(s) across all directories");
-
         int loaded = 0;
         int failed = 0;
 

@@ -859,7 +859,6 @@ public class PluginEventBridge implements EventBridge {
 
         // Construir datos de todos los skill trees
         for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
-            LOGGER.info("[SKILL_DEBUG] Processing tree: " + tree.getId() + " with " + tree.getNodes().size() + " nodes");
             Map<String, Object> treeData = new HashMap<>();
             treeData.put("id", tree.getId());
             treeData.put("displayName", tree.getDisplayName());
@@ -915,7 +914,6 @@ public class PluginEventBridge implements EventBridge {
             treeData.put("nodes", nodesMap);
             treesMap.put(tree.getId(), treeData);
         }
-        LOGGER.info("[SKILL_DEBUG] Built " + treesMap.size() + " trees for player " + player.getName());
 
         // Construir datos de puntos disponibles
         Map<String, Object> pointsMap = new HashMap<>();
@@ -937,19 +935,27 @@ public class PluginEventBridge implements EventBridge {
         responseData.put("trees", treesMap);
         responseData.put("points", pointsMap);
 
-        String jsonData = gson.toJson(responseData);
+        // Add connections config
+        var connectionsConfig = plugin.getUIConfigManager().getConnectionsConfig();
+        Map<String, Object> connectionsMap = new HashMap<>();
+        connectionsMap.put("type", connectionsConfig.getType().toString().toLowerCase());
+        connectionsMap.put("thickness", connectionsConfig.getThickness());
+        connectionsMap.put("color", connectionsConfig.getColor());
+        connectionsMap.put("opacity", connectionsConfig.getOpacity());
+        connectionsMap.put("dashed", connectionsConfig.isDashed());
+        connectionsMap.put("glow", connectionsConfig.hasGlow());
+        connectionsMap.put("animated", connectionsConfig.isAnimated());
+        connectionsMap.put("lockedColor", connectionsConfig.getLockedColor());
+        connectionsMap.put("availableColor", connectionsConfig.getAvailableColor());
+        connectionsMap.put("partialColor", connectionsConfig.getPartialColor());
+        connectionsMap.put("maxedColor", connectionsConfig.getMaxedColor());
+        connectionsMap.put("showOnHover", connectionsConfig.showOnHover());
+        responseData.put("connections", connectionsMap);
 
-        LOGGER.info("[SKILL_DEBUG] ========== SKILL_DATA_RESPONSE ==========");
-        LOGGER.info("[SKILL_DEBUG] Player: " + player.getName());
-        LOGGER.info("[SKILL_DEBUG] Trees: " + treesMap.keySet());
-        LOGGER.info("[SKILL_DEBUG] Points: " + pointsMap.keySet());
-        LOGGER.info("[SKILL_DEBUG] JSON size: " + jsonData.length() + " chars");
-        LOGGER.info("[SKILL_DEBUG] JSON PAYLOAD: " + jsonData);
-        LOGGER.info("[SKILL_DEBUG] ==========================================");
+        String jsonData = gson.toJson(responseData);
 
         Map<String, String> payload = Map.of("skill_data", jsonData);
 
-        LOGGER.info("[SKILL_DEBUG] Sending SKILL_DATA_RESPONSE to player: " + player.getName());
         BridgeMessage response = new PluginBridgeMessage(
                 MessageType.SKILL_DATA_RESPONSE,
                 payload,
@@ -958,7 +964,6 @@ public class PluginEventBridge implements EventBridge {
         );
 
         sendMessage(response);
-        LOGGER.info("[SKILL_DEBUG] SKILL_DATA_RESPONSE sent successfully");
         LOGGER.fine("Sent skill data to player " + player.getName() + " (" + jsonData.length() + " chars)");
     }
 

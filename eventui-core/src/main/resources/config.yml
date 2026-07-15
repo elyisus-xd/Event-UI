@@ -63,6 +63,23 @@ skills:
       point_type: "combat_points"
       only_on_level_up: true
 
+  connections:
+    style:
+      type: "curved"           # "straight" | "curved" | "orthogonal"
+      thickness: 2             # 1-5
+      color: "#FFFFFF"
+      opacity: 0.7            # 0.0-1.0
+      dashed: false
+    effects:
+      glow: true               # brillo en conexiones activas
+      animated: false         # flujo animado
+    state_colors:
+      locked: "#555555"
+      available: "#00FF00"
+      partial: "#FFFF00"
+      maxed: "#00FFFF"
+    show_on_hover: true       # resaltar conexiones al hacer hover
+
 # ⚠️ Las secciones tracking y debug no están implementadas aún
 
 tracking:

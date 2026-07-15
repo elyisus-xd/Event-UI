@@ -30,12 +30,10 @@ public class EventStorage {
 
         public void registerEvent(EventDefinition definition) {
         eventDefinitions.put(definition.getId(), definition);
-        LOGGER.info("Registered event definition: " + definition.getId());
     }
 
         public void registerEvents(Map<String, EventDefinition> events) {
         eventDefinitions.putAll(events);
-        LOGGER.info("Registered " + events.size() + " event definitions");
     }
 
         public Optional<EventDefinition> getEventDefinition(String eventId) {

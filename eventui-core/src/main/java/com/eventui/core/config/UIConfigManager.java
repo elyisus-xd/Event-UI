@@ -4,6 +4,7 @@ import com.eventui.api.ui.UIConfig;
 import com.eventui.core.EventUIPlugin;
 import com.eventui.core.messaging.EventMessageConfig;
 import com.eventui.core.messaging.EventMessenger;
+import com.eventui.core.skill.SkillConnectionsConfig;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.io.File;
@@ -26,12 +27,13 @@ public class UIConfigManager {
     private boolean fallbackEnabled;
     private boolean eventsAlwaysActive;
 
+    private EventMessageConfig messageConfig;
+    private SkillConnectionsConfig connectionsConfig;
+    private EventMessenger messenger;
+
     private ScheduledExecutorService watcherExecutor;
     private ScheduledFuture<?> watcherTask;
     private long lastConfigModified = 0L;
-
-    private EventMessageConfig messageConfig;
-    private EventMessenger messenger;
 
     public UIConfigManager(EventUIPlugin plugin) {
         this.plugin = plugin;
@@ -49,8 +51,6 @@ public class UIConfigManager {
 
         if (mode == UIMode.CUSTOM) {
             validateCustomMode();
-        } else {
-            LOGGER.info("✓ UI config loaded: mode=" + mode);
         }
 
         // ── Messages ──
@@ -88,10 +88,25 @@ public class UIConfigManager {
             this.messenger.reload(messageConfig);
         }
 
-        LOGGER.info("✓ Messages config loaded (enabled=" + messageConfig.isEnabled() + ")");
+        // ── Skill Connections ──
+        this.connectionsConfig = new SkillConnectionsConfig(
+                config.getString("skills.connections.style.type", "curved"),
+                config.getInt("skills.connections.style.thickness", 2),
+                config.getString("skills.connections.style.color", "#FFFFFF"),
+                (float) config.getDouble("skills.connections.style.opacity", 0.7),
+                config.getBoolean("skills.connections.style.dashed", false),
+                config.getBoolean("skills.connections.effects.glow", true),
+                config.getBoolean("skills.connections.effects.animated", false),
+                config.getString("skills.connections.state_colors.locked", "#555555"),
+                config.getString("skills.connections.state_colors.available", "#00FF00"),
+                config.getString("skills.connections.state_colors.partial", "#FFFF00"),
+                config.getString("skills.connections.state_colors.maxed", "#00FFFF"),
+                config.getBoolean("skills.connections.show_on_hover", true)
+        );
     }
 
     public EventMessenger getMessenger() { return messenger; }
+    public SkillConnectionsConfig getConnectionsConfig() { return connectionsConfig; }
 
 
     public boolean isEventsAlwaysActive() {
@@ -126,9 +141,6 @@ public class UIConfigManager {
                         "Custom UI '" + customScreenId + "' not found and fallback is disabled"
                 );
             }
-        } else {
-            LOGGER.info("✓ UI config loaded: mode=CUSTOM, screen=" + customScreenId
-                    + " (" + uiConfig.getRootElements().size() + " elements)");
         }
     }
 
@@ -231,8 +243,6 @@ public class UIConfigManager {
                 LOGGER.severe("Error in config.yml watcher: " + e.getMessage());
             }
         }, 2, 2, TimeUnit.SECONDS);
-
-        LOGGER.info("✓ config.yml watcher started (polling every 2s)");
     }
 
         public void stopConfigWatcher() {

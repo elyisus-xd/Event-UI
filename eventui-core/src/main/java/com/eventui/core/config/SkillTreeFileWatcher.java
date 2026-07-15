@@ -41,9 +41,6 @@ public class SkillTreeFileWatcher {
         pollThread = new Thread(this::pollLoop, "EventUI-SkillTreeFileWatcher");
         pollThread.setDaemon(true);
         pollThread.start();
-
-        LOGGER.info("[EventUI] Skill Tree Hot Reload activo (polling), vigilando: "
-                + skillsFolder.getAbsolutePath());
     }
 
     public void stop() {

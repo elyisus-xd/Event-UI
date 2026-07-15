@@ -31,8 +31,6 @@ public class PluginNetworkHandler implements PluginMessageListener {
         private void registerChannel() {
         plugin.getServer().getMessenger().registerIncomingPluginChannel(plugin, CHANNEL, this);
         plugin.getServer().getMessenger().registerOutgoingPluginChannel(plugin, CHANNEL);
-
-        LOGGER.info("Registered plugin messaging channel: " + CHANNEL);
     }
 
     @Override

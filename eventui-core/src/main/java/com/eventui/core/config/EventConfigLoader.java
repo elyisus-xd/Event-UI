@@ -137,8 +137,6 @@ public class EventConfigLoader {
                 }
             }
         }
-
-        LOGGER.info("✓ Dependency graph validated: no cycles detected");
     }
 
         private boolean hasCycleDFS(

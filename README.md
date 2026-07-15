@@ -7,7 +7,7 @@ Sistema de UI y misiones completamente configurable para Minecraft 1.21.1 (Fabri
 EventUI está diseñado con una arquitectura desacoplada de tres capas:
 
 - **eventui-common**: Contratos e interfaces compartidas.
-- **eventui-core**: Lógica de misiones, estados y eventos sin depender de minecraft.
+- **eventui-core**: Lógica de misiones, estados y eventos.
 - **eventui-fabric**: Adaptador Fabric + renderizado de UI.
 
 ## 🚀 Requisitos

@@ -41,9 +41,6 @@ public class UIFileWatcher {
         pollThread = new Thread(this::pollLoop, "EventUI-FileWatcher");
         pollThread.setDaemon(true);
         pollThread.start();
-
-        LOGGER.info("[EventUI] Hot Reload activo (polling), vigilando: "
-                + uisFolder.getAbsolutePath());
     }
 
     public void stop() {

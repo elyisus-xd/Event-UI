@@ -21,6 +21,7 @@ public class ClientEventCache {
     private final Map<UUID, CompletableFuture<?>> pendingRequests;
     private final Map<String, SkillTreeData> cachedSkillTrees;
     private final Map<String, SkillPointsData> cachedSkillPoints;
+    private SkillConnectionsConfig connectionsConfig;
 
     public ClientEventCache() {
         this.eventDefinitions = new ConcurrentHashMap<>();
@@ -29,6 +30,7 @@ public class ClientEventCache {
         this.uiConfigs = new ConcurrentHashMap<>();
         this.cachedSkillTrees = new ConcurrentHashMap<>();
         this.cachedSkillPoints = new ConcurrentHashMap<>();
+        this.connectionsConfig = SkillConnectionsConfig.defaults();
     }
 
     public void cacheUIConfig(String uiId, String uiDataJson) {
@@ -141,6 +143,14 @@ public class ClientEventCache {
 
     public Map<String, SkillPointsData> getCachedSkillPoints() {
         return new ConcurrentHashMap<>(cachedSkillPoints);
+    }
+
+    public SkillConnectionsConfig getConnectionsConfig() {
+        return connectionsConfig;
+    }
+
+    public void setConnectionsConfig(SkillConnectionsConfig config) {
+        this.connectionsConfig = config;
     }
 
     public void updateNodeLevel(String treeId, String nodeId, int newLevel, String newState,

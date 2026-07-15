@@ -79,6 +79,10 @@ public class TooltipRenderer {
 
     private static void renderAdvancedTooltipNative(TooltipConfig config, GuiGraphics graphics,
                                                     Font font, int mouseX, int mouseY) {
+        var poseStack = graphics.pose();
+        poseStack.pushPose();
+        poseStack.translate(0, 0, 400f);
+
         TooltipDimensions dims = calculateTooltipDimensions(config, font);
 
         int screenWidth  = Minecraft.getInstance().getWindow().getGuiScaledWidth();
@@ -102,6 +106,8 @@ public class TooltipRenderer {
                     contentX, currentY, dims.width - 16);
             currentY += sectionHeight + 2;
         }
+
+        poseStack.popPose();
     }
 
 
