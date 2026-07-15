@@ -934,8 +934,14 @@ public class EventCommand implements CommandExecutor {
         sender.sendMessage("§6[Active Point Sources]");
         if (sourcesConfig.isXpConversionEnabled()) {
             int levelsPerPoint = sourcesConfig.getLevelsPerPoint();
-            String pointType = sourcesConfig.getXpPointType();
-            sender.sendMessage("§eXP Conversion: §aENABLED §7— cada " + levelsPerPoint + " nivel(es) → 1 " + pointType);
+            var pointTypes = sourcesConfig.getXpPointTypes();
+            var pointDist = sourcesConfig.getXpPointDistribution();
+            if (pointDist != null && !pointDist.isEmpty()) {
+                sender.sendMessage("§eXP Conversion: §aENABLED §7— cada " + levelsPerPoint + " nivel(es) → " + pointDist);
+            } else {
+                String pointType = pointTypes.isEmpty() ? "unknown" : pointTypes.getFirst();
+                sender.sendMessage("§eXP Conversion: §aENABLED §7— cada " + levelsPerPoint + " nivel(es) → 1 " + pointType);
+            }
         } else {
             sender.sendMessage("§eXP Conversion: §cDISABLED");
         }

@@ -15,63 +15,38 @@ public class SkillPointsListener implements Listener {
 
     private final EventUIPlugin plugin;
     private final SkillSourcesConfig config;
-    
+    private final PointSourceManager pointSourceManager;
+
     // Accumulator for leftover levels when levels_per_point > 1
     private final Map<UUID, Integer> levelAccumulator = new HashMap<>();
 
-    public SkillPointsListener(EventUIPlugin plugin, SkillSourcesConfig config) {
+    public SkillPointsListener(EventUIPlugin plugin, SkillSourcesConfig config, PointSourceManager pointSourceManager) {
         this.plugin = plugin;
         this.config = config;
+        this.pointSourceManager = pointSourceManager;
     }
 
     @EventHandler
     public void onPlayerLevelChange(PlayerLevelChangeEvent event) {
-        // 1. Verify XP conversion is enabled
-        if (!config.isXpConversionEnabled()) {
-            return;
-        }
-
-        // 2. If only_on_level_up, ignore when level DECREASES
-        if (config.isOnlyOnLevelUp() && event.getNewLevel() <= event.getOldLevel()) {
-            return;
-        }
-
-        // 3. Calculate how many levels were gained in this event
-        int levelsGained = event.getNewLevel() - event.getOldLevel();
-        if (levelsGained <= 0) {
-            return;
-        }
-
-        // 4. Calculate points to grant using levels_per_point
-        int pointsToGrant = calculatePoints(event.getPlayer().getUniqueId(), levelsGained);
-        if (pointsToGrant <= 0) {
-            return;
-        }
-
-        // 5. Grant the points
-        String pointType = config.getXpPointType();
-        var skillProgress = plugin.getSkillProgressStorage()
-            .getOrCreateProgress(event.getPlayer().getUniqueId());
-        skillProgress.addEarnedPoints(pointType, pointsToGrant);
-
-        // 6. Send message to player (using EventMessenger.sendPointsGranted)
-        plugin.getMessenger().sendPointsGranted(event.getPlayer(), pointsToGrant, pointType);
-
-        // 7. Persist data
-        plugin.getPlayerDataManager().requestSave(
-            event.getPlayer().getUniqueId(), "xp conversion: +" + pointsToGrant);
+        // Delegate to PointSourceManager for XP conversion
+        pointSourceManager.handleXpGain(
+            event.getPlayer(),
+            event.getNewLevel() - event.getOldLevel(),
+            event.getNewLevel() > event.getOldLevel()
+        );
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         // Clean up accumulator when player leaves
         levelAccumulator.remove(event.getPlayer().getUniqueId());
+        pointSourceManager.cleanup();
     }
 
     /**
      * Calculate points to grant based on levels gained and levels_per_point configuration.
      * Handles accumulation when levels_per_point > 1.
-     * 
+     *
      * Example: if levels_per_point = 5:
      *   - Player gains 3 levels: accumulated = 3, points = 0 (store for next time)
      *   - Player gains 2 levels: accumulated = 5, points = 1, reset accumulator

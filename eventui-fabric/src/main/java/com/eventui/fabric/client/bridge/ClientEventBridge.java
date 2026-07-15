@@ -490,23 +490,29 @@ public class ClientEventBridge implements EventBridge {
         try {
             String updateDataJson = message.getPayload().get("update_data");
             if (updateDataJson == null) {
-                LOGGER.error("SKILL_NODE_UPDATE missing 'update_data' key. Keys: {}", 
+                LOGGER.error("SKILL_NODE_UPDATE missing 'update_data' key. Keys: {}",
                     message.getPayload().keySet());
                 return;
             }
             Gson gson = new Gson();
             Type mapType = new TypeToken<Map<String, Object>>() {}.getType();
             Map<String, Object> updateData = gson.fromJson(updateDataJson, mapType);
-            
-            String treeId = (String) updateData.get("tree_id");
-            String nodeId = (String) updateData.get("node_id");
-            int newLevel = ((Number) updateData.get("new_level")).intValue();
-            String newState = (String) updateData.get("new_state");
-            int costNextLevel = ((Number) updateData.get("cost_next_level")).intValue();
-            int pointsAvailable = ((Number) updateData.get("points_available")).intValue();
+
+            String treeId        = (String) updateData.get("tree_id");
+            String nodeId        = (String) updateData.get("node_id");
+            int newLevel         = ((Number) updateData.get("new_level")).intValue();
+            String newState      = (String) updateData.get("new_state");
+            int costNextLevel    = ((Number) updateData.get("cost_next_level")).intValue();
+            int pointsAvailable  = ((Number) updateData.get("points_available")).intValue();
 
             cache.updateNodeLevel(treeId, nodeId, newLevel, newState, costNextLevel, pointsAvailable);
             skillDataDirty = true;
+
+            // Trigger the click animation now that the server confirmed success
+            Minecraft.getInstance().execute(() ->
+                com.eventui.fabric.client.ui.SkillTreeRenderer.confirmSpend(treeId, nodeId, "punch", 150)
+            );
+
             LOGGER.debug("Node updated: {}.{} → level {}", treeId, nodeId, newLevel);
 
         } catch (Exception e) {
@@ -527,6 +533,14 @@ public class ClientEventBridge implements EventBridge {
             String errorType = (String) errorData.get("error");
             LOGGER.warn("Skill spend error: {}", errorType);
 
+            String nodeId = errorData.containsKey("node_id") ? (String) errorData.get("node_id") : null;
+            String treeId = errorData.containsKey("tree_id") ? (String) errorData.get("tree_id") : null;
+            if (treeId != null && nodeId != null) {
+                Minecraft.getInstance().execute(() ->
+                    com.eventui.fabric.client.ui.SkillTreeRenderer.cancelSpend(treeId, nodeId)
+                );
+            }
+
         } catch (Exception e) {
             LOGGER.error("Failed to parse SKILL_SPEND_ERROR", e);
         }
@@ -544,6 +558,8 @@ public class ClientEventBridge implements EventBridge {
                 payload,
                 playerId
         );
+
+        com.eventui.fabric.client.ui.SkillTreeRenderer.markPendingSpend(treeId, nodeId);
 
         sendMessage(message);
         LOGGER.debug("Requested skill spend: {}.{}", treeId, nodeId);

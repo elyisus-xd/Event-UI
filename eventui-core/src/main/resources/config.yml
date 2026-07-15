@@ -57,11 +57,125 @@ messages:
 
 skills:
   point_sources:
+    # ── XP Conversion ──────────────────────────────────────────
     xp_conversion:
       enabled: true
       levels_per_point: 1
-      point_type: "combat_points"
+      point_type: "skill_points"
       only_on_level_up: true
+
+    # ── Mob Kill ─────────────────────────────────────────────
+    mob_kill:
+      enabled: true
+      point_type: "combat_points"
+      base_points: 1
+      # point_distribution allows awarding multiple point types with different amounts
+      # If point_distribution is set, it overrides point_type and base_points
+      point_distribution:
+        skill_points: 1      # 1 skill point per kill
+        combat_points: 2     # 2 combat points per kill
+        gathering_points: 0.5 # 0.5 gathering points per kill
+      multipliers:
+        minecraft:zombie: 1
+        minecraft:skeleton: 1
+        minecraft:creeper: 2
+        minecraft:spider: 1
+        minecraft:enderman: 3
+        minecraft:wither_skeleton: 5
+        minecraft:ender_dragon: 50
+        minecraft:wither: 30
+        "#minecraft:bosses": 40
+      natural_only: true
+      cooldowns_per_mob:
+        minecraft:ender_dragon: 3600
+        minecraft:wither: 3600
+
+    # ── Player Kill ───────────────────────────────────────────
+    player_kill:
+      enabled: true
+      point_type: "combat_points"
+      points_per_kill: 5
+      cooldown_per_victim_seconds: 300
+
+    # ── Block Mine ───────────────────────────────────────────
+    block_mine:
+      enabled: true
+      point_type: "gathering_points"
+      base_points: 1
+      multipliers:
+        minecraft:diamond_ore: 5
+        minecraft:iron_ore: 1
+        minecraft:gold_ore: 2
+        minecraft:ancient_debris: 10
+        minecraft:deepslate_diamond_ore: 5
+        minecraft:deepslate_iron_ore: 1
+        "#minecraft:logs": 1
+      require_correct_tool: true
+      cooldown_per_block_seconds: 0
+
+    # ── Fishing ───────────────────────────────────────────────
+    fishing:
+      enabled: true
+      point_type: "gathering_points"
+      base_points: 1
+      multipliers:
+        "#minecraft:fishes": 1
+        minecraft:treasure: 5
+      luck_bonus: true
+
+    # ── Crop Harvest ─────────────────────────────────────────
+    crop_harvest:
+      enabled: true
+      point_type: "gathering_points"
+      base_points: 1
+      multipliers:
+        minecraft:wheat: 1
+        minecraft:carrots: 1
+        minecraft:potatoes: 1
+        minecraft:beetroots: 1
+        minecraft:nether_wart: 3
+        minecraft:cocoa: 2
+      require_mature: true
+      manual_only: false
+
+    # ── Animal Breed ─────────────────────────────────────────
+    animal_breed:
+      enabled: true
+      point_type: "gathering_points"
+      base_points: 2
+      multipliers:
+        "#minecraft:passive": 2
+        minecraft:horse: 3
+        minecraft:donkey: 3
+        minecraft:llama: 3
+      cooldown_per_entity_seconds: 0
+
+    # ── Event Complete ───────────────────────────────────────
+    event_complete:
+      enabled: true
+      point_type: "skill_points"
+      base_points: 10
+      difficulty_multipliers:
+        easy: 1
+        medium: 2
+        hard: 3
+      require_completion: true
+
+    # ── Objective Complete ───────────────────────────────────
+    objective_complete:
+      enabled: true
+      point_type: "skill_points"
+      base_points: 2
+      require_event_completion: false
+
+    # ── Playtime ─────────────────────────────────────────────
+    playtime:
+      enabled: false
+      point_type: "skill_points"
+      points_per_minutes: 30
+      daily_cap: 10
+      require_activity: true
+      activity_threshold_seconds: 60
 
   connections:
     style:

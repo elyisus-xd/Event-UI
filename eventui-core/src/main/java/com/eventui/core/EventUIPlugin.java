@@ -50,6 +50,7 @@ public class EventUIPlugin extends JavaPlugin {
     private SkillTreeFileWatcher skillTreeFileWatcher;
     private PlayerDataManager playerDataManager;
     private com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig;
+    private com.eventui.core.skill.PointSourceManager pointSourceManager;
 
     @Override
     public void onEnable() {
@@ -73,8 +74,10 @@ public class EventUIPlugin extends JavaPlugin {
         this.rewardManager = new RewardManager(this);
         this.playerDataManager = new PlayerDataManager(this);
         this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
+        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig);
         getServer().getPluginManager().registerEvents(new PlayerDataListener(this), this);
-        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.SkillPointsListener(this, skillSourcesConfig), this);
+        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.PointSourceListener(this, pointSourceManager), this);
+        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.SkillPointsListener(this, skillSourcesConfig, pointSourceManager), this);
         loadEvents();
         loadSkillTrees();
         initializeBridge();
@@ -214,6 +217,7 @@ public class EventUIPlugin extends JavaPlugin {
     public void reloadEvents() {
         LOGGER.info("Reloading events, skill trees and UI configuration...");
         this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
+        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig);
         loadEvents();
         loadSkillTrees();
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
@@ -262,6 +266,10 @@ public class EventUIPlugin extends JavaPlugin {
 
     public com.eventui.core.skill.SkillSourcesConfig getSkillSourcesConfig() {
         return skillSourcesConfig;
+    }
+
+    public com.eventui.core.skill.PointSourceManager getPointSourceManager() {
+        return pointSourceManager;
     }
 
     public Map<String, UIConfig> getUIConfigs() { return uiConfigs; }

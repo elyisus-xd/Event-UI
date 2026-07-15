@@ -53,6 +53,10 @@ public class SkillTreeRenderer {
     private static int cachedMouseX = -1;
     private static int cachedMouseY = -1;
 
+    // Tracks nodes with pending spend requests (waiting for server response)
+    private static final java.util.Set<String> pendingSpendNodes =
+        java.util.Collections.newSetFromMap(new java.util.concurrent.ConcurrentHashMap<>());
+
     // Pan and zoom state class
     private static class PanZoomState {
         float offsetX = 0f;
@@ -323,6 +327,14 @@ public class SkillTreeRenderer {
                 }
             }
 
+            // Pending spend indicator (replaces click animation while waiting for server)
+            if (isSpendPending(treeId, nodeId)) {
+                long t = System.currentTimeMillis() % 600;
+                float pulse = (float) Math.abs(Math.sin(t / 600.0 * Math.PI));
+                int pulseAlpha = (int)(pulse * 100);
+                // draw after node background — handled at end of node loop
+            }
+
             // a) Determine texture and fallback colors
             ResourceLocation nodeTexture = getEffectiveNodeTexture(node,
                     nodeTextureLocked, nodeTextureAvailable, nodeTexturePartial, nodeTextureMaxed);
@@ -381,6 +393,14 @@ public class SkillTreeRenderer {
                 }
             }
 
+            if (isSpendPending(treeId, nodeId)) {
+                long t = System.currentTimeMillis() % 600;
+                float pulse = (float) Math.abs(Math.sin(t / 600.0 * Math.PI));
+                int pulseAlpha = (int)(pulse * 80);
+                graphics.fill(nodePixelX + 1, nodePixelY + 1,
+                              nodePixelX + nodeSize - 1, nodePixelY + nodeSize - 1,
+                              (pulseAlpha << 24) | 0xFFFFAA);
+            }
 
             if (hasTransform) {
                 graphics.pose().popPose();
@@ -712,6 +732,22 @@ public class SkillTreeRenderer {
 
         dragStartX = mouseX;
         dragStartY = mouseY;
+    }
+
+    /**
+     * Resets the pan/zoom state for a specific tree.
+     * Call this when the screen containing the skill tree is closed.
+     */
+    public static void clearPanZoomState(String treeId) {
+        panZoomStates.remove(treeId);
+    }
+
+    /**
+     * Resets pan/zoom state for all trees.
+     * Call this on full screen close if the tree ID is not known.
+     */
+    public static void clearAllPanZoomStates() {
+        panZoomStates.clear();
     }
 
     /**
@@ -1256,6 +1292,31 @@ public class SkillTreeRenderer {
 
         return maxX >= screenMinX && minX <= screenMaxX &&
                maxY >= screenMinY && minY <= screenMaxY;
+    }
+
+    /** Called when the player clicks a node — marks it as pending without animating yet. */
+    public static void markPendingSpend(String treeId, String nodeId) {
+        pendingSpendNodes.add(treeId + ":" + nodeId);
+    }
+
+    /** Called on SKILL_NODE_UPDATE success — removes from pending and triggers the click animation. */
+    public static void confirmSpend(String treeId, String nodeId, String clickAnimType, int clickAnimDuration) {
+        String key = treeId + ":" + nodeId;
+        pendingSpendNodes.remove(key);
+        if (clickAnimType != null && !clickAnimType.equals("none")) {
+            ClickAnimationManager.getInstance().triggerClick(
+                "click:" + key, clickAnimType, clickAnimDuration);
+        }
+    }
+
+    /** Called on SKILL_SPEND_ERROR — removes from pending without animating. */
+    public static void cancelSpend(String treeId, String nodeId) {
+        pendingSpendNodes.remove(treeId + ":" + nodeId);
+    }
+
+    /** Returns true if this node has a spend request in flight. */
+    public static boolean isSpendPending(String treeId, String nodeId) {
+        return pendingSpendNodes.contains(treeId + ":" + nodeId);
     }
 
 }

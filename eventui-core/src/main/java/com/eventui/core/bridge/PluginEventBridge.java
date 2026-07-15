@@ -1060,27 +1060,25 @@ public class PluginEventBridge implements EventBridge {
             com.eventui.api.skill.PlayerSkillProgress playerProgress,
             String treeId
     ) {
-        if (currentLevel >= node.getMaxLevel()) {
-            return "MAXED";
-        }
+        if (currentLevel >= node.getMaxLevel()) return "MAXED";
+        if (currentLevel > 0) return "PARTIAL";
+        if (playerProgress == null) return "LOCKED";
 
-        if (currentLevel > 0) {
-            return "PARTIAL";
-        }
+        var requirements = node.getRequirements();
+        if (requirements == null || requirements.isEmpty()) return "AVAILABLE";
 
-        // currentLevel == 0, verificar requisitos
-        if (playerProgress == null) {
-            return "LOCKED"; // Sin progreso, asumir que no cumple requisitos
-        }
+        boolean isAny = "any".equalsIgnoreCase(node.getRequiresMode());
 
-        for (var req : node.getRequirements()) {
+        for (var req : requirements) {
             int reqLevel = playerProgress.getNodeLevel(treeId, req.getNodeId());
-            if (reqLevel < req.getMinLevel()) {
-                return "LOCKED";
-            }
+            boolean met = reqLevel >= req.getMinLevel();
+            if (isAny && met) return "AVAILABLE";
+            if (!isAny && !met) return "LOCKED";
         }
 
-        return "AVAILABLE";
+        // "all" mode: all requirements passed → AVAILABLE
+        // "any" mode: no requirement passed → LOCKED
+        return isAny ? "LOCKED" : "AVAILABLE";
     }
 
     private void sendSkillSpendError(UUID playerId, String treeId, String nodeId, String errorType, int cost, int available) {

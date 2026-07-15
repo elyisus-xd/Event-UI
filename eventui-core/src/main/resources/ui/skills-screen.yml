@@ -1,0 +1,115 @@
+id: "skills-screen"
+title: ""
+screen_width: 1000
+screen_height: 700
+
+
+screen_properties:
+  blur: false
+  pause_game: "false"
+  transition_in: "scale_up"
+  transition_out: "none"
+  transition_duration: "300"
+
+
+elements:
+  - id: "titulo"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 20
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 30
+      content: "§6§lÁrbol de Habilidades"
+      align: "center"
+      shadow: true
+
+
+  - id: "points_display"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 16
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 55
+      content: "§ePuntos de Combate: §a{{skills.combat_points.available}}"
+      shadow: true
+
+
+  - id: "skill_points_display"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 16
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 75
+      content: "§ePuntos de Habilidad: §a{{skills.skill_points.available}}"
+      shadow: true
+
+
+  - id: "gathering_points_display"
+    type: TEXT
+    x: 0
+    y: 0
+    width: 400
+    height: 16
+    properties:
+      anchor: "top_center"
+      anchor_offset_x: 0
+      anchor_offset_y: 95
+      content: "§ePuntos de Recolección: §a{{skills.gathering_points.available}}"
+      shadow: true
+
+
+  - id: "combat_tree"
+    type: SKILL_TREE
+    x: 50
+    y: 120
+    width: 900
+    height: 500
+    properties:
+      tree_id: "combat-tree"
+      node_size: "60"
+      node_spacing_x: "110"
+      node_spacing_y: "80"
+      show_level_text: "true"
+      connection_color_locked: "555555"
+      connection_color_available: "aaaaaa"
+      connection_color_unlocked: "5cb85c"
+      node_texture_locked: "eventui:textures/ui/widgets/mission_icon.png"
+      node_texture_available: "eventui:textures/ui/widgets/mission_icon.png"
+      node_texture_partial: "eventui:textures/ui/widgets/mission_icon_in_progress.png"
+      node_texture_maxed: "eventui:textures/ui/widgets/mission_icon_completed.png"
+      hover_animation: "zoom_in"
+      hover_animation_intensity: "1.08"
+      hover_sound: "minecraft:entity.experience_orb.pickup"
+      hover_sound_volume: "0.3"
+      click_animation: "punch"
+      click_sound: "minecraft:block.metal.hit"
+
+
+  - id: "close_btn"
+    type: IMAGE_BUTTON
+    x: 0
+    y: 0
+    width: 50
+    height: 50
+    properties:
+      anchor: "bottom_center"
+      anchor_offset_x: 0
+      anchor_offset_y: -40
+      texture: "eventui:textures/ui/logo/owlsafio_logo.png"
+      hover_animation: "float"
+      hover_sound: "eventui:ui.hover"
+      hover_sound_volume: "0.05"
+      click_sound: "eventui:ui.click"
+      action: "close"

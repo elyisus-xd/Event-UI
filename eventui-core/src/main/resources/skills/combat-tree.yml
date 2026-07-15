@@ -4,6 +4,7 @@ description: "Mejora tus estadísticas de combate"
 point_type: "combat_points"
 
 nodes:
+  # ── VITALITY BRANCH ────────────────────────────────────────
   - id: "vitality_1"
     display_name: "Vitalidad I"
     description: "+2 corazones de vida máxima por nivel"
@@ -20,42 +21,281 @@ nodes:
         operation: "add"
         value_per_level: 2.0
 
+  - id: "vitality_2"
+    display_name: "Vitalidad II"
+    description: "+3 corazones de vida máxima por nivel"
+    icon: "minecraft:golden_apple"
+    max_level: 5
+    cost_per_level: 2
+    requires:
+      - node: "vitality_1"
+        min_level: 3
+    position:
+      x: 1
+      y: 0
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_MAX_HEALTH"
+        operation: "add"
+        value_per_level: 3.0
+
+  - id: "regeneration"
+    display_name: "Regeneración"
+    description: "+0.5 regeneración de vida por segundo por nivel"
+    icon: "minecraft:golden_carrot"
+    max_level: 3
+    cost_per_level: 3
+    requires:
+      - node: "vitality_2"
+        min_level: 3
+    position:
+      x: 2
+      y: 0
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_REGENERATION"
+        operation: "add"
+        value_per_level: 0.5
+
+  # ── STRENGTH BRANCH ────────────────────────────────────────
   - id: "strength_1"
     display_name: "Fuerza I"
     description: "+5% de daño de ataque por nivel"
     icon: "minecraft:iron_sword"
-    max_level: 3
+    max_level: 5
     cost_per_level: 2
     requires:
       - node: "vitality_1"
         min_level: 2
-    requires_mode: "all"
     position:
-      x: 1
-      y: 0
+      x: 0
+      y: 1
     effects:
       - type: "attribute"
         attribute: "GENERIC_ATTACK_DAMAGE"
         operation: "multiply_base"
         value_per_level: 0.05
 
-  - id: "berserker"
-    display_name: "Berserker"
-    description: "Desbloquea velocidad de ataque al recibir daño"
-    icon: "minecraft:netherite_axe"
-    max_level: 1
-    cost_per_level: 5
+  - id: "strength_2"
+    display_name: "Fuerza II"
+    description: "+8% de daño de ataque por nivel"
+    icon: "minecraft:diamond_sword"
+    max_level: 5
+    cost_per_level: 3
     requires:
       - node: "strength_1"
         min_level: 3
     position:
+      x: 1
+      y: 1
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_ATTACK_DAMAGE"
+        operation: "multiply_base"
+        value_per_level: 0.08
+
+  - id: "critical_strike"
+    display_name: "Golpe Crítico"
+    description: "+10% probabilidad de crítico por nivel"
+    icon: "minecraft:enchanted_book"
+    max_level: 3
+    cost_per_level: 4
+    requires:
+      - node: "strength_2"
+        min_level: 3
+    position:
       x: 2
-      y: 0
+      y: 1
     effects:
       - type: "command"
-        command: "say {player} activated berserker!"
+        command: "effect give {player} minecraft:instant_health 1 1 true"
         at_level: 1
-    texture_override:
-      locked: "eventui:textures/ui/skills/capstone_locked.png"
-      available: "eventui:textures/ui/skills/capstone_available.png"
-      maxed: "eventui:textures/ui/skills/capstone_maxed.png"
+      - type: "command"
+        command: "effect give {player} minecraft:instant_health 1 2 true"
+        at_level: 2
+      - type: "command"
+        command: "effect give {player} minecraft:instant_health 1 3 true"
+        at_level: 3
+
+  # ── SPEED BRANCH ───────────────────────────────────────────
+  - id: "agility_1"
+    display_name: "Agilidad I"
+    description: "+5% velocidad de movimiento por nivel"
+    icon: "minecraft:rabbit_foot"
+    max_level: 5
+    cost_per_level: 2
+    requires:
+      - node: "vitality_1"
+        min_level: 1
+    position:
+      x: 0
+      y: 2
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_MOVEMENT_SPEED"
+        operation: "multiply_base"
+        value_per_level: 0.05
+
+  - id: "agility_2"
+    display_name: "Agilidad II"
+    description: "+8% velocidad de movimiento por nivel"
+    icon: "minecraft:feather"
+    max_level: 5
+    cost_per_level: 3
+    requires:
+      - node: "agility_1"
+        min_level: 3
+    position:
+      x: 1
+      y: 2
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_MOVEMENT_SPEED"
+        operation: "multiply_base"
+        value_per_level: 0.08
+
+  - id: "evasion"
+    display_name: "Evasión"
+    description: "+5% probabilidad de esquivar por nivel"
+    icon: "minecraft:elytra"
+    max_level: 3
+    cost_per_level: 4
+    requires:
+      - node: "agility_2"
+        min_level: 3
+    position:
+      x: 2
+      y: 2
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_LUCK"
+        operation: "add"
+        value_per_level: 0.5
+
+  # ── DEFENSE BRANCH ─────────────────────────────────────────
+  - id: "armor_1"
+    display_name: "Armadura I"
+    description: "+2 armadura por nivel"
+    icon: "minecraft:iron_chestplate"
+    max_level: 5
+    cost_per_level: 2
+    requires:
+      - node: "vitality_2"
+        min_level: 2
+    position:
+      x: 0
+      y: 3
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_ARMOR"
+        operation: "add"
+        value_per_level: 2.0
+
+  - id: "armor_2"
+    display_name: "Armadura II"
+    description: "+3 armadura por nivel"
+    icon: "minecraft:diamond_chestplate"
+    max_level: 5
+    cost_per_level: 3
+    requires:
+      - node: "armor_1"
+        min_level: 3
+    position:
+      x: 1
+      y: 3
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_ARMOR"
+        operation: "add"
+        value_per_level: 3.0
+
+  - id: "resistance"
+    display_name: "Resistencia"
+    description: "+10% resistencia a daño por nivel"
+    icon: "minecraft:netherite_chestplate"
+    max_level: 3
+    cost_per_level: 5
+    requires:
+      - node: "armor_2"
+        min_level: 3
+    position:
+      x: 2
+      y: 3
+    effects:
+      - type: "attribute"
+        attribute: "GENERIC_ARMOR_TOUGHNESS"
+        operation: "add"
+        value_per_level: 2.0
+
+  # ── CAPSTONE NODES ─────────────────────────────────────────
+  - id: "berserker"
+    display_name: "Berserker"
+    description: "Furia: +50% daño cuando tienes menos de 50% vida"
+    icon: "minecraft:netherite_axe"
+    max_level: 1
+    cost_per_level: 10
+    requires:
+      - node: "strength_2"
+        min_level: 5
+      - node: "critical_strike"
+        min_level: 1
+    requires_mode: "all"
+    position:
+      x: 3
+      y: 1
+    effects:
+      - type: "command"
+        command: "say {player} ha desbloqueado Berserker!"
+        at_level: 1
+      - type: "attribute"
+        attribute: "GENERIC_ATTACK_DAMAGE"
+        operation: "multiply_base"
+        value_per_level: 0.5
+
+  - id: "paladin"
+    display_name: "Paladín"
+    description: "Aura: +20% resistencia a daño para aliados cercanos"
+    icon: "minecraft:golden_sword"
+    max_level: 1
+    cost_per_level: 10
+    requires:
+      - node: "armor_2"
+        min_level: 5
+      - node: "resistance"
+        min_level: 1
+    requires_mode: "all"
+    position:
+      x: 3
+      y: 3
+    effects:
+      - type: "command"
+        command: "say {player} ha desbloqueado Paladín!"
+        at_level: 1
+      - type: "attribute"
+        attribute: "GENERIC_KNOCKBACK_RESISTANCE"
+        operation: "add"
+        value_per_level: 0.5
+
+  - id: "shadow_step"
+    display_name: "Paso Sombra"
+    description: "Teletransporte: Shift + Click para teleportarse 8 bloques"
+    icon: "minecraft:ender_pearl"
+    max_level: 1
+    cost_per_level: 10
+    requires:
+      - node: "agility_2"
+        min_level: 5
+      - node: "evasion"
+        min_level: 1
+    requires_mode: "all"
+    position:
+      x: 3
+      y: 2
+    effects:
+      - type: "command"
+        command: "say {player} ha desbloqueado Paso Sombra!"
+        at_level: 1
+      - type: "attribute"
+        attribute: "GENERIC_MOVEMENT_SPEED"
+        operation: "multiply_base"
+        value_per_level: 0.2
