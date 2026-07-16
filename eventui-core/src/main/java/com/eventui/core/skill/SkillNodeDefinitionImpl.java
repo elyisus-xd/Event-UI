@@ -17,7 +17,9 @@ public record SkillNodeDefinitionImpl(
         int positionX,
         int positionY,
         List<SkillEffect> effects,
-        Map<String, String> textureOverrides
+        Map<String, String> textureOverrides,
+        String exclusiveGroupId,
+        String exclusiveBranchId
 ) implements SkillNodeDefinition {
 
     public SkillNodeDefinitionImpl {
@@ -103,5 +105,15 @@ public record SkillNodeDefinitionImpl(
     @Override
     public Map<String, String> getTextureOverrides() {
         return textureOverrides;
+    }
+
+    @Override
+    public String getExclusiveGroupId() {
+        return exclusiveGroupId;
+    }
+
+    @Override
+    public String getExclusiveBranchId() {
+        return exclusiveBranchId;
     }
 }

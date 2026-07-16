@@ -25,4 +25,7 @@ public interface SkillTreeDefinition {
 
     /** @return Lista INMUTABLE de nodos que componen este árbol */
     List<SkillNodeDefinition> getNodes();
+
+    /** @return Lista INMUTABLE de grupos exclusivos de ramas (puede estar vacía) */
+    List<ExclusiveGroup> getExclusiveGroups();
 }

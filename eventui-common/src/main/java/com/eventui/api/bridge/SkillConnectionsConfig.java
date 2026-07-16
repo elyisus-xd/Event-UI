@@ -1,4 +1,4 @@
-package com.eventui.fabric.client.bridge;
+package com.eventui.api.bridge;
 
 public class SkillConnectionsConfig {
 

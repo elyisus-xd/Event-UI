@@ -109,12 +109,27 @@ public class SkillTreeConfigLoader {
         if (displayName == null || displayName.isBlank()) throw new IllegalArgumentException("Missing required field: display_name");
         if (pointType == null || pointType.isBlank()) throw new IllegalArgumentException("Missing required field: point_type");
 
+        // Parsear grupos exclusivos primero (para poder asignar IDs a nodos después)
+        List<ExclusiveGroup> exclusiveGroups = new ArrayList<>();
+        Map<String, Map<String, String>> nodeToBranchMap = new HashMap<>(); // nodeId -> (groupId, branchId)
+
+        Object groupsObj = data.get("exclusive_groups");
+        if (groupsObj instanceof List) {
+            for (Object groupObj : (List<?>) groupsObj) {
+                if (groupObj instanceof Map) {
+                    Map<String, Object> groupData = (Map<String, Object>) groupObj;
+                    ExclusiveGroup group = parseExclusiveGroup(groupData, nodeToBranchMap);
+                    exclusiveGroups.add(group);
+                }
+            }
+        }
+
         List<SkillNodeDefinition> nodes = new ArrayList<>();
         List<Map<String, Object>> nodesList = (List<Map<String, Object>>) data.get("nodes");
 
         if (nodesList != null) {
             for (Map<String, Object> nodeData : nodesList) {
-                nodes.add(parseNode(nodeData));
+                nodes.add(parseNode(nodeData, nodeToBranchMap));
             }
         }
 
@@ -122,7 +137,63 @@ public class SkillTreeConfigLoader {
             throw new IllegalArgumentException("Skill tree must have at least one node");
         }
 
-        return new SkillTreeDefinitionImpl(id, displayName, description, pointType, nodes);
+        return new SkillTreeDefinitionImpl(id, displayName, description, pointType, nodes, exclusiveGroups);
+    }
+
+    /**
+     * Parsea un grupo exclusivo de ramas.
+     */
+    @SuppressWarnings("unchecked")
+    private ExclusiveGroup parseExclusiveGroup(Map<String, Object> groupData, Map<String, Map<String, String>> nodeToBranchMap) {
+        String id = (String) groupData.get("id");
+        String name = (String) groupData.get("name");
+        String description = (String) groupData.get("description");
+        int maxSelections = parseIntSafe(groupData.get("max_selections"), 1);
+
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("ExclusiveGroup missing required field: id");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("ExclusiveGroup missing required field: name");
+
+        List<ExclusiveBranch> branches = new ArrayList<>();
+        Object branchesObj = groupData.get("branches");
+        if (branchesObj instanceof List) {
+            for (Object branchObj : (List<?>) branchesObj) {
+                if (branchObj instanceof Map) {
+                    Map<String, Object> branchData = (Map<String, Object>) branchObj;
+                    ExclusiveBranch branch = parseExclusiveBranch(branchData, id, nodeToBranchMap);
+                    branches.add(branch);
+                }
+            }
+        }
+
+        return new ExclusiveGroupImpl(id, name, description, maxSelections, branches);
+    }
+
+    /**
+     * Parsea una rama exclusiva.
+     */
+    @SuppressWarnings("unchecked")
+    private ExclusiveBranch parseExclusiveBranch(Map<String, Object> branchData, String groupId, Map<String, Map<String, String>> nodeToBranchMap) {
+        String id = (String) branchData.get("id");
+        String name = (String) branchData.get("name");
+
+        if (id == null || id.isBlank()) throw new IllegalArgumentException("ExclusiveBranch missing required field: id");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("ExclusiveBranch missing required field: name");
+
+        List<String> nodeIds = new ArrayList<>();
+        Object nodesObj = branchData.get("nodes");
+        if (nodesObj instanceof List) {
+            for (Object nodeIdObj : (List<?>) nodesObj) {
+                String nodeId = nodeIdObj.toString();
+                nodeIds.add(nodeId);
+                // Guardar mapeo para asignar al nodo después
+                Map<String, String> branchInfo = new HashMap<>();
+                branchInfo.put("groupId", groupId);
+                branchInfo.put("branchId", id);
+                nodeToBranchMap.put(nodeId, branchInfo);
+            }
+        }
+
+        return new ExclusiveBranchImpl(id, name, nodeIds);
     }
 
     /**
@@ -130,7 +201,7 @@ public class SkillTreeConfigLoader {
      * Maneja cost_per_level como número fijo O como lista.
      */
     @SuppressWarnings("unchecked")
-    private SkillNodeDefinition parseNode(Map<String, Object> nodeData) {
+    private SkillNodeDefinition parseNode(Map<String, Object> nodeData, Map<String, Map<String, String>> nodeToBranchMap) {
         String id = (String) nodeData.get("id");
         String displayName = (String) nodeData.get("display_name");
         String description = (String) nodeData.get("description");
@@ -213,9 +284,18 @@ public class SkillTreeConfigLoader {
             }
         }
 
+        // Asignar grupo y rama exclusiva si el nodo está en el mapa
+        String exclusiveGroupId = null;
+        String exclusiveBranchId = null;
+        Map<String, String> branchInfo = nodeToBranchMap.get(id);
+        if (branchInfo != null) {
+            exclusiveGroupId = branchInfo.get("groupId");
+            exclusiveBranchId = branchInfo.get("branchId");
+        }
+
         return new SkillNodeDefinitionImpl(
                 id, displayName, description, icon, maxLevel, costs, requirements, requiresMode,
-                posX, posY, effects, textures
+                posX, posY, effects, textures, exclusiveGroupId, exclusiveBranchId
         );
     }
 

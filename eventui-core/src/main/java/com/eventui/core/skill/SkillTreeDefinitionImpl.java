@@ -9,7 +9,8 @@ public record SkillTreeDefinitionImpl(
         String displayName,
         String description,
         String pointType,
-        List<SkillNodeDefinition> nodes
+        List<SkillNodeDefinition> nodes,
+        List<ExclusiveGroup> exclusiveGroups
 ) implements SkillTreeDefinition {
 
     public SkillTreeDefinitionImpl {
@@ -21,6 +22,7 @@ public record SkillTreeDefinitionImpl(
             throw new IllegalArgumentException("SkillTree pointType cannot be null or blank");
 
         nodes = nodes != null ? List.copyOf(nodes) : List.of();
+        exclusiveGroups = exclusiveGroups != null ? List.copyOf(exclusiveGroups) : List.of();
     }
 
     @Override
@@ -46,5 +48,10 @@ public record SkillTreeDefinitionImpl(
     @Override
     public List<SkillNodeDefinition> getNodes() {
         return nodes;
+    }
+
+    @Override
+    public List<ExclusiveGroup> getExclusiveGroups() {
+        return exclusiveGroups;
     }
 }

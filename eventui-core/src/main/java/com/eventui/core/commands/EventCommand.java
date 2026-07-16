@@ -320,17 +320,11 @@ public class EventCommand implements CommandExecutor {
 
     private void handleResetSkills(CommandSender sender, Player target, String treeId) {
         UUID playerId = target.getUniqueId();
-        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
 
-        // Admin reset only clears node levels. It intentionally does not refund
-        // available or total earned points; that belongs to a future respec flow.
         if (treeId.equalsIgnoreCase("all")) {
-            for (String registeredTreeId : plugin.getSkillTreeStorage().getAllSkillTrees().keySet()) {
-                skillProgress.resetTreeProgress(registeredTreeId);
-            }
-
-            plugin.getPlayerDataManager().requestSave(playerId, "reset: skills all");
-            sender.sendMessage("§aâœ“ Reset ALL skill trees for " + target.getName() + " (points not refunded)");
+            plugin.getSkillNodeService().removeAllEventUIAttributesFromPlayer(target);
+            plugin.getSkillNodeService().resetAllTreesForPlayer(playerId);
+            sender.sendMessage("§a✔ Reset ALL skill trees and points for " + target.getName());
             return;
         }
 
@@ -339,9 +333,9 @@ public class EventCommand implements CommandExecutor {
             return;
         }
 
-        skillProgress.resetTreeProgress(treeId);
-        plugin.getPlayerDataManager().requestSave(playerId, "reset: skill tree " + treeId);
-        sender.sendMessage("§aâœ“ Reset skill tree '" + treeId + "' for " + target.getName() + " (points not refunded)");
+        plugin.getSkillNodeService().removeAllEventUIAttributesFromPlayer(target);
+        plugin.getSkillNodeService().resetTreeForPlayer(playerId, treeId);
+        sender.sendMessage("§a✔ Reset skill tree '" + treeId + "' for " + target.getName() + " (points not refunded)");
     }
         private void handleComplete(CommandSender sender, String[] args) {
         if (!(sender instanceof Player player)) {

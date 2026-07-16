@@ -1,10 +1,10 @@
 package com.eventui.fabric.client.ui;
 
 import com.eventui.api.ui.UIElement;
+import com.eventui.api.bridge.SkillConnectionsConfig;
+import com.eventui.api.bridge.SkillNodeData;
+import com.eventui.api.bridge.SkillRequirementData;
 import com.eventui.fabric.client.bridge.ClientEventBridge;
-import com.eventui.fabric.client.bridge.SkillConnectionsConfig;
-import com.eventui.fabric.client.bridge.SkillNodeData;
-import com.eventui.fabric.client.bridge.SkillRequirementData;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -454,14 +454,33 @@ public class SkillTreeRenderer {
                     if (requires != null && !requires.isEmpty()) {
                         lines.add(net.minecraft.network.chat.Component.literal(""));
                         lines.add(net.minecraft.network.chat.Component.literal("§7Requisitos:"));
-                        
+
                         for (SkillRequirementData req : requires) {
                             SkillNodeData reqNode = tree.nodes().get(req.nodeId());
                             String reqText = getString(req, reqNode);
                             lines.add(net.minecraft.network.chat.Component.literal(reqText));
                         }
                     }
-                    
+
+                    // Exclusive branch info
+                    if (node.exclusiveGroupId() != null && node.exclusiveBranchId() != null) {
+                        lines.add(net.minecraft.network.chat.Component.literal(""));
+                        String selectedBranch = tree.selectedBranches() != null ? tree.selectedBranches().get(node.exclusiveGroupId()) : null;
+
+                        if (selectedBranch != null && !selectedBranch.equals(node.exclusiveBranchId())) {
+                            // Nodo bloqueado por selección de rama diferente
+                            lines.add(net.minecraft.network.chat.Component.literal("§cRama bloqueada"));
+                            lines.add(net.minecraft.network.chat.Component.literal("§7Ya seleccionaste otra rama en este grupo"));
+                        } else if (selectedBranch == null) {
+                            // Nodo disponible para selección
+                            lines.add(net.minecraft.network.chat.Component.literal("§aRama disponible"));
+                            lines.add(net.minecraft.network.chat.Component.literal("§7Seleccionar esta rama bloqueará las otras"));
+                        } else {
+                            // Nodo en la rama seleccionada
+                            lines.add(net.minecraft.network.chat.Component.literal("§aRama seleccionada"));
+                        }
+                    }
+
                     // Use screen mouse coordinates for tooltip position
                     graphics.renderTooltip(font, lines, java.util.Optional.empty(), screenMouseX, screenMouseY);
                     break;

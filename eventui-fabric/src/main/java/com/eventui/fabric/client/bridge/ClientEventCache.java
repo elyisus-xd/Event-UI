@@ -1,9 +1,13 @@
 package com.eventui.fabric.client.bridge;
 
 import com.eventui.api.bridge.BridgeMessage;
+import com.eventui.api.bridge.SkillConnectionsConfig;
+import com.eventui.api.bridge.SkillNodeData;
+import com.eventui.api.bridge.SkillPointsData;
+import com.eventui.api.bridge.SkillRequirementData;
+import com.eventui.api.bridge.SkillTreeData;
 import com.eventui.api.event.EventDefinition;
 import com.eventui.api.event.EventProgress;
-import com.eventui.fabric.client.bridge.ClientEventBridge;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,7 +178,9 @@ public class ClientEventCache {
                     oldNode.textureOverrideLocked(),
                     oldNode.textureOverrideAvailable(),
                     oldNode.textureOverridePartial(),
-                    oldNode.textureOverrideMaxed()
+                    oldNode.textureOverrideMaxed(),
+                    oldNode.exclusiveGroupId(),
+                    oldNode.exclusiveBranchId()
             );
             tree.nodes().put(nodeId, newNode);
             LOGGER.debug("Updated node {}.{} to level {}", treeId, nodeId, newLevel);
@@ -226,7 +232,9 @@ public class ClientEventCache {
                             node.textureOverrideLocked(),
                             node.textureOverrideAvailable(),
                             node.textureOverridePartial(),
-                            node.textureOverrideMaxed()
+                            node.textureOverrideMaxed(),
+                            node.exclusiveGroupId(),
+                            node.exclusiveBranchId()
                     );
                     nodes.put(nodeId, updated);
                     LOGGER.debug("Pass {}: recalculated state for {}.{}: {} -> {}",

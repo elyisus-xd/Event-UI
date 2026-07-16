@@ -53,4 +53,19 @@ public interface PlayerSkillProgress {
      * Resetea a 0 todos los nodos registrados para un arbol.
      */
     void resetTreeProgress(String treeId);
+
+    /**
+     * @return ID de la rama seleccionada para un grupo exclusivo (null si no seleccionó)
+     */
+    String getSelectedBranch(String treeId, String groupId);
+
+    /**
+     * Establece la rama seleccionada para un grupo exclusivo.
+     */
+    void setSelectedBranch(String treeId, String groupId, String branchId);
+
+    /**
+     * @return Mapa de grupos exclusivos a ramas seleccionadas para un árbol
+     */
+    java.util.Map<String, String> getSelectedBranches(String treeId);
 }

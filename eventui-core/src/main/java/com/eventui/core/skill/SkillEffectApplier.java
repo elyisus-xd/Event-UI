@@ -48,6 +48,34 @@ public class SkillEffectApplier {
         }
     }
 
+    public void removeNodeEffects(Player player, SkillNodeDefinition node) {
+        for (SkillEffect effect : node.getEffects()) {
+            if (!"attribute".equalsIgnoreCase(effect.getType())) continue;
+
+            String attributeName = effect.getData().get("attribute");
+            if (attributeName == null || attributeName.isBlank()) continue;
+
+            Attribute attribute;
+            try {
+                attribute = Attribute.valueOf(attributeName);
+            } catch (IllegalArgumentException e) {
+                LOGGER.warning("Unknown attribute '" + attributeName + "' while removing effects for node " + node.getId());
+                continue;
+            }
+
+            AttributeInstance attrInstance = player.getAttribute(attribute);
+            if (attrInstance == null) continue;
+
+            NamespacedKey modifierKey = new NamespacedKey("eventui", "skill_" + node.getId());
+            attrInstance.getModifiers().stream()
+                    .filter(m -> modifierKey.equals(m.getKey()))
+                    .findFirst()
+                    .ifPresent(attrInstance::removeModifier);
+
+            LOGGER.fine("Removed attribute " + attributeName + " from " + player.getName() + " (node: " + node.getId() + ")");
+        }
+    }
+
     /**
      * Aplica un efecto de atributo de Bukkit.
      * Usa NamespacedKey determinística para que los modifiers se reemplacen, no se acumulen.
@@ -99,7 +127,7 @@ public class SkillEffectApplier {
             }
 
             // Crear e aplicar nuevo modifier con NamespacedKey (1.21+ compatible)
-            AttributeModifier.Operation operation = AttributeModifier.Operation.ADD_NUMBER;
+            AttributeModifier.Operation operation = parseOperation(operationStr);
 
             AttributeModifier modifier = new AttributeModifier(
                     modifierKey,
@@ -152,5 +180,26 @@ public class SkillEffectApplier {
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
 
         LOGGER.fine("Executed skill command: " + finalCommand);
+    }
+
+    /**
+     * Parse operation string to AttributeModifier.Operation.
+     * Supports: "add", "multiply", "add_scalar"
+     * Defaults to ADD_NUMBER if unknown or null.
+     */
+    private AttributeModifier.Operation parseOperation(String operationStr) {
+        if (operationStr == null || operationStr.isBlank()) {
+            return AttributeModifier.Operation.ADD_NUMBER;
+        }
+
+        return switch (operationStr.toLowerCase()) {
+            case "add", "add_number" -> AttributeModifier.Operation.ADD_NUMBER;
+            case "multiply" -> AttributeModifier.Operation.MULTIPLY_SCALAR_1;
+            case "add_scalar" -> AttributeModifier.Operation.ADD_SCALAR;
+            default -> {
+                LOGGER.warning("Unknown operation '" + operationStr + "', defaulting to ADD_NUMBER");
+                yield AttributeModifier.Operation.ADD_NUMBER;
+            }
+        };
     }
 }

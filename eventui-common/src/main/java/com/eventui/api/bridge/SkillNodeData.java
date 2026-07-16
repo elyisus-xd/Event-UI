@@ -1,8 +1,6 @@
-package com.eventui.fabric.client.bridge;
+package com.eventui.api.bridge;
 
 import java.util.List;
-
-import com.google.gson.annotations.SerializedName;
 
 public record SkillNodeData(
         String id,
@@ -20,5 +18,7 @@ public record SkillNodeData(
         String textureOverrideLocked,
         String textureOverrideAvailable,
         String textureOverridePartial,
-        String textureOverrideMaxed
+        String textureOverrideMaxed,
+        String exclusiveGroupId,
+        String exclusiveBranchId
 ) {}

@@ -3,6 +3,22 @@ display_name: "Árbol de Combate"
 description: "Mejora tus estadísticas de combate"
 point_type: "combat_points"
 
+exclusive_groups:
+  - id: "class_choice"
+    name: "Clase de Combate"
+    description: "Elige una especialización de combate"
+    max_selections: 1
+    branches:
+      - id: "warrior"
+        name: "Guerrero"
+        nodes: ["strength_1", "strength_2", "critical_strike", "berserker"]
+      - id: "rogue"
+        name: "Pícaro"
+        nodes: ["agility_1", "agility_2", "evasion", "shadow_step"]
+      - id: "tank"
+        name: "Tanque"
+        nodes: ["armor_1", "armor_2", "resistance", "paladin"]
+
 nodes:
   # ── VITALITY BRANCH ────────────────────────────────────────
   - id: "vitality_1"

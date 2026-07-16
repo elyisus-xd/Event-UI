@@ -5,6 +5,8 @@ import com.eventui.api.skill.SkillRequirement;
 import com.eventui.api.skill.PlayerSkillProgress;
 import com.eventui.core.EventUIPlugin;
 import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
@@ -83,6 +85,14 @@ public class SkillNodeService {
         skillProgress.spendPoints(pointType, cost);
         skillProgress.setNodeLevel(treeId, nodeId, nextLevel);
 
+        // Si el nodo pertenece a un grupo exclusivo y es el primer nivel, seleccionar la rama
+        String exclusiveGroupId = nodeDef.getExclusiveGroupId();
+        String exclusiveBranchId = nodeDef.getExclusiveBranchId();
+        if (exclusiveGroupId != null && exclusiveBranchId != null && currentLevel == 0) {
+            skillProgress.setSelectedBranch(treeId, exclusiveGroupId, exclusiveBranchId);
+            LOGGER.info("Player " + playerId + " selected branch '" + exclusiveBranchId + "' in group '" + exclusiveGroupId + "'");
+        }
+
         // Aplicar efectos del nodo
         Player player = Bukkit.getPlayer(playerId);
         if (player != null && player.isOnline()) {
@@ -108,12 +118,80 @@ public class SkillNodeService {
         return SpendResult.SUCCESS;
     }
 
+    public void resetTreeForPlayer(UUID playerId, String treeId) {
+        var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
+        if (treeOpt.isEmpty()) {
+            LOGGER.warning("resetTreeForPlayer: tree not found: " + treeId);
+            return;
+        }
+
+        var treeDef = treeOpt.get();
+        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
+        Player player = Bukkit.getPlayer(playerId);
+
+        if (player != null && player.isOnline()) {
+            for (var node : treeDef.getNodes()) {
+                int currentLevel = skillProgress.getNodeLevel(treeId, node.getId());
+                if (currentLevel > 0) {
+                    effectApplier.removeNodeEffects(player, node);
+                }
+            }
+        }
+
+        skillProgress.resetTreeProgress(treeId);
+        plugin.getPlayerDataManager().requestSave(playerId, "skill tree reset: " + treeId);
+        LOGGER.info("Reset skill tree '" + treeId + "' for player " + playerId
+            + (player != null ? " (" + player.getName() + ")" : " [offline - attributes not removed]"));
+    }
+
+    public void resetAllTreesForPlayer(UUID playerId) {
+        var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(playerId);
+        Player player = Bukkit.getPlayer(playerId);
+
+        for (String treeId : plugin.getSkillTreeStorage().getAllSkillTrees().keySet()) {
+            var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
+            if (treeOpt.isEmpty()) continue;
+
+            var treeDef = treeOpt.get();
+
+            if (player != null && player.isOnline()) {
+                for (var node : treeDef.getNodes()) {
+                    int currentLevel = skillProgress.getNodeLevel(treeId, node.getId());
+                    if (currentLevel > 0) {
+                        effectApplier.removeNodeEffects(player, node);
+                    }
+                }
+            }
+
+            skillProgress.resetTreeProgress(treeId);
+        }
+
+        skillProgress.resetAllPoints();
+        plugin.getPlayerDataManager().requestSave(playerId, "reset: skills all");
+        LOGGER.info("Reset ALL skill trees and points for player " + playerId
+            + (player != null ? " (" + player.getName() + ")" : " [offline - attributes not removed]"));
+    }
+
     public void grantPoints(Player player, String pointType, int amount) {
         var skillProgress = plugin.getSkillProgressStorage().getOrCreateProgress(player.getUniqueId());
         skillProgress.addEarnedPoints(pointType, amount);
 
         plugin.getPlayerDataManager().requestSave(player.getUniqueId(), "skill grant: " + pointType + " x" + amount);
         plugin.getMessenger().sendPointsGranted(player, amount, pointType);
+    }
+
+    public void removeAllEventUIAttributesFromPlayer(Player player) {
+        for (Attribute attribute : Attribute.values()) {
+            AttributeInstance instance = player.getAttribute(attribute);
+            if (instance == null) continue;
+
+            instance.getModifiers().stream()
+                    .filter(m -> m.getKey() != null
+                        && "eventui".equals(m.getKey().getNamespace()))
+                    .toList()
+                    .forEach(instance::removeModifier);
+        }
+        LOGGER.info("Removed all EventUI attribute modifiers from " + player.getName());
     }
 
     private void sendIfOnline(UUID playerId, java.util.function.Consumer<Player> sender) {

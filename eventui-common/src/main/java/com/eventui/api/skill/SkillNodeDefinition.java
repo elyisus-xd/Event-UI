@@ -46,4 +46,16 @@ public interface SkillNodeDefinition {
      * Puede estar vacío si no se definen overrides en el YAML
      */
     Map<String, String> getTextureOverrides();
+
+    /**
+     * @return ID del grupo exclusivo al que pertenece este nodo (si aplica)
+     * null si el nodo no está en ningún grupo exclusivo
+     */
+    String getExclusiveGroupId();
+
+    /**
+     * @return ID de la rama exclusiva a la que pertenece este nodo (si aplica)
+     * null si el nodo no está en ningún grupo exclusivo
+     */
+    String getExclusiveBranchId();
 }

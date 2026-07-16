@@ -864,8 +864,34 @@ public class PluginEventBridge implements EventBridge {
             treeData.put("displayName", tree.getDisplayName());
             treeData.put("pointType", tree.getPointType());
 
-            Map<String, Object> nodesMap = new HashMap<>();
+            // Exclusive groups data
+            List<Map<String, Object>> exclusiveGroupsList = new ArrayList<>();
+            for (var group : tree.getExclusiveGroups()) {
+                Map<String, Object> groupData = new HashMap<>();
+                groupData.put("id", group.getId());
+                groupData.put("name", group.getName());
+                groupData.put("description", group.getDescription());
+                groupData.put("maxSelections", group.getMaxSelections());
+
+                List<Map<String, Object>> branchesList = new ArrayList<>();
+                for (var branch : group.getBranches()) {
+                    Map<String, Object> branchData = new HashMap<>();
+                    branchData.put("id", branch.getId());
+                    branchData.put("name", branch.getName());
+                    branchData.put("nodeIds", branch.getNodeIds());
+                    branchesList.add(branchData);
+                }
+                groupData.put("branches", branchesList);
+                exclusiveGroupsList.add(groupData);
+            }
+            treeData.put("exclusiveGroups", exclusiveGroupsList);
+
+            // Selected branches for this player
             var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+            Map<String, String> selectedBranches = playerProgress.map(p -> p.getSelectedBranches(tree.getId())).orElse(Map.of());
+            treeData.put("selectedBranches", selectedBranches);
+
+            Map<String, Object> nodesMap = new HashMap<>();
 
             for (var node : tree.getNodes()) {
                 Map<String, Object> nodeData = new HashMap<>();
@@ -898,6 +924,10 @@ public class PluginEventBridge implements EventBridge {
                 }
                 nodeData.put("requires", requiresList);
                 nodeData.put("requiresMode", node.getRequiresMode());
+
+                // Exclusive group data
+                nodeData.put("exclusiveGroupId", node.getExclusiveGroupId());
+                nodeData.put("exclusiveBranchId", node.getExclusiveBranchId());
 
                 // Texture overrides
                 Map<String, String> textureOverrides = node.getTextureOverrides();
@@ -1063,6 +1093,18 @@ public class PluginEventBridge implements EventBridge {
         if (currentLevel >= node.getMaxLevel()) return "MAXED";
         if (currentLevel > 0) return "PARTIAL";
         if (playerProgress == null) return "LOCKED";
+
+        // Verificar grupo exclusivo
+        String exclusiveGroupId = node.getExclusiveGroupId();
+        if (exclusiveGroupId != null) {
+            String selectedBranch = playerProgress.getSelectedBranch(treeId, exclusiveGroupId);
+            String nodeBranch = node.getExclusiveBranchId();
+
+            // Si el jugador ya seleccionó una rama diferente, bloquear este nodo
+            if (selectedBranch != null && !selectedBranch.equals(nodeBranch)) {
+                return "LOCKED"; // Bloqueado por selección de rama diferente
+            }
+        }
 
         var requirements = node.getRequirements();
         if (requirements == null || requirements.isEmpty()) return "AVAILABLE";

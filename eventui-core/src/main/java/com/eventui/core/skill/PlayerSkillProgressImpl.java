@@ -14,12 +14,14 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
     private final Map<String, Map<String, Integer>> nodeLevels;      // treeId -> (nodeId -> level)
     private final Map<String, Integer> availablePoints;               // pointType -> amount
     private final Map<String, Integer> totalEarnedPoints;             // pointType -> amount
+    private final Map<String, Map<String, String>> selectedBranches;  // treeId -> (groupId -> branchId)
 
     public PlayerSkillProgressImpl(UUID playerId) {
         this.playerId = playerId;
         this.nodeLevels = new ConcurrentHashMap<>();
         this.availablePoints = new ConcurrentHashMap<>();
         this.totalEarnedPoints = new ConcurrentHashMap<>();
+        this.selectedBranches = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -70,6 +72,27 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
     @Override
     public void resetTreeProgress(String treeId) {
         nodeLevels.remove(treeId);
+        selectedBranches.remove(treeId);
+    }
+
+    @Override
+    public String getSelectedBranch(String treeId, String groupId) {
+        Map<String, String> treeBranches = selectedBranches.get(treeId);
+        if (treeBranches == null) return null;
+        return treeBranches.get(groupId);
+    }
+
+    @Override
+    public void setSelectedBranch(String treeId, String groupId, String branchId) {
+        selectedBranches.computeIfAbsent(treeId, k -> new ConcurrentHashMap<>())
+                .put(groupId, branchId);
+    }
+
+    @Override
+    public Map<String, String> getSelectedBranches(String treeId) {
+        Map<String, String> treeBranches = selectedBranches.get(treeId);
+        if (treeBranches == null) return Map.of();
+        return Map.copyOf(treeBranches);
     }
 
     public void spendPoints(String pointType, int amount) {
