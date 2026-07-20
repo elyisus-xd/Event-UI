@@ -64,9 +64,11 @@ public class ObjectiveProgressImpl implements ObjectiveProgress {
         completed = currentAmount >= targetAmount;
     }
 
-        public synchronized void setProgress(int amount) {
+        public synchronized boolean setProgress(int amount) {
+        boolean wasCompleted = this.completed;
         this.currentAmount = Math.max(0, Math.min(amount, targetAmount));
         this.completed = this.currentAmount >= targetAmount;
+        return !wasCompleted && this.completed;
     }
 
         public synchronized void reset() {

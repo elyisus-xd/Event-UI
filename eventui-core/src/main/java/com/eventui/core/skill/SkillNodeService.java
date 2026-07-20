@@ -70,6 +70,40 @@ public class SkillNodeService {
             return SpendResult.REQUIREMENTS_NOT_MET;
         }
 
+        // Check exclusive groups
+        for (var group : treeDef.getExclusiveGroups()) {
+            // Find which branch the target node belongs to
+            String targetBranch = null;
+            for (var branch : group.getBranches()) {
+                if (branch.getNodeIds().contains(nodeId)) {
+                    targetBranch = branch.getId();
+                    break;
+                }
+            }
+            if (targetBranch == null) continue; // node not in this group
+
+            // Count how many OTHER branches already have spent nodes
+            java.util.Set<String> activeBranches = new java.util.HashSet<>();
+            for (var branch : group.getBranches()) {
+                for (String branchNodeId : branch.getNodeIds()) {
+                    int level = skillProgress.getNodeLevel(treeId, branchNodeId);
+                    if (level > 0) {
+                        activeBranches.add(branch.getId());
+                        break;
+                    }
+                }
+            }
+
+            // If a different branch is already active and we've hit maxSelections, block
+            activeBranches.remove(targetBranch); // don't count current branch
+            if (activeBranches.size() >= group.getMaxSelections()) {
+                sendIfOnline(playerId, player ->
+                    plugin.getMessenger().sendExclusiveBranchBlocked(player, group.getName())
+                );
+                return SpendResult.REQUIREMENTS_NOT_MET;
+            }
+        }
+
         // 5. Verificar costo de puntos
         int cost = nodeDef.getCostForLevel(nextLevel);
         String pointType = treeDef.getPointType();

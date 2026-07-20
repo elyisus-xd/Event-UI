@@ -172,22 +172,32 @@ public class UIElementRenderer {
 
     private boolean applyHoverTransform(UIElement element, GuiGraphics graphics, boolean isHovered) {
         String hoverAnim = element.getProperties().get("hover_animation");
-        if (hoverAnim == null || hoverAnim.isEmpty() || hoverAnim.equals("none")) {
+        String loopAnim = element.getProperties().get("loop_animation");
+
+        // Check for loop animation first (takes priority)
+        boolean isLoop = loopAnim != null && !loopAnim.isEmpty() && !loopAnim.equals("none");
+        boolean hasHover = hoverAnim != null && !hoverAnim.isEmpty() && !hoverAnim.equals("none");
+
+        if (!isLoop && !hasHover) {
             return false;
         }
-        
-        // Don't apply hover transform to SKILL_TREE elements
+
+        // Don't apply transform to SKILL_TREE elements
         if (element.getType() == UIElementType.SKILL_TREE) {
             return false;
         }
 
-        HoverAnimation animation = parseHoverAnimation(element);
-        if (isHovered) {
-            hoverAnimationManager.startAnimation(element.getId(), animation);
+        HoverAnimation animation = parseHoverAnimation(element, isLoop ? loopAnim : hoverAnim);
+
+        if (isLoop) {
+            // Loop animation: always active
+            hoverAnimationManager.startAnimation(element.getId(), animation, true);
+        } else if (isHovered) {
+            // Hover animation: only on hover
+            hoverAnimationManager.startAnimation(element.getId(), animation, false);
         } else {
             hoverAnimationManager.stopAnimation(element.getId());
         }
-
 
         float progress = hoverAnimationManager.getProgress(element.getId());
         if (progress <= 0f) return false;
@@ -213,12 +223,15 @@ public class UIElementRenderer {
     }
 
     private HoverAnimation parseHoverAnimation(UIElement element) {
-        String typeStr   = element.getProperties().getOrDefault("hover_animation", "zoom_in");
+        return parseHoverAnimation(element, element.getProperties().getOrDefault("hover_animation", "zoom_in"));
+    }
+
+    private HoverAnimation parseHoverAnimation(UIElement element, String animTypeStr) {
         float intensity  = parseFloatProp(element, "hover_animation_intensity", 1.1f);
         int duration     = parseIntProp(element, "hover_animation_duration", 200);
         String easing    = element.getProperties().getOrDefault("hover_animation_easing", "ease_out");
 
-        HoverAnimation.AnimationType type = switch (typeStr.toLowerCase()) {
+        HoverAnimation.AnimationType type = switch (animTypeStr.toLowerCase()) {
             case "zoom_in"    -> HoverAnimation.AnimationType.ZOOM_IN;
             case "zoom_out"   -> HoverAnimation.AnimationType.ZOOM_OUT;
             case "shake"      -> HoverAnimation.AnimationType.SHAKE;
@@ -232,7 +245,7 @@ public class UIElementRenderer {
             case "spin_3d"    -> HoverAnimation.AnimationType.SPIN_3D;
             case "glow"       -> HoverAnimation.AnimationType.GLOW;
             default -> {
-                LOGGER.warn("Unknown hover_animation '{}' on element '{}'", typeStr, element.getId());
+                LOGGER.warn("Unknown animation '{}' on element '{}'", animTypeStr, element.getId());
                 yield HoverAnimation.AnimationType.ZOOM_IN;
             }
         };
@@ -298,9 +311,7 @@ public class UIElementRenderer {
         boolean shadow  = Boolean.parseBoolean(element.getProperties().getOrDefault("shadow", "true"));
         float fontSize  = parseFloatProp(element, "font_size", 1.0f);
         fontSize        = Math.max(0.1f, fontSize);
-        int effectiveWidth = (element.getWidth() > 0)
-                ? (int)(element.getWidth() / fontSize)
-                : 0;
+        int effectiveWidth = Math.max(element.getWidth(), 0);
 
         String[] explicitLines = content.split("\\\\n|\\n|\\r\\n|/n|<br>|<newline>");
         List<String> lines = new ArrayList<>();
@@ -330,13 +341,13 @@ public class UIElementRenderer {
         var poseStack = graphics.pose();
         poseStack.pushPose();
         poseStack.translate(element.getX(), element.getY(), 0);
-        poseStack.scale(fontSize, fontSize, 1.0f);
 
         int localY = 0;
+        int lineHeight = 10;
 
         for (String line : lines) {
             if (line.trim().isEmpty()) {
-                localY += 10;
+                localY += lineHeight;
                 continue;
             }
 
@@ -352,8 +363,14 @@ public class UIElementRenderer {
                 localX = avail - textWidth;
             }
 
-            graphics.drawString(font, lineComponent, localX, localY, 0xFFFFFF, shadow);
-            localY += 10;
+            // Apply scale transformation for this line only
+            poseStack.pushPose();
+            poseStack.translate(localX, localY, 0);
+            poseStack.scale(fontSize, fontSize, 1.0f);
+            graphics.drawString(font, lineComponent, 0, 0, 0xFFFFFF, shadow);
+            poseStack.popPose();
+
+            localY += lineHeight;
         }
 
         poseStack.popPose();

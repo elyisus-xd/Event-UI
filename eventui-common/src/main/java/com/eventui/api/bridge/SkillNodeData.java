@@ -20,5 +20,6 @@ public record SkillNodeData(
         String textureOverridePartial,
         String textureOverrideMaxed,
         String exclusiveGroupId,
-        String exclusiveBranchId
+        String exclusiveBranchId,
+        String pointType
 ) {}

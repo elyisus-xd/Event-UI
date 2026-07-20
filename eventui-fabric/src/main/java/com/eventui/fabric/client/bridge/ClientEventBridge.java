@@ -20,6 +20,7 @@ import com.eventui.fabric.client.ui.custom.CustomEventScreen;
 import com.eventui.fabric.client.ui.tooltip.RecipeCache;
 import com.eventui.fabric.client.viewmodel.EventViewModel;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
@@ -443,7 +444,9 @@ public class ClientEventBridge implements EventBridge {
                 return;
             }
 
-            Gson gson = new Gson();
+            Gson gson = new GsonBuilder()
+                    .registerTypeAdapter(SkillNodeData.class, new SkillNodeDataAdapter())
+                    .create();
             Type genericMapType = new TypeToken<Map<String, Object>>() {}.getType();
             Map<String, Object> fullSkillData = gson.fromJson(skillDataPayload, genericMapType);
 

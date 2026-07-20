@@ -54,28 +54,45 @@ messages:
     already_maxed:
       enabled: true
       format: "<red>[EventUI]</red> <gray><node_name> ya está en su nivel máximo.</gray>"
+    exclusive_branch_blocked:
+      enabled: true
+      format: "<red>[EventUI]</red> <gray>Ya elegiste otra rama en el grupo '<group_name>'. No puedes desbloquear esta.</gray>"
+    point_source_cooldown:
+      enabled: true
+      format: "<yellow>[EventUI]</yellow> <gray><source> está en cooldown. Espera <remaining> segundos.</gray>"
 
 skills:
+  # Point type aliases - allows using friendly names that map to internal IDs
+  point_type_aliases:
+    "Puntos de Combate": "combat_points"
+    "Puntos de Habilidad": "skill_points"
+    "Puntos de Recolección": "gathering_points"
+    "Combat Points": "combat_points"
+    "Skill Points": "skill_points"
+    "Gathering Points": "gathering_points"
+
   point_sources:
     # ── XP Conversion ──────────────────────────────────────────
     xp_conversion:
-      enabled: true
-      levels_per_point: 1
-      point_type: "skill_points"
-      only_on_level_up: true
+      enabled: true              # Activa/desactiva conversión de XP a puntos
+      levels_per_point: 1       # Niveles necesarios para 1 punto
+      point_type: "skill_points" # Tipo de punto a otorgar
+      only_on_level_up: true     # Solo al subir nivel (true) o cada XP ganado (false)
 
     # ── Mob Kill ─────────────────────────────────────────────
     mob_kill:
-      enabled: true
-      point_type: "combat_points"
-      base_points: 1
-      # point_distribution allows awarding multiple point types with different amounts
-      # If point_distribution is set, it overrides point_type and base_points
-      point_distribution:
-        skill_points: 1      # 1 skill point per kill
-        combat_points: 2     # 2 combat points per kill
-        gathering_points: 0.5 # 0.5 gathering points per kill
-      multipliers:
+      enabled: true                    # Activa/desactiva puntos por matar mobs
+      point_type: "combat_points"      # Tipo de punto (usado si no hay point_distribution)
+      base_points: 1                   # Puntos base por kill
+      allowed_mobs:                    # Solo estos mobs dan puntos (vacío = todos). Soporta tags con #
+        - minecraft:zombie
+        - minecraft:skeleton
+        - "#minecraft:bosses"
+      point_distribution:              # Distribución múltiple de puntos (anula point_type/base_points)
+        skill_points: 1
+        combat_points: 2
+        gathering_points: 0.5
+      multipliers:                     # Multiplicador por mob específico
         minecraft:zombie: 1
         minecraft:skeleton: 1
         minecraft:creeper: 2
@@ -85,24 +102,28 @@ skills:
         minecraft:ender_dragon: 50
         minecraft:wither: 30
         "#minecraft:bosses": 40
-      natural_only: true
-      cooldowns_per_mob:
+      natural_only: true               # Solo mobs spawn naturales (no spawners)
+      cooldowns_per_mob:               # Cooldown por mob específico (segundos)
         minecraft:ender_dragon: 3600
         minecraft:wither: 3600
 
     # ── Player Kill ───────────────────────────────────────────
     player_kill:
-      enabled: true
-      point_type: "combat_points"
-      points_per_kill: 5
-      cooldown_per_victim_seconds: 300
+      enabled: true                    # Activa/desactiva puntos por matar jugadores
+      point_type: "combat_points"      # Tipo de punto
+      points_per_kill: 5               # Puntos por kill
+      cooldown_per_victim_seconds: 300 # Cooldown por víctima específica (segundos)
 
     # ── Block Mine ───────────────────────────────────────────
     block_mine:
-      enabled: true
-      point_type: "gathering_points"
-      base_points: 1
-      multipliers:
+      enabled: true                    # Activa/desactiva puntos por minar bloques
+      point_type: "gathering_points"   # Tipo de punto
+      base_points: 1                   # Puntos base por bloque
+      allowed_blocks:                  # Solo estos bloques dan puntos (vacío = todos). Soporta tags con #
+        - minecraft:diamond_ore
+        - minecraft:iron_ore
+        - "#minecraft:logs"
+      multipliers:                     # Multiplicador por bloque específico
         minecraft:diamond_ore: 5
         minecraft:iron_ore: 1
         minecraft:gold_ore: 2
@@ -110,72 +131,71 @@ skills:
         minecraft:deepslate_diamond_ore: 5
         minecraft:deepslate_iron_ore: 1
         "#minecraft:logs": 1
-      require_correct_tool: true
-      cooldown_per_block_seconds: 0
+      require_correct_tool: true       # Requiere herramienta correcta (pico/hacha)
+      cooldown_per_block_seconds: 0    # Cooldown por bloque (segundos)
 
     # ── Fishing ───────────────────────────────────────────────
     fishing:
-      enabled: true
-      point_type: "gathering_points"
-      base_points: 1
-      multipliers:
+      enabled: true                    # Activa/desactiva puntos por pescar
+      point_type: "gathering_points"   # Tipo de punto
+      base_points: 1                   # Puntos base por pesca
+      multipliers:                     # Multiplicador por tipo de pesca
         "#minecraft:fishes": 1
-        minecraft:treasure: 5
-      luck_bonus: true
+      luck_bonus: true                 # Bonus por suerte del jugador
 
     # ── Crop Harvest ─────────────────────────────────────────
     crop_harvest:
-      enabled: true
-      point_type: "gathering_points"
-      base_points: 1
-      multipliers:
+      enabled: true                    # Activa/desactiva puntos por cosechar
+      point_type: "gathering_points"   # Tipo de punto
+      base_points: 1                   # Puntos base por cosecha
+      multipliers:                     # Multiplicador por cultivo específico
         minecraft:wheat: 1
         minecraft:carrots: 1
         minecraft:potatoes: 1
         minecraft:beetroots: 1
         minecraft:nether_wart: 3
         minecraft:cocoa: 2
-      require_mature: true
-      manual_only: false
+      require_mature: true             # Solo cultivos maduros
+      manual_only: false               # Solo cosecha manual (no dispensadores)
 
     # ── Animal Breed ─────────────────────────────────────────
     animal_breed:
-      enabled: true
-      point_type: "gathering_points"
-      base_points: 2
-      multipliers:
+      enabled: true                    # Activa/desactiva puntos por criar animales
+      point_type: "gathering_points"   # Tipo de punto
+      base_points: 2                   # Puntos base por cría
+      multipliers:                     # Multiplicador por animal específico
         "#minecraft:passive": 2
         minecraft:horse: 3
         minecraft:donkey: 3
         minecraft:llama: 3
-      cooldown_per_entity_seconds: 0
+      cooldown_per_entity_seconds: 0    # Cooldown por entidad (segundos)
 
     # ── Event Complete ───────────────────────────────────────
     event_complete:
-      enabled: true
-      point_type: "skill_points"
-      base_points: 10
-      difficulty_multipliers:
+      enabled: true                    # Activa/desactiva puntos por completar eventos
+      point_type: "skill_points"      # Tipo de punto
+      base_points: 10                  # Puntos base por evento completado
+      difficulty_multipliers:          # Multiplicador por dificultad
         easy: 1
         medium: 2
         hard: 3
-      require_completion: true
+      require_completion: true        # Solo eventos realmente completados
 
     # ── Objective Complete ───────────────────────────────────
     objective_complete:
-      enabled: true
-      point_type: "skill_points"
-      base_points: 2
-      require_event_completion: false
+      enabled: true                    # Activa/desactiva puntos por completar objetivos
+      point_type: "skill_points"      # Tipo de punto
+      base_points: 2                   # Puntos base por objetivo completado
+      require_event_completion: false  # Solo si el evento también se completa
 
     # ── Playtime ─────────────────────────────────────────────
     playtime:
-      enabled: false
-      point_type: "skill_points"
-      points_per_minutes: 30
-      daily_cap: 10
-      require_activity: true
-      activity_threshold_seconds: 60
+      enabled: false                   # Activa/desactiva puntos por tiempo jugado
+      point_type: "skill_points"      # Tipo de punto
+      points_per_minutes: 30          # Puntos por X minutos jugados
+      daily_cap: 10                   # Cap diario de puntos
+      require_activity: true          # Requiere actividad (movimiento)
+      activity_threshold_seconds: 60  # Umbral de actividad en segundos
 
   connections:
     style:

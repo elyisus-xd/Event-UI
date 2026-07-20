@@ -21,6 +21,7 @@ public class PointSourceManager {
 
     private final SkillProgressStorage storage;
     private final SkillSourcesConfig config;
+    private final EventUIPlugin plugin;
 
     // Cooldown tracking: key format "playerId:resourceId" -> timestamp
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
@@ -35,9 +36,10 @@ public class PointSourceManager {
     // Tick tracking for playtime: playerId -> ticks since last point award
     private final Map<UUID, Integer> playtimeTicks = new ConcurrentHashMap<>();
 
-    public PointSourceManager(SkillProgressStorage storage, SkillSourcesConfig config) {
+    public PointSourceManager(SkillProgressStorage storage, SkillSourcesConfig config, EventUIPlugin plugin) {
         this.storage = storage;
         this.config = config;
+        this.plugin = plugin;
     }
 
     // ── XP Conversion ──────────────────────────────────────────
@@ -75,6 +77,28 @@ public class PointSourceManager {
         }
 
         String entityId = getEntityId(entity);
+
+        // Check allowed mobs list (if configured)
+        List<String> allowedMobs = config.getMobKillAllowedMobs();
+        if (allowedMobs != null && !allowedMobs.isEmpty()) {
+            boolean isAllowed = false;
+            for (String allowed : allowedMobs) {
+                // Check exact match
+                if (entityId.equalsIgnoreCase(allowed)) {
+                    isAllowed = true;
+                    break;
+                }
+                // Check tag (starts with #)
+                if (allowed.startsWith("#") && isInTag(entityId, allowed)) {
+                    isAllowed = true;
+                    break;
+                }
+            }
+            if (!isAllowed) {
+                return;
+            }
+        }
+
         int basePoints = config.getMobKillBasePoints();
 
         // Apply multipliers
@@ -82,7 +106,10 @@ public class PointSourceManager {
 
         // Check cooldown
         String cooldownKey = killer.getUniqueId() + ":" + entityId;
-        if (isOnCooldown(cooldownKey, config.getMobKillCooldowns().getOrDefault(entityId, 0))) {
+        int cooldownSeconds = config.getMobKillCooldowns().getOrDefault(entityId, 0);
+        if (isOnCooldown(cooldownKey, cooldownSeconds)) {
+            long remaining = getRemainingCooldown(cooldownKey, cooldownSeconds);
+            plugin.getMessenger().sendPointSourceCooldown(killer, "Mob Kill (" + entityId + ")", remaining);
             return;
         }
 
@@ -98,6 +125,7 @@ public class PointSourceManager {
                 // Fallback to old single point type method
                 addPoints(killer, config.getMobKillPointTypes().getFirst(), points);
             }
+            cooldowns.put(cooldownKey, System.currentTimeMillis());
         }
     }
 
@@ -106,7 +134,10 @@ public class PointSourceManager {
         if (!config.isPlayerKillEnabled()) return;
 
         String cooldownKey = killer.getUniqueId() + ":" + victim.getUniqueId();
-        if (isOnCooldown(cooldownKey, config.getPlayerKillCooldownPerVictim())) {
+        int cooldownSeconds = config.getPlayerKillCooldownPerVictim();
+        if (isOnCooldown(cooldownKey, cooldownSeconds)) {
+            long remaining = getRemainingCooldown(cooldownKey, cooldownSeconds);
+            plugin.getMessenger().sendPointSourceCooldown(killer, "Player Kill (" + victim.getName() + ")", remaining);
             return;
         }
 
@@ -120,11 +151,33 @@ public class PointSourceManager {
             // Fallback to old single point type method
             addPoints(killer, config.getPlayerKillPointTypes().getFirst(), config.getPlayerKillPoints());
         }
+        cooldowns.put(killer.getUniqueId() + ":" + victim.getUniqueId(), System.currentTimeMillis());
     }
 
     // ── Block Mine ───────────────────────────────────────────
     public void handleBlockMine(Player player, String blockId) {
         if (!config.isBlockMineEnabled()) return;
+
+        // Check allowed blocks list (if configured)
+        List<String> allowedBlocks = config.getBlockMineAllowedBlocks();
+        if (allowedBlocks != null && !allowedBlocks.isEmpty()) {
+            boolean isAllowed = false;
+            for (String allowed : allowedBlocks) {
+                // Check exact match
+                if (blockId.equalsIgnoreCase(allowed)) {
+                    isAllowed = true;
+                    break;
+                }
+                // Check tag (starts with #)
+                if (allowed.startsWith("#") && isInTag(blockId, allowed)) {
+                    isAllowed = true;
+                    break;
+                }
+            }
+            if (!isAllowed) {
+                return;
+            }
+        }
 
         int basePoints = config.getBlockMineBasePoints();
 
@@ -133,7 +186,10 @@ public class PointSourceManager {
 
         // Check cooldown
         String cooldownKey = player.getUniqueId() + ":" + blockId;
-        if (isOnCooldown(cooldownKey, config.getBlockMineCooldownPerBlock())) {
+        int cooldownSeconds = config.getBlockMineCooldownPerBlock();
+        if (isOnCooldown(cooldownKey, cooldownSeconds)) {
+            long remaining = getRemainingCooldown(cooldownKey, cooldownSeconds);
+            plugin.getMessenger().sendPointSourceCooldown(player, "Block Mine (" + blockId + ")", remaining);
             return;
         }
 
@@ -149,6 +205,7 @@ public class PointSourceManager {
                 // Fallback to old single point type method
                 addPoints(player, config.getBlockMinePointTypes().getFirst(), points);
             }
+            cooldowns.put(cooldownKey, System.currentTimeMillis());
         }
     }
 
@@ -236,7 +293,10 @@ public class PointSourceManager {
 
         // Check cooldown
         String cooldownKey = player.getUniqueId() + ":" + entityId;
-        if (isOnCooldown(cooldownKey, config.getAnimalBreedCooldownPerEntity())) {
+        int cooldownSeconds = config.getAnimalBreedCooldownPerEntity();
+        if (isOnCooldown(cooldownKey, cooldownSeconds)) {
+            long remaining = getRemainingCooldown(cooldownKey, cooldownSeconds);
+            plugin.getMessenger().sendPointSourceCooldown(player, "Animal Breed (" + entityId + ")", remaining);
             return;
         }
 
@@ -252,6 +312,7 @@ public class PointSourceManager {
                 // Fallback to old single point type method
                 addPoints(player, config.getAnimalBreedPointTypes().getFirst(), points);
             }
+            cooldowns.put(cooldownKey, System.currentTimeMillis());
         }
     }
 
@@ -260,27 +321,39 @@ public class PointSourceManager {
     public void handleEventComplete(Player player, String eventId, String difficulty) {
         if (!config.isEventCompleteEnabled()) return;
 
-        // Apply difficulty multiplier
-        int points = config.getEventCompleteBasePoints();
-        if (difficulty != null) {
-            Integer multiplier = config.getEventCompleteDifficultyMultipliers().get(difficulty.toLowerCase());
-            if (multiplier != null) {
-                points *= multiplier;
-            }
-        }
+        // Use point_distribution if available (already includes difficulty multiplier)
+        Map<String, Double> distribution = config.getEventCompletePointDistribution();
+        if (distribution != null && !distribution.isEmpty()) {
+            int basePoints = config.getEventCompleteBasePoints();
+            int points = basePoints;
 
-        if (points > 0) {
-            // Use point_distribution if available
-            Map<String, Double> distribution = config.getEventCompletePointDistribution();
-            if (distribution != null && !distribution.isEmpty()) {
-                for (Map.Entry<String, Double> entry : distribution.entrySet()) {
-                    double finalPoints = entry.getValue() * points;
-                    addPoints(player, entry.getKey(), finalPoints);
+            // Apply difficulty multiplier to base points
+            if (difficulty != null) {
+                Integer multiplier = config.getEventCompleteDifficultyMultipliers().get(difficulty.toLowerCase());
+                if (multiplier != null) {
+                    points *= multiplier;
                 }
-            } else {
-                // Fallback to old single point type method
-                addPoints(player, config.getEventCompletePointTypes().getFirst(), points);
             }
+
+            // Check if distribution is the default fallback (same as base points)
+            // If so, don't multiply again
+            boolean isDefaultDistribution = distribution.size() == 1 &&
+                    distribution.values().iterator().next() == basePoints;
+
+            for (Map.Entry<String, Double> entry : distribution.entrySet()) {
+                double finalPoints = isDefaultDistribution ? points : entry.getValue() * points;
+                addPoints(player, entry.getKey(), finalPoints);
+            }
+        } else {
+            // Fallback to old single point type method
+            int points = config.getEventCompleteBasePoints();
+            if (difficulty != null) {
+                Integer multiplier = config.getEventCompleteDifficultyMultipliers().get(difficulty.toLowerCase());
+                if (multiplier != null) {
+                    points *= multiplier;
+                }
+            }
+            addPoints(player, config.getEventCompletePointTypes().getFirst(), points);
         }
     }
 
@@ -310,72 +383,87 @@ public class PointSourceManager {
         UUID playerId = player.getUniqueId();
         long now = System.currentTimeMillis();
 
-        // Update activity
-        lastActivity.put(playerId, now);
-
         // Check daily cap reset
-        String today = new Date(now).toString().substring(0, 10);
+        String today = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(now));
         if (!today.equals(lastPlaytimeDate.getOrDefault(playerId, ""))) {
             dailyPlaytimePoints.put(playerId, 0);
             lastPlaytimeDate.put(playerId, today);
             playtimeTicks.put(playerId, 0);
+            LOGGER.info("[Playtime] Reset daily cap for " + player.getName());
         }
 
         // Check daily cap
         int earnedToday = dailyPlaytimePoints.getOrDefault(playerId, 0);
-        if (earnedToday >= config.getPlaytimeDailyCap()) return;
+        if (earnedToday >= config.getPlaytimeDailyCap()) {
+            LOGGER.info("[Playtime] " + player.getName() + " reached daily cap: " + earnedToday);
+            return;
+        }
 
-        // Check activity requirement
+        // Check activity requirement BEFORE updating lastActivity
         if (config.isPlaytimeRequireActivity()) {
-            long lastActive = lastActivity.getOrDefault(playerId, now);
-            if ((now - lastActive) / 1000 > config.getPlaytimeActivityThreshold()) {
-                return;
+            long lastActive = lastActivity.getOrDefault(playerId, 0L);
+            // Only check threshold if player has been active before (lastActive != 0)
+            if (lastActive != 0L && (now - lastActive) / 1000 > config.getPlaytimeActivityThreshold()) {
+                LOGGER.info("[Playtime] " + player.getName() + " is AFK, last active " + ((now - lastActive) / 1000) + "s ago");
+                return; // player is AFK
             }
         }
 
-        // Track ticks (20 ticks = 1 second, 1200 ticks = 1 minute)
+        // Track ticks
         int ticks = playtimeTicks.getOrDefault(playerId, 0) + 1;
         playtimeTicks.put(playerId, ticks);
 
-        // Award points every minute (1200 ticks)
-        int pointsPerMinutes = config.getPlaytimePointsPerMinutes();
         int ticksPerMinute = 1200;
         if (ticks >= ticksPerMinute) {
             int minutesPassed = ticks / ticksPerMinute;
-            int pointsToAward = minutesPassed * pointsPerMinutes;
+            int pointsToAward = minutesPassed * config.getPlaytimePointsPerMinutes();
 
-            // Use point_distribution if available
+            LOGGER.info("[Playtime] Awarding " + pointsToAward + " points to " + player.getName() + " for " + minutesPassed + " minutes");
+
             Map<String, Double> distribution = config.getPlaytimePointDistribution();
             if (distribution != null && !distribution.isEmpty()) {
                 for (Map.Entry<String, Double> entry : distribution.entrySet()) {
-                    double finalPoints = entry.getValue() * pointsToAward;
-                    addPoints(player, entry.getKey(), finalPoints);
+                    addPoints(player, entry.getKey(), entry.getValue() * pointsToAward);
                 }
             } else {
-                // Fallback to old single point type method
                 addPoints(player, config.getPlaytimePointTypes().getFirst(), pointsToAward);
             }
 
-            // Update daily earned
             dailyPlaytimePoints.put(playerId, earnedToday + pointsToAward);
-
-            // Reset ticks (keep remainder)
             playtimeTicks.put(playerId, ticks % ticksPerMinute);
         }
+    }
+
+    public void updateActivity(UUID playerId) {
+        lastActivity.put(playerId, System.currentTimeMillis());
     }
 
     // ── Helper Methods ────────────────────────────────────────
 
     private void addPoints(Player player, String pointType, double amount) {
         if (amount <= 0) return;
-        
+
         int pointsToAdd = (int) Math.floor(amount);
         if (pointsToAdd <= 0) return;
-        
+
+        // Resolve point type alias to internal ID
+        String resolvedPointType = config.getPointTypeResolver().resolve(pointType);
+
         PlayerSkillProgressImpl progress = storage.getOrCreateProgress(player.getUniqueId());
-        progress.addEarnedPoints(pointType, pointsToAdd);
-        
-        LOGGER.info("Added " + pointsToAdd + " " + pointType + " to " + player.getName());
+        progress.addEarnedPoints(resolvedPointType, pointsToAdd);
+
+        LOGGER.info("Added " + pointsToAdd + " " + resolvedPointType + " to " + player.getName());
+
+        // Send points granted message with display name
+        String displayName = config.getPointTypeResolver().getDisplayName(resolvedPointType);
+        plugin.getMessenger().sendPointsGranted(player, pointsToAdd, displayName);
+
+        // Push updated skill data to client
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) {
+                plugin.getEventBridge().sendSkillDataToPlayer(player);
+            }
+        });
     }
 
     private boolean isOnCooldown(String key, int cooldownSeconds) {
@@ -388,15 +476,37 @@ public class PointSourceManager {
         return elapsed < cooldownSeconds;
     }
 
+    private long getRemainingCooldown(String key, int cooldownSeconds) {
+        if (cooldownSeconds <= 0) return 0;
+
+        Long lastTime = cooldowns.get(key);
+        if (lastTime == null) return 0;
+
+        long elapsed = (System.currentTimeMillis() - lastTime) / 1000;
+        long remaining = cooldownSeconds - elapsed;
+        return Math.max(0, remaining);
+    }
+
 
     private String getEntityId(Entity entity) {
         return entity.getType().getKey().toString();
     }
 
     private boolean isNaturalSpawn(LivingEntity entity) {
-        // Check if spawned by spawner, breeding, etc.
-        // This is a simplified check
-        return !entity.hasMetadata("spawner") && !entity.hasMetadata("breeding");
+        try {
+            org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason reason =
+                entity.getEntitySpawnReason();
+            return switch (reason) {
+                case NATURAL, CHUNK_GEN, DEFAULT -> true;
+                case SPAWNER, SPAWNER_EGG, BREEDING, CURED, DISPENSE_EGG,
+                     DUPLICATION, JOCKEY, MOUNT, NETHER_PORTAL, RAID,
+                     REINFORCEMENTS, SHEARED, SILVERFISH_BLOCK, SLIME_SPLIT,
+                     SPELL, VILLAGE_DEFENSE, VILLAGE_INVASION -> false;
+                default -> true;
+            };
+        } catch (Exception e) {
+            return true; // fallback: assume natural
+        }
     }
 
     private int applyMultipliers(Map<String, Integer> multipliers, String resourceId, int basePoints) {

@@ -929,6 +929,13 @@ public class PluginEventBridge implements EventBridge {
                 nodeData.put("exclusiveGroupId", node.getExclusiveGroupId());
                 nodeData.put("exclusiveBranchId", node.getExclusiveBranchId());
 
+                // Point type (node-specific or fallback to tree point type)
+                String nodePointType = node.getPointType();
+                if (nodePointType == null || nodePointType.isEmpty()) {
+                    nodePointType = tree.getPointType();
+                }
+                nodeData.put("pointType", nodePointType);
+
                 // Texture overrides
                 Map<String, String> textureOverrides = node.getTextureOverrides();
                 if (textureOverrides != null && !textureOverrides.isEmpty()) {
@@ -948,9 +955,28 @@ public class PluginEventBridge implements EventBridge {
         // Construir datos de puntos disponibles
         Map<String, Object> pointsMap = new HashMap<>();
         var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
+
+        // Collect all known point types from skill trees and point sources config
+        java.util.Set<String> knownPointTypes = new java.util.HashSet<>();
+        for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
+            knownPointTypes.add(tree.getPointType());
+        }
+        // Add point types from point sources config
+        var sourcesConfig = plugin.getSkillSourcesConfig();
+        knownPointTypes.addAll(sourcesConfig.getXpPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getMobKillPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getPlayerKillPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getBlockMinePointTypes());
+        knownPointTypes.addAll(sourcesConfig.getFishingPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getCropHarvestPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getAnimalBreedPointTypes());
+        knownPointTypes.addAll(sourcesConfig.getEventCompletePointTypes());
+        knownPointTypes.addAll(sourcesConfig.getObjectiveCompletePointTypes());
+        knownPointTypes.addAll(sourcesConfig.getPlaytimePointTypes());
+
         if (playerProgress.isPresent()) {
-            for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
-                String pointType = tree.getPointType();
+            // Add all known point types with their values (0 if not present)
+            for (String pointType : knownPointTypes) {
                 int available = playerProgress.get().getAvailablePoints(pointType);
                 int totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
 
@@ -958,6 +984,18 @@ public class PluginEventBridge implements EventBridge {
                 pointsData.put("available", available);
                 pointsData.put("totalEarned", totalEarned);
                 pointsMap.put(pointType, pointsData);
+            }
+            // Then, add any additional point types from player progress that aren't in known types
+            for (var pointType : playerProgress.get().getAllPointTypes()) {
+                if (!pointsMap.containsKey(pointType)) {
+                    int available = playerProgress.get().getAvailablePoints(pointType);
+                    int totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
+
+                    Map<String, Object> pointsData = new HashMap<>();
+                    pointsData.put("available", available);
+                    pointsData.put("totalEarned", totalEarned);
+                    pointsMap.put(pointType, pointsData);
+                }
             }
         }
 

@@ -445,8 +445,10 @@ public class SkillTreeRenderer {
                     lines.add(net.minecraft.network.chat.Component.literal(
                         "§eNivel: §f" + node.currentLevel() + "/" + node.maxLevel()));
                     if (!"MAXED".equals(node.state()) && node.costNextLevel() > 0) {
+                        String pointType = node.pointType() != null ? node.pointType() : tree.pointType();
+                        String pointTypeDisplay = getPointTypeDisplayName(pointType);
                         lines.add(net.minecraft.network.chat.Component.literal(
-                            "§eCosto siguiente nivel: §f" + node.costNextLevel()));
+                            "§eCosto siguiente nivel: §f" + node.costNextLevel() + " §7" + pointTypeDisplay));
                     }
                     
                     // Requisitos
@@ -467,6 +469,52 @@ public class SkillTreeRenderer {
                         lines.add(net.minecraft.network.chat.Component.literal(""));
                         String selectedBranch = tree.selectedBranches() != null ? tree.selectedBranches().get(node.exclusiveGroupId()) : null;
 
+                        // Find the exclusive group and branch
+                        com.eventui.api.bridge.ExclusiveGroupData group = null;
+                        com.eventui.api.bridge.ExclusiveBranchData branch = null;
+                        if (tree.exclusiveGroups() != null) {
+                            for (var g : tree.exclusiveGroups()) {
+                                if (g.id().equals(node.exclusiveGroupId())) {
+                                    group = g;
+                                    for (var b : g.branches()) {
+                                        if (b.id().equals(node.exclusiveBranchId())) {
+                                            branch = b;
+                                            break;
+                                        }
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Show group info
+                        if (group != null) {
+                            lines.add(net.minecraft.network.chat.Component.literal("§6Grupo: §f" + group.name()));
+                            if (group.description() != null && !group.description().isEmpty()) {
+                                lines.add(net.minecraft.network.chat.Component.literal("§7" + group.description()));
+                            }
+                            int selectionsMade = tree.selectedBranches() != null && tree.selectedBranches().containsKey(group.id()) ? 1 : 0;
+                            int remaining = group.maxSelections() - selectionsMade;
+                            lines.add(net.minecraft.network.chat.Component.literal("§7Selecciones: §f" + selectionsMade + "/" + group.maxSelections() + " §7(" + remaining + " restantes)"));
+                        }
+
+                        // Show branch info if this is the first node of the branch
+                        if (branch != null && !branch.nodeIds().isEmpty()) {
+                            String firstNodeId = branch.nodeIds().get(0);
+                            if (node.id().equals(firstNodeId)) {
+                                lines.add(net.minecraft.network.chat.Component.literal(""));
+                                lines.add(net.minecraft.network.chat.Component.literal("§bRama: §f" + branch.name()));
+                                lines.add(net.minecraft.network.chat.Component.literal("§7Nodos en esta rama:"));
+                                for (String nodeId : branch.nodeIds()) {
+                                    SkillNodeData branchNode = tree.nodes().get(nodeId);
+                                    String nodeName = branchNode != null ? branchNode.displayName() : nodeId;
+                                    lines.add(net.minecraft.network.chat.Component.literal("  §f- " + nodeName));
+                                }
+                            }
+                        }
+
+                        // Show branch status
+                        lines.add(net.minecraft.network.chat.Component.literal(""));
                         if (selectedBranch != null && !selectedBranch.equals(node.exclusiveBranchId())) {
                             // Nodo bloqueado por selección de rama diferente
                             lines.add(net.minecraft.network.chat.Component.literal("§cRama bloqueada"));
@@ -1331,6 +1379,16 @@ public class SkillTreeRenderer {
     /** Called on SKILL_SPEND_ERROR — removes from pending without animating. */
     public static void cancelSpend(String treeId, String nodeId) {
         pendingSpendNodes.remove(treeId + ":" + nodeId);
+    }
+
+    private static String getPointTypeDisplayName(String pointType) {
+        if (pointType == null) return "puntos";
+        return switch (pointType) {
+            case "combat_points" -> "Puntos de Combate";
+            case "skill_points" -> "Puntos de Habilidad";
+            case "gathering_points" -> "Puntos de Recolección";
+            default -> pointType.replace("_", " ");
+        };
     }
 
     /** Returns true if this node has a spend request in flight. */

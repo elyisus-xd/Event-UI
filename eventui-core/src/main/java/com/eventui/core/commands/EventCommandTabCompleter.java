@@ -236,8 +236,37 @@ public class EventCommandTabCompleter implements TabCompleter {
     }
 
     private List<String> getAvailablePointTypes(String partial) {
-        return plugin.getSkillTreeStorage().getAllSkillTrees().values().stream()
+        List<String> pointTypes = new ArrayList<>();
+
+        // Add point types from skill trees
+        pointTypes.addAll(plugin.getSkillTreeStorage().getAllSkillTrees().values().stream()
                 .map(tree -> tree.getPointType())
+                .distinct()
+                .toList());
+
+        // Add aliases from config
+        if (plugin.getSkillSourcesConfig() != null && plugin.getSkillSourcesConfig().getPointTypeResolver() != null) {
+            var aliasesSection = plugin.getConfig().getConfigurationSection("skills.point_type_aliases");
+            if (aliasesSection != null) {
+                pointTypes.addAll(aliasesSection.getKeys(false));
+            }
+        }
+
+        // Add point types from point distributions
+        if (plugin.getSkillSourcesConfig() != null) {
+            var sourcesConfig = plugin.getSkillSourcesConfig();
+            pointTypes.addAll(sourcesConfig.getMobKillPointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getPlayerKillPointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getBlockMinePointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getFishingPointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getCropHarvestPointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getAnimalBreedPointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getEventCompletePointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getObjectiveCompletePointDistribution().keySet());
+            pointTypes.addAll(sourcesConfig.getPlaytimePointDistribution().keySet());
+        }
+
+        return pointTypes.stream()
                 .distinct()
                 .filter(type -> type.toLowerCase().startsWith(partial.toLowerCase()))
                 .sorted()

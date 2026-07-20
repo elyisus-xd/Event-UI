@@ -184,7 +184,7 @@ public class SkillEffectApplier {
 
     /**
      * Parse operation string to AttributeModifier.Operation.
-     * Supports: "add", "multiply", "add_scalar"
+     * Supports: "add", "add_number" (adds fixed value), "add_percent", "add_scalar" (adds percentage of base value), "multiply"
      * Defaults to ADD_NUMBER if unknown or null.
      */
     private AttributeModifier.Operation parseOperation(String operationStr) {
@@ -195,7 +195,7 @@ public class SkillEffectApplier {
         return switch (operationStr.toLowerCase()) {
             case "add", "add_number" -> AttributeModifier.Operation.ADD_NUMBER;
             case "multiply" -> AttributeModifier.Operation.MULTIPLY_SCALAR_1;
-            case "add_scalar" -> AttributeModifier.Operation.ADD_SCALAR;
+            case "add_percent", "add_scalar" -> AttributeModifier.Operation.ADD_SCALAR;
             default -> {
                 LOGGER.warning("Unknown operation '" + operationStr + "', defaulting to ADD_NUMBER");
                 yield AttributeModifier.Operation.ADD_NUMBER;

@@ -79,7 +79,11 @@ public class UIConfigManager {
                 config.getBoolean("messages.skills.requirements_not_met.enabled", true),
                 config.getString ("messages.skills.requirements_not_met.format", null),
                 config.getBoolean("messages.skills.already_maxed.enabled", true),
-                config.getString ("messages.skills.already_maxed.format", null)
+                config.getString ("messages.skills.already_maxed.format", null),
+                config.getBoolean("messages.skills.exclusive_branch_blocked.enabled", true),
+                config.getString ("messages.skills.exclusive_branch_blocked.format", null),
+                config.getBoolean("messages.skills.point_source_cooldown.enabled", true),
+                config.getString ("messages.skills.point_source_cooldown.format", null)
         );
 
         if (this.messenger == null) {
@@ -224,6 +228,10 @@ public class UIConfigManager {
 
                         reload();
 
+                        // Also reload skill sources config
+                        plugin.setSkillSourcesConfig(new com.eventui.core.skill.SkillSourcesConfig(plugin.getConfig()));
+                        plugin.setPointSourceManager(new com.eventui.core.skill.PointSourceManager(plugin.getSkillProgressStorage(), plugin.getSkillSourcesConfig(), plugin));
+
                         boolean modeChanged   = previousMode != this.mode;
                         boolean screenChanged = !String.valueOf(previousScreenId)
                                 .equals(String.valueOf(this.customScreenId));
@@ -235,7 +243,7 @@ public class UIConfigManager {
                                     : ""));
                             plugin.notifyUIReload();
                         } else {
-                            LOGGER.fine("config.yml reloaded but UI mode unchanged — no notification sent");
+                            LOGGER.fine("config.yml reloaded (including skill sources) — no UI notification sent");
                         }
                     });
                 }

@@ -41,6 +41,10 @@ public class EventMessageConfig {
     private final String skillRequirementsNotMetFormat;
     private final boolean skillAlreadyMaxedEnabled;
     private final String skillAlreadyMaxedFormat;
+    private final boolean skillExclusiveBranchBlockedEnabled;
+    private final String skillExclusiveBranchBlockedFormat;
+    private final boolean pointSourceCooldownEnabled;
+    private final String pointSourceCooldownFormat;
 
     public EventMessageConfig(
             boolean enabled,
@@ -55,7 +59,9 @@ public class EventMessageConfig {
             boolean skillPointsGrantedEnabled, String skillPointsGrantedFormat,
             boolean skillInsufficientPointsEnabled, String skillInsufficientPointsFormat,
             boolean skillRequirementsNotMetEnabled, String skillRequirementsNotMetFormat,
-            boolean skillAlreadyMaxedEnabled, String skillAlreadyMaxedFormat) {
+            boolean skillAlreadyMaxedEnabled, String skillAlreadyMaxedFormat,
+            boolean skillExclusiveBranchBlockedEnabled, String skillExclusiveBranchBlockedFormat,
+            boolean pointSourceCooldownEnabled, String pointSourceCooldownFormat) {
 
         this.enabled = enabled;
         this.progressEnabled = progressEnabled;
@@ -82,6 +88,10 @@ public class EventMessageConfig {
         this.skillRequirementsNotMetFormat = skillRequirementsNotMetFormat != null ? skillRequirementsNotMetFormat : "<red>[EventUI]</red> <gray>No cumples los requisitos para desbloquear <node_name>.</gray>";
         this.skillAlreadyMaxedEnabled = skillAlreadyMaxedEnabled;
         this.skillAlreadyMaxedFormat = skillAlreadyMaxedFormat != null ? skillAlreadyMaxedFormat : "<red>[EventUI]</red> <gray><node_name> ya está en su nivel máximo.</gray>";
+        this.skillExclusiveBranchBlockedEnabled = skillExclusiveBranchBlockedEnabled;
+        this.skillExclusiveBranchBlockedFormat = skillExclusiveBranchBlockedFormat != null ? skillExclusiveBranchBlockedFormat : "<red>[EventUI]</red> <gray>Ya elegiste otra rama en el grupo '<group_name>'. No puedes desbloquear esta.</gray>";
+        this.pointSourceCooldownEnabled = pointSourceCooldownEnabled;
+        this.pointSourceCooldownFormat = pointSourceCooldownFormat != null ? pointSourceCooldownFormat : "<yellow>[EventUI]</yellow> <gray><source> está en cooldown. Espera <remaining> segundos.</gray>";
     }
 
     public static EventMessageConfig defaults() {
@@ -93,6 +103,8 @@ public class EventMessageConfig {
                 true, DEFAULT_EVENT_COMPLETED,
                 true, DEFAULT_EVENT_FAILED,
                 true, DEFAULT_EVENT_LOCKED,
+                true, null,
+                true, null,
                 true, null,
                 true, null,
                 true, null,
@@ -127,4 +139,8 @@ public class EventMessageConfig {
     public String getSkillRequirementsNotMetFormat() { return skillRequirementsNotMetFormat; }
     public boolean isSkillAlreadyMaxedEnabled() { return skillAlreadyMaxedEnabled; }
     public String getSkillAlreadyMaxedFormat()  { return skillAlreadyMaxedFormat; }
+    public boolean isSkillExclusiveBranchBlockedEnabled() { return skillExclusiveBranchBlockedEnabled; }
+    public String getSkillExclusiveBranchBlockedFormat() { return skillExclusiveBranchBlockedFormat; }
+    public boolean isPointSourceCooldownEnabled() { return pointSourceCooldownEnabled; }
+    public String getPointSourceCooldownFormat() { return pointSourceCooldownFormat; }
 }

@@ -68,4 +68,9 @@ public interface PlayerSkillProgress {
      * @return Mapa de grupos exclusivos a ramas seleccionadas para un árbol
      */
     java.util.Map<String, String> getSelectedBranches(String treeId);
+
+    /**
+     * @return Set de todos los tipos de puntos que el jugador tiene registrados
+     */
+    java.util.Set<String> getAllPointTypes();
 }

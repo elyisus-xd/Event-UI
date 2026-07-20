@@ -48,6 +48,7 @@ public class EventUIPlugin extends JavaPlugin {
     private UIStateManager uiStateManager;
     private UIFileWatcher fileWatcher;
     private SkillTreeFileWatcher skillTreeFileWatcher;
+    private EventFileWatcher eventFileWatcher;
     private PlayerDataManager playerDataManager;
     private com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig;
     private com.eventui.core.skill.PointSourceManager pointSourceManager;
@@ -56,7 +57,7 @@ public class EventUIPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        LOGGER.info("EventUI v" + getDescription().getVersion() + " initializing...");
+        LOGGER.info("EventUI v" + getPluginMeta().getVersion() + " initializing...");
         saveDefaultConfig();
         this.adventure = BukkitAudiences.create(this);
         this.configLoader = new EventConfigLoader(getDataFolder());
@@ -74,10 +75,9 @@ public class EventUIPlugin extends JavaPlugin {
         this.rewardManager = new RewardManager(this);
         this.playerDataManager = new PlayerDataManager(this);
         this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
-        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig);
+        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig, this);
         getServer().getPluginManager().registerEvents(new PlayerDataListener(this), this);
-        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.PointSourceListener(this, pointSourceManager), this);
-        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.SkillPointsListener(this, skillSourcesConfig, pointSourceManager), this);
+        getServer().getPluginManager().registerEvents(new com.eventui.core.skill.PointSourceListener(this), this);
         loadEvents();
         loadSkillTrees();
         initializeBridge();
@@ -88,6 +88,9 @@ public class EventUIPlugin extends JavaPlugin {
 
         this.skillTreeFileWatcher = new SkillTreeFileWatcher(this);
         this.skillTreeFileWatcher.start();
+
+        this.eventFileWatcher = new EventFileWatcher(this);
+        this.eventFileWatcher.start();
         registerTrackers();
         objectiveTracker.buildObjectiveTypeIndex();
         objectiveTracker.initializeActiveEventsIndex();
@@ -134,6 +137,7 @@ public class EventUIPlugin extends JavaPlugin {
 
         if (fileWatcher != null) fileWatcher.stop();
         if (skillTreeFileWatcher != null) skillTreeFileWatcher.stop();
+        if (eventFileWatcher != null) eventFileWatcher.stop();
 
         if (playerDataManager != null) {
             playerDataManager.saveAll();
@@ -217,7 +221,7 @@ public class EventUIPlugin extends JavaPlugin {
     public void reloadEvents() {
         LOGGER.info("Reloading events, skill trees and UI configuration...");
         this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
-        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig);
+        this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig, this);
         loadEvents();
         loadSkillTrees();
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
@@ -268,8 +272,16 @@ public class EventUIPlugin extends JavaPlugin {
         return skillSourcesConfig;
     }
 
+    public void setSkillSourcesConfig(com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig) {
+        this.skillSourcesConfig = skillSourcesConfig;
+    }
+
     public com.eventui.core.skill.PointSourceManager getPointSourceManager() {
         return pointSourceManager;
+    }
+
+    public void setPointSourceManager(com.eventui.core.skill.PointSourceManager pointSourceManager) {
+        this.pointSourceManager = pointSourceManager;
     }
 
     public Map<String, UIConfig> getUIConfigs() { return uiConfigs; }

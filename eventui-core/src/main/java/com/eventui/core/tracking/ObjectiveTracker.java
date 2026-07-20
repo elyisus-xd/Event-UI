@@ -844,6 +844,12 @@ public class ObjectiveTracker implements Listener {
             plugin.getRewardManager().giveRewards(player, eventDef);
             notifyStateChange(player.getUniqueId(), eventDef.getId());
             plugin.getPlayerDataManager().requestSave(player.getUniqueId(), "event completed: " + eventDef.getId());
+
+            // Award points for event completion
+            if (plugin.getPointSourceManager() != null) {
+                String difficulty = eventDef.getMetadata().getOrDefault("difficulty", "medium");
+                plugin.getPointSourceManager().handleEventComplete(player, eventDef.getId(), difficulty);
+            }
         }
     }
 

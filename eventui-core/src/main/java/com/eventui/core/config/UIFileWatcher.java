@@ -4,6 +4,8 @@ import com.eventui.api.ui.UIConfig;
 import com.eventui.core.EventUIPlugin;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -12,12 +14,13 @@ import java.util.logging.Logger;
 public class UIFileWatcher {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI");
-    private static final long POLL_INTERVAL_MS = 1000;
     private static final long DEBOUNCE_MS = 300;
 
     private final EventUIPlugin plugin;
     private final File uisFolder;
-    private Thread pollThread;
+    private WatchService watchService;
+    private WatchKey watchKey;
+    private Thread watchThread;
     private volatile boolean running = false;
     private final ScheduledExecutorService debouncer;
     private final Map<String, ScheduledFuture<?>> pending = new HashMap<>();
@@ -37,21 +40,95 @@ public class UIFileWatcher {
             uisFolder.mkdirs();
         }
 
+        try {
+            watchService = FileSystems.getDefault().newWatchService();
+            Path watchPath = uisFolder.toPath();
+            watchKey = watchPath.register(watchService,
+                    StandardWatchEventKinds.ENTRY_MODIFY,
+                    StandardWatchEventKinds.ENTRY_CREATE);
+
+            running = true;
+            watchThread = new Thread(this::watchLoop, "EventUI-FileWatcher");
+            watchThread.setDaemon(true);
+            watchThread.start();
+
+            LOGGER.info("[EventUI] UI WatchService iniciado en " + uisFolder.getAbsolutePath());
+        } catch (IOException e) {
+            LOGGER.severe("[EventUI] Error iniciando WatchService: " + e.getMessage());
+            LOGGER.warning("[EventUI] Usando polling como fallback");
+            startPollingFallback();
+        }
+    }
+
+    private void startPollingFallback() {
         running = true;
-        pollThread = new Thread(this::pollLoop, "EventUI-FileWatcher");
-        pollThread.setDaemon(true);
-        pollThread.start();
+        watchThread = new Thread(this::pollingFallbackLoop, "EventUI-FileWatcher-Fallback");
+        watchThread.setDaemon(true);
+        watchThread.start();
     }
 
     public void stop() {
         running = false;
-        if (pollThread != null) pollThread.interrupt();
+        if (watchThread != null) watchThread.interrupt();
         debouncer.shutdownNow();
+
+        if (watchService != null) {
+            try {
+                watchService.close();
+            } catch (IOException e) {
+                LOGGER.warning("[EventUI] Error cerrando WatchService: " + e.getMessage());
+            }
+        }
         LOGGER.info("[EventUI] Hot Reload detenido.");
     }
 
-    private void pollLoop() {
-        // Snapshot inicial para no recargar todo al arrancar
+    private void watchLoop() {
+        while (running && !Thread.currentThread().isInterrupted()) {
+            try {
+                WatchKey key = watchService.poll(1, TimeUnit.SECONDS);
+                if (key == null) continue;
+
+                for (WatchEvent<?> event : key.pollEvents()) {
+                    WatchEvent.Kind<?> kind = event.kind();
+
+                    if (kind == StandardWatchEventKinds.OVERFLOW) {
+                        continue;
+                    }
+
+                    @SuppressWarnings("unchecked")
+                    WatchEvent<Path> ev = (WatchEvent<Path>) event;
+                    Path filename = ev.context();
+
+                    if (filename.toString().endsWith(".yml") || filename.toString().endsWith(".yaml")) {
+                        String fileName = filename.toString();
+                        LOGGER.info("[UIWatcher] Change detected: " + fileName);
+
+                        String path = uisFolder.getAbsolutePath() + File.separator + fileName;
+                        ScheduledFuture<?> prev = pending.get(path);
+                        if (prev != null && !prev.isDone()) prev.cancel(false);
+
+                        File file = new File(uisFolder, fileName);
+                        pending.put(path, debouncer.schedule(
+                                () -> reloadOnMainThread(file, fileName),
+                                DEBOUNCE_MS, TimeUnit.MILLISECONDS
+                        ));
+                    }
+                }
+
+                boolean valid = key.reset();
+                if (!valid) {
+                    LOGGER.warning("[EventUI] WatchKey invalidado, reiniciando...");
+                    break;
+                }
+            } catch (InterruptedException e) {
+                break;
+            } catch (ClosedWatchServiceException e) {
+                break;
+            }
+        }
+    }
+
+    private void pollingFallbackLoop() {
         Map<String, Long> lastModified = new HashMap<>();
         File[] initialFiles = listYamlFiles();
         if (initialFiles != null) {
@@ -62,7 +139,7 @@ public class UIFileWatcher {
 
         while (running && !Thread.currentThread().isInterrupted()) {
             try {
-                Thread.sleep(POLL_INTERVAL_MS);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 break;
             }
@@ -78,7 +155,7 @@ public class UIFileWatcher {
                 if (previousTs == null || currentTs > previousTs) {
                     lastModified.put(path, currentTs);
 
-                    if (previousTs != null) { // skip on first detection (startup)
+                    if (previousTs != null) {
                         String fileName = file.getName();
                         LOGGER.info("[UIWatcher] Change detected: " + fileName);
 

@@ -126,6 +126,21 @@ public class EventMessenger {
                 Placeholder.unparsed("player", player.getName()));
     }
 
+    public void sendExclusiveBranchBlocked(Player player, String groupName) {
+        if (!config.isEnabled() || !config.isSkillExclusiveBranchBlockedEnabled()) return;
+        send(player, config.getSkillExclusiveBranchBlockedFormat(),
+                Placeholder.unparsed("group_name", groupName),
+                Placeholder.unparsed("player", player.getName()));
+    }
+
+    public void sendPointSourceCooldown(Player player, String source, long remainingSeconds) {
+        if (!config.isEnabled() || !config.isPointSourceCooldownEnabled()) return;
+        send(player, config.getPointSourceCooldownFormat(),
+                Placeholder.unparsed("source", source),
+                Placeholder.unparsed("remaining", String.valueOf(remainingSeconds)),
+                Placeholder.unparsed("player", player.getName()));
+    }
+
     private void send(Player player, String format, TagResolver... resolvers) {
         try {
             Component component = MM.deserialize(format, resolvers);

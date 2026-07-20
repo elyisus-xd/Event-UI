@@ -128,4 +128,8 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
     public Map<String, Integer> getTotalEarnedPointsSnapshot() {
         return Collections.unmodifiableMap(new HashMap<>(totalEarnedPoints));
     }
+
+    public java.util.Set<String> getAllPointTypes() {
+        return Collections.unmodifiableSet(availablePoints.keySet());
+    }
 }

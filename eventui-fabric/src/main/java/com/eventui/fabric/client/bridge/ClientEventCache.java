@@ -180,7 +180,8 @@ public class ClientEventCache {
                     oldNode.textureOverridePartial(),
                     oldNode.textureOverrideMaxed(),
                     oldNode.exclusiveGroupId(),
-                    oldNode.exclusiveBranchId()
+                    oldNode.exclusiveBranchId(),
+                    oldNode.pointType()
             );
             tree.nodes().put(nodeId, newNode);
             LOGGER.debug("Updated node {}.{} to level {}", treeId, nodeId, newLevel);
@@ -234,7 +235,8 @@ public class ClientEventCache {
                             node.textureOverridePartial(),
                             node.textureOverrideMaxed(),
                             node.exclusiveGroupId(),
-                            node.exclusiveBranchId()
+                            node.exclusiveBranchId(),
+                            node.pointType()
                     );
                     nodes.put(nodeId, updated);
                     LOGGER.debug("Pass {}: recalculated state for {}.{}: {} -> {}",

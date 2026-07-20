@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 public class SkillSourcesConfig {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI");
+    private final PointTypeResolver pointTypeResolver;
 
     // ── XP Conversion ──────────────────────────────────────────
     private final boolean xpConversionEnabled;
@@ -24,6 +25,7 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> mobKillMultipliers;
     private final boolean mobKillNaturalOnly;
     private final Map<String, Integer> mobKillCooldowns;
+    private final List<String> mobKillAllowedMobs;
 
     // ── Player Kill ───────────────────────────────────────────
     private final boolean playerKillEnabled;
@@ -40,6 +42,7 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> blockMineMultipliers;
     private final boolean blockMineRequireCorrectTool;
     private final int blockMineCooldownPerBlock;
+    private final List<String> blockMineAllowedBlocks;
 
     // ── Fishing ───────────────────────────────────────────────
     private final boolean fishingEnabled;
@@ -91,6 +94,8 @@ public class SkillSourcesConfig {
     private final int playtimeActivityThreshold;
 
     public SkillSourcesConfig(FileConfiguration config) {
+        this.pointTypeResolver = new PointTypeResolver(config);
+
         ConfigurationSection pointSources = config.getConfigurationSection("skills.point_sources");
         if (pointSources == null) {
             LOGGER.warning("skills.point_sources section not found in config, using defaults");
@@ -114,6 +119,9 @@ public class SkillSourcesConfig {
         this.mobKillMultipliers = loadMultipliers(mobKillSection, "multipliers");
         this.mobKillNaturalOnly = mobKillSection != null && mobKillSection.getBoolean("natural_only", true);
         this.mobKillCooldowns = loadMultipliers(mobKillSection, "cooldowns_per_mob");
+        this.mobKillAllowedMobs = mobKillSection != null && mobKillSection.isList("allowed_mobs")
+                ? mobKillSection.getStringList("allowed_mobs")
+                : null;
 
         // Player Kill
         ConfigurationSection playerKillSection = pointSources.getConfigurationSection("player_kill");
@@ -132,6 +140,9 @@ public class SkillSourcesConfig {
         this.blockMineMultipliers = loadMultipliers(blockMineSection, "multipliers");
         this.blockMineRequireCorrectTool = blockMineSection != null && blockMineSection.getBoolean("require_correct_tool", true);
         this.blockMineCooldownPerBlock = blockMineSection != null ? blockMineSection.getInt("cooldown_per_block_seconds", 0) : 0;
+        this.blockMineAllowedBlocks = blockMineSection != null && blockMineSection.isList("allowed_blocks")
+                ? blockMineSection.getStringList("allowed_blocks")
+                : null;
 
         // Fishing
         ConfigurationSection fishingSection = pointSources.getConfigurationSection("fishing");
@@ -203,20 +214,25 @@ public class SkillSourcesConfig {
     }
 
     private List<String> loadPointTypes(ConfigurationSection section, String defaultType) {
-        if (section == null) return List.of(defaultType);
+        if (section == null) return List.of(pointTypeResolver.resolve(defaultType));
 
         // Try loading as list first (new format)
         if (section.isList("point_types")) {
-            return section.getStringList("point_types");
+            List<String> types = section.getStringList("point_types");
+            List<String> resolved = new ArrayList<>();
+            for (String type : types) {
+                resolved.add(pointTypeResolver.resolve(type));
+            }
+            return resolved;
         }
 
         // Fallback to single string (old format)
         String singleType = section.getString("point_type");
         if (singleType != null && !singleType.isEmpty()) {
-            return List.of(singleType);
+            return List.of(pointTypeResolver.resolve(singleType));
         }
 
-        return List.of(defaultType);
+        return List.of(pointTypeResolver.resolve(defaultType));
     }
 
     private Map<String, Double> loadPointDistribution(ConfigurationSection section, List<String> pointTypes, double defaultValue) {
@@ -224,7 +240,7 @@ public class SkillSourcesConfig {
         if (section == null) {
             // Fallback: distribute default value evenly among point types
             for (String type : pointTypes) {
-                distribution.put(type, defaultValue);
+                distribution.put(pointTypeResolver.resolve(type), defaultValue);
             }
             return distribution;
         }
@@ -233,14 +249,14 @@ public class SkillSourcesConfig {
         if (section.isConfigurationSection("point_distribution")) {
             ConfigurationSection distSection = section.getConfigurationSection("point_distribution");
             for (String key : distSection.getKeys(false)) {
-                distribution.put(key, distSection.getDouble(key, 0.0));
+                distribution.put(pointTypeResolver.resolve(key), distSection.getDouble(key, 0.0));
             }
             return distribution;
         }
 
         // Fallback: distribute default value evenly among point types
         for (String type : pointTypes) {
-            distribution.put(type, defaultValue);
+            distribution.put(pointTypeResolver.resolve(type), defaultValue);
         }
         return distribution;
     }
@@ -260,6 +276,7 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getMobKillMultipliers() { return Collections.unmodifiableMap(mobKillMultipliers); }
     public boolean isMobKillNaturalOnly() { return mobKillNaturalOnly; }
     public Map<String, Integer> getMobKillCooldowns() { return Collections.unmodifiableMap(mobKillCooldowns); }
+    public List<String> getMobKillAllowedMobs() { return mobKillAllowedMobs != null ? Collections.unmodifiableList(mobKillAllowedMobs) : null; }
 
     // ── Player Kill Getters ────────────────────────────────────
     public boolean isPlayerKillEnabled() { return playerKillEnabled; }
@@ -276,6 +293,7 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getBlockMineMultipliers() { return Collections.unmodifiableMap(blockMineMultipliers); }
     public boolean isBlockMineRequireCorrectTool() { return blockMineRequireCorrectTool; }
     public int getBlockMineCooldownPerBlock() { return blockMineCooldownPerBlock; }
+    public List<String> getBlockMineAllowedBlocks() { return blockMineAllowedBlocks != null ? Collections.unmodifiableList(blockMineAllowedBlocks) : null; }
 
     // ── Fishing Getters ────────────────────────────────────────
     public boolean isFishingEnabled() { return fishingEnabled; }
@@ -325,4 +343,7 @@ public class SkillSourcesConfig {
     public int getPlaytimeDailyCap() { return playtimeDailyCap; }
     public boolean isPlaytimeRequireActivity() { return playtimeRequireActivity; }
     public int getPlaytimeActivityThreshold() { return playtimeActivityThreshold; }
+
+    // ── Point Type Resolver ───────────────────────────────────
+    public PointTypeResolver getPointTypeResolver() { return pointTypeResolver; }
 }

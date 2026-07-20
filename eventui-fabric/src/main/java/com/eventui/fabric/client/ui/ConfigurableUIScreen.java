@@ -279,9 +279,12 @@ public class ConfigurableUIScreen extends Screen {
             pointData.put("totalEarned", entry.getValue().totalEarned());
             skillsMap.put(entry.getKey(), pointData);
         }
+        // Always add skills to context, even if empty (data bindings need structure)
         context.put("skills", skillsMap);
         if (!skillsMap.isEmpty()) {
             org.slf4j.LoggerFactory.getLogger(getClass()).debug("Added {} skill point types to context", skillsMap.size());
+        } else {
+            org.slf4j.LoggerFactory.getLogger(getClass()).debug("No skill points data available, added empty skills map to context");
         }
 
         return context;

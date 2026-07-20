@@ -293,9 +293,12 @@ public class SkillTreeConfigLoader {
             exclusiveBranchId = branchInfo.get("branchId");
         }
 
+        // Parsear point_type específico del nodo (opcional)
+        String pointType = (String) nodeData.get("point_type");
+
         return new SkillNodeDefinitionImpl(
                 id, displayName, description, icon, maxLevel, costs, requirements, requiresMode,
-                posX, posY, effects, textures, exclusiveGroupId, exclusiveBranchId
+                posX, posY, effects, textures, exclusiveGroupId, exclusiveBranchId, pointType
         );
     }
 

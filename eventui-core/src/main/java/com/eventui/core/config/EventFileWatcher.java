@@ -1,6 +1,5 @@
 package com.eventui.core.config;
 
-import com.eventui.api.skill.SkillTreeDefinition;
 import com.eventui.core.EventUIPlugin;
 
 import java.io.File;
@@ -11,13 +10,13 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.logging.Logger;
 
-public class SkillTreeFileWatcher {
+public class EventFileWatcher {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI");
     private static final long DEBOUNCE_MS = 300;
 
     private final EventUIPlugin plugin;
-    private final File skillsFolder;
+    private final File eventsFolder;
     private WatchService watchService;
     private WatchKey watchKey;
     private Thread watchThread;
@@ -25,34 +24,34 @@ public class SkillTreeFileWatcher {
     private final ScheduledExecutorService debouncer;
     private final Map<String, ScheduledFuture<?>> pending = new HashMap<>();
 
-    public SkillTreeFileWatcher(EventUIPlugin plugin) {
+    public EventFileWatcher(EventUIPlugin plugin) {
         this.plugin = plugin;
-        this.skillsFolder = new File(plugin.getDataFolder(), "skills");
+        this.eventsFolder = new File(plugin.getDataFolder(), "events");
         this.debouncer = Executors.newSingleThreadScheduledExecutor(r -> {
-            Thread t = new Thread(r, "EventUI-SkillTreeHotReload-Debounce");
+            Thread t = new Thread(r, "EventUI-EventReload-Debounce");
             t.setDaemon(true);
             return t;
         });
     }
 
     public void start() {
-        if (!skillsFolder.exists()) {
-            skillsFolder.mkdirs();
+        if (!eventsFolder.exists()) {
+            eventsFolder.mkdirs();
         }
 
         try {
             watchService = FileSystems.getDefault().newWatchService();
-            Path watchPath = skillsFolder.toPath();
+            Path watchPath = eventsFolder.toPath();
             watchKey = watchPath.register(watchService,
                     StandardWatchEventKinds.ENTRY_MODIFY,
                     StandardWatchEventKinds.ENTRY_CREATE);
 
             running = true;
-            watchThread = new Thread(this::watchLoop, "EventUI-SkillTreeFileWatcher");
+            watchThread = new Thread(this::watchLoop, "EventUI-EventFileWatcher");
             watchThread.setDaemon(true);
             watchThread.start();
 
-            LOGGER.info("[EventUI] SkillTree WatchService iniciado en " + skillsFolder.getAbsolutePath());
+            LOGGER.info("[EventUI] Event WatchService iniciado en " + eventsFolder.getAbsolutePath());
         } catch (IOException e) {
             LOGGER.severe("[EventUI] Error iniciando WatchService: " + e.getMessage());
             LOGGER.warning("[EventUI] Usando polling como fallback");
@@ -62,7 +61,7 @@ public class SkillTreeFileWatcher {
 
     private void startPollingFallback() {
         running = true;
-        watchThread = new Thread(this::pollingFallbackLoop, "EventUI-SkillTreeFileWatcher-Fallback");
+        watchThread = new Thread(this::pollingFallbackLoop, "EventUI-EventFileWatcher-Fallback");
         watchThread.setDaemon(true);
         watchThread.start();
     }
@@ -79,7 +78,7 @@ public class SkillTreeFileWatcher {
                 LOGGER.warning("[EventUI] Error cerrando WatchService: " + e.getMessage());
             }
         }
-        LOGGER.info("[EventUI] Skill Tree Hot Reload detenido.");
+        LOGGER.info("[EventUI] Event FileWatcher detenido.");
     }
 
     private void watchLoop() {
@@ -101,15 +100,14 @@ public class SkillTreeFileWatcher {
 
                     if (filename.toString().endsWith(".yml") || filename.toString().endsWith(".yaml")) {
                         String fileName = filename.toString();
-                        LOGGER.info("[SkillTreeWatcher] Change detected: " + fileName);
+                        LOGGER.info("[EventWatcher] Change detected: " + fileName);
 
-                        String path = skillsFolder.getAbsolutePath() + File.separator + fileName;
+                        String path = eventsFolder.getAbsolutePath() + File.separator + fileName;
                         ScheduledFuture<?> prev = pending.get(path);
                         if (prev != null && !prev.isDone()) prev.cancel(false);
 
-                        File file = new File(skillsFolder, fileName);
                         pending.put(path, debouncer.schedule(
-                                () -> reloadOnMainThread(file, fileName),
+                                () -> reloadOnMainThread(fileName),
                                 DEBOUNCE_MS, TimeUnit.MILLISECONDS
                         ));
                     }
@@ -157,13 +155,13 @@ public class SkillTreeFileWatcher {
 
                     if (previousTs != null) {
                         String fileName = file.getName();
-                        LOGGER.info("[SkillTreeWatcher] Change detected: " + fileName);
+                        LOGGER.info("[EventWatcher] Change detected: " + fileName);
 
                         ScheduledFuture<?> prev = pending.get(path);
                         if (prev != null && !prev.isDone()) prev.cancel(false);
 
                         pending.put(path, debouncer.schedule(
-                                () -> reloadOnMainThread(file, fileName),
+                                () -> reloadOnMainThread(fileName),
                                 DEBOUNCE_MS, TimeUnit.MILLISECONDS
                         ));
                     }
@@ -173,24 +171,33 @@ public class SkillTreeFileWatcher {
     }
 
     private File[] listYamlFiles() {
-        return skillsFolder.listFiles((dir, name) ->
+        return eventsFolder.listFiles((dir, name) ->
                 name.endsWith(".yml") || name.endsWith(".yaml"));
     }
 
-    private void reloadOnMainThread(File file, String fileName) {
+    private void reloadOnMainThread(String fileName) {
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             try {
-                SkillTreeDefinition newTree =
-                        plugin.getSkillTreeConfigLoader().loadSkillTreeFromFile(file);
-                plugin.getSkillTreeStorage().registerSkillTree(newTree);
-                LOGGER.info("[EventUI] Skill Tree Hot Reload: '"
-                        + newTree.getId() + "' recargado desde " + fileName);
-                plugin.notifySkillTreeHotReload(newTree.getId());
+                File eventFile = new File(eventsFolder, fileName);
+                if (!eventFile.exists()) {
+                    LOGGER.warning("[EventUI] Hot Reload: Archivo no existe " + fileName);
+                    return;
+                }
+
+                LOGGER.info("[EventUI] Hot Reload: Recargando evento desde " + fileName);
+
+                // Load single event file
+                var eventDef = plugin.getConfigLoader().loadEventFromFile(eventFile);
+                if (eventDef != null) {
+                    plugin.getStorage().registerEvent(eventDef);
+                    plugin.getObjectiveTracker().buildObjectiveTypeIndex();
+                    plugin.getObjectiveTracker().initializeActiveEventsIndex();
+                    LOGGER.info("[EventUI] Hot Reload: Evento '" + eventDef.getId() + "' recargado exitosamente");
+                } else {
+                    LOGGER.warning("[EventUI] Hot Reload: No se pudo cargar el evento desde " + fileName);
+                }
             } catch (Exception e) {
-                LOGGER.severe("[EventUI] Skill Tree Hot Reload: error en "
-                        + fileName + " - " + e.getMessage());
-                LOGGER.severe("[EventUI] El skill tree anterior sigue activo"
-                        + " hasta que el archivo sea válido.");
+                LOGGER.severe("[EventUI] Hot Reload: error al recargar evento - " + e.getMessage());
             }
         });
     }

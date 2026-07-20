@@ -34,6 +34,22 @@ public class EventStorage {
 
         public void registerEvents(Map<String, EventDefinition> events) {
         eventDefinitions.putAll(events);
+
+        // Update existing player progress with new target amounts
+        for (Map.Entry<UUID, Map<String, EventProgressImpl>> playerEntry : playerProgress.entrySet()) {
+            for (Map.Entry<String, EventProgressImpl> progressEntry : playerEntry.getValue().entrySet()) {
+                String eventId = progressEntry.getKey();
+                EventProgressImpl progress = progressEntry.getValue();
+
+                EventDefinition newDefinition = eventDefinitions.get(eventId);
+                if (newDefinition != null) {
+                    // Update target amounts for existing objectives
+                    for (var objective : newDefinition.getObjectives()) {
+                        progress.registerObjective(objective.getId(), objective.getTargetAmount());
+                    }
+                }
+            }
+        }
     }
 
         public Optional<EventDefinition> getEventDefinition(String eventId) {

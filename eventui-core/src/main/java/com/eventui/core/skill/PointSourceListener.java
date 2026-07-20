@@ -20,18 +20,20 @@ import org.bukkit.inventory.ItemStack;
 public class PointSourceListener implements Listener {
 
     private final EventUIPlugin plugin;
-    private final PointSourceManager pointSourceManager;
 
-    public PointSourceListener(EventUIPlugin plugin, PointSourceManager pointSourceManager) {
+    public PointSourceListener(EventUIPlugin plugin) {
         this.plugin = plugin;
-        this.pointSourceManager = pointSourceManager;
+    }
+
+    private PointSourceManager getPointSourceManager() {
+        return plugin.getPointSourceManager();
     }
 
     // ── XP Conversion ──────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLevelChange(PlayerLevelChangeEvent event) {
         if (event.getNewLevel() > event.getOldLevel()) {
-            pointSourceManager.handleXpGain(event.getPlayer(), event.getNewLevel() - event.getOldLevel(), true);
+            getPointSourceManager().handleXpGain(event.getPlayer(), event.getNewLevel() - event.getOldLevel(), true);
         }
     }
 
@@ -40,7 +42,7 @@ public class PointSourceListener implements Listener {
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.getKiller() instanceof Player) {
-            pointSourceManager.handleMobKill(event);
+            getPointSourceManager().handleMobKill(event);
         }
     }
 
@@ -49,15 +51,13 @@ public class PointSourceListener implements Listener {
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player killer = event.getPlayer().getKiller();
         if (killer != null) {
-            pointSourceManager.handlePlayerKill(killer, event.getPlayer());
+            getPointSourceManager().handlePlayerKill(killer, event.getPlayer());
         }
     }
 
     // ── Block Mine ───────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
-        if (!event.getPlayer().hasPermission("eventui.skills.points")) return;
-
         Block block = event.getBlock();
         String blockId = block.getType().getKey().toString();
 
@@ -70,13 +70,13 @@ public class PointSourceListener implements Listener {
             }
         }
 
-        pointSourceManager.handleBlockMine(event.getPlayer(), blockId);
+        getPointSourceManager().handleBlockMine(event.getPlayer(), blockId);
     }
 
     // ── Fishing ───────────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerFish(PlayerFishEvent event) {
-        pointSourceManager.handleFishing(event);
+        getPointSourceManager().handleFishing(event);
     }
 
     // ── Crop Harvest ─────────────────────────────────────────
@@ -93,7 +93,7 @@ public class PointSourceListener implements Listener {
         String cropId = block.getType().getKey().toString();
         boolean isManual = true; // Simplified - could check for dispenser
 
-        pointSourceManager.handleCropHarvest(event.getPlayer(), cropId, isMature, isManual);
+        getPointSourceManager().handleCropHarvest(event.getPlayer(), cropId, isMature, isManual);
     }
 
     // ── Animal Breed ─────────────────────────────────────────
@@ -104,20 +104,20 @@ public class PointSourceListener implements Listener {
         Entity child = event.getEntity();
         String entityId = child.getType().getKey().toString();
 
-        pointSourceManager.handleAnimalBreed(player, entityId);
+        getPointSourceManager().handleAnimalBreed(player, entityId);
     }
 
     // ── Playtime Activity Tracking ─────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
-        // Only track significant movement
-        if (event.getFrom().getX() == event.getTo().getX() &&
-            event.getFrom().getY() == event.getTo().getY() &&
-            event.getFrom().getZ() == event.getTo().getZ()) {
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+            event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+            event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
             return;
         }
-
-        pointSourceManager.handlePlaytimeTick(event.getPlayer());
+        // Update activity timestamp separately from playtime tick
+        getPointSourceManager().updateActivity(event.getPlayer().getUniqueId());
+        getPointSourceManager().handlePlaytimeTick(event.getPlayer());
     }
 
     // ── Helper Methods ────────────────────────────────────────

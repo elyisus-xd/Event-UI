@@ -247,11 +247,6 @@ public class EventCommand implements CommandExecutor {
             int eventCount = plugin.getStorage().getAllEventDefinitions().size();
             sender.sendMessage("§aâœ“ Events reloaded successfully!");
             sender.sendMessage("§7Loaded " + eventCount + " event(s)");
-            int notifiedPlayers = notifyAllClientsReload();
-
-            if (notifiedPlayers > 0) {
-                sender.sendMessage("§7Notified " + notifiedPlayers + " online player(s) to refresh their UI");
-            }
 
         } catch (Exception e) {
             sender.sendMessage("§cFailed to reload: " + e.getMessage());
@@ -504,7 +499,7 @@ public class EventCommand implements CommandExecutor {
 
             var objProgress = progress.getObjectiveProgress(objectiveId);
             if (objProgress != null) {
-                objProgress.setProgress(amount);
+                boolean justCompleted = objProgress.setProgress(amount);
 
                 sender.sendMessage("§aâœ“ Progress updated!");
                 sender.sendMessage(String.format("§7%s: §f%d/%d",
@@ -520,6 +515,13 @@ public class EventCommand implements CommandExecutor {
                         objective.getTargetAmount(),
                         objective.getDescription()
                 );
+
+                // Award points for objective completion
+                if (justCompleted && plugin.getPointSourceManager() != null) {
+                    boolean eventAlsoCompleted = progress.areAllObjectivesCompleted();
+                    plugin.getPointSourceManager().handleObjectiveComplete((Player) sender, eventId, eventAlsoCompleted);
+                }
+
                 plugin.getPlayerDataManager().requestSave(
                         player.getUniqueId(),
                         "progress manually set: " + eventId + "/" + objectiveId
@@ -969,7 +971,10 @@ public class EventCommand implements CommandExecutor {
             return;
         }
 
-        plugin.getSkillNodeService().grantPoints(target, pointType, amount);
+        // Resolve point type alias to internal ID
+        String resolvedPointType = plugin.getSkillSourcesConfig().getPointTypeResolver().resolve(pointType);
+
+        plugin.getSkillNodeService().grantPoints(target, resolvedPointType, amount);
 
         // Push updated skill data to client immediately
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {

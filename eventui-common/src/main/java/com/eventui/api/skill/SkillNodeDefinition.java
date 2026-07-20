@@ -58,4 +58,10 @@ public interface SkillNodeDefinition {
      * null si el nodo no está en ningún grupo exclusivo
      */
     String getExclusiveBranchId();
+
+    /**
+     * @return Tipo de punto requerido para subir este nodo (ej: "combat_points")
+     * null si usa el tipo de punto por defecto del árbol
+     */
+    String getPointType();
 }

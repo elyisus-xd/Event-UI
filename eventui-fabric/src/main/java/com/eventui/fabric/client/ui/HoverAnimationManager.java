@@ -15,12 +15,16 @@ public class HoverAnimationManager {
     private final Map<String, AnimationState> activeAnimations = new ConcurrentHashMap<>();
 
     public void startAnimation(String elementId, HoverAnimation animation) {
+        startAnimation(elementId, animation, false);
+    }
+
+    public void startAnimation(String elementId, HoverAnimation animation, boolean isLoop) {
         if (animation == null) return;
 
         AnimationState state = activeAnimations.get(elementId);
 
         if (state == null) {
-            state = new AnimationState(animation, System.currentTimeMillis());
+            state = new AnimationState(animation, System.currentTimeMillis(), isLoop);
             activeAnimations.put(elementId, state);
         } else if (state.isExiting) {
             float currentProgress = getProgress(elementId);
@@ -28,9 +32,9 @@ public class HoverAnimationManager {
             state.isExiting = false;
             state.exitStartTime = 0L;
             activeAnimations.put(elementId,
-                    new AnimationState(animation, System.currentTimeMillis() - virtualElapsed));
-        } else if (!state.animation.equals(animation)) {
-            state = new AnimationState(animation, System.currentTimeMillis());
+                    new AnimationState(animation, System.currentTimeMillis() - virtualElapsed, isLoop));
+        } else if (!state.animation.equals(animation) || state.isLoop != isLoop) {
+            state = new AnimationState(animation, System.currentTimeMillis(), isLoop);
             activeAnimations.put(elementId, state);
         }
     }
@@ -63,7 +67,15 @@ public class HoverAnimationManager {
         }
 
         long elapsed = System.currentTimeMillis() - state.startTime;
-        float progress = Math.min(1.0f, elapsed / (float) state.animation.duration());
+        float progress = elapsed / (float) state.animation.duration();
+
+        // Loop animation: use sine wave for continuous effect
+        if (state.isLoop) {
+            progress = (float) Math.abs(Math.sin(progress * Math.PI));
+        } else {
+            progress = Math.min(1.0f, progress);
+        }
+
         return applyEasing(progress, state.animation.easing());
     }
 
@@ -131,6 +143,8 @@ public class HoverAnimationManager {
     public void cleanup() {
         long now = System.currentTimeMillis();
         activeAnimations.entrySet().removeIf(entry -> {
+            // Don't remove loop animations
+            if (entry.getValue().isLoop) return false;
             long elapsed = now - entry.getValue().startTime;
             return elapsed > entry.getValue().animation.duration() + 1000;
         });
@@ -238,10 +252,17 @@ public class HoverAnimationManager {
         boolean isExiting = false;
         long exitStartTime = 0L;
         float exitStartProgress = 1.0f;
+        boolean isLoop = false;
 
         AnimationState(HoverAnimation animation, long startTime) {
             this.animation = animation;
             this.startTime = startTime;
+        }
+
+        AnimationState(HoverAnimation animation, long startTime, boolean isLoop) {
+            this.animation = animation;
+            this.startTime = startTime;
+            this.isLoop = isLoop;
         }
     }
 }
