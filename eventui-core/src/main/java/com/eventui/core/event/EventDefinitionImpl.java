@@ -17,8 +17,6 @@ public record EventDefinitionImpl(
         Boolean alwaysActive
 ) implements EventDefinition {
 
-
-
     public EventDefinitionImpl {
         if (id == null || id.isBlank())
             throw new IllegalArgumentException("Event ID cannot be null or blank");

@@ -8,10 +8,6 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-/**
- * Almacenamiento en memoria de definiciones de árboles de habilidades.
- * SOLO contiene definiciones (estructura), NO progreso del jugador.
- */
 public class SkillTreeStorage {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI SkillTreeStorage");
@@ -22,37 +18,22 @@ public class SkillTreeStorage {
         this.skillTreeDefinitions = new ConcurrentHashMap<>();
     }
 
-    /**
-     * Registra un árbol de habilidades.
-     */
     public void registerSkillTree(SkillTreeDefinition definition) {
         skillTreeDefinitions.put(definition.getId(), definition);
     }
 
-    /**
-     * Registra múltiples árboles de habilidades.
-     */
     public void registerSkillTrees(Map<String, SkillTreeDefinition> trees) {
         skillTreeDefinitions.putAll(trees);
     }
 
-    /**
-     * Obtiene la definición de un árbol por ID.
-     */
     public Optional<SkillTreeDefinition> getSkillTree(String treeId) {
         return Optional.ofNullable(skillTreeDefinitions.get(treeId));
     }
 
-    /**
-     * Obtiene todos los árboles de habilidades registrados.
-     */
     public Map<String, SkillTreeDefinition> getAllSkillTrees() {
         return Collections.unmodifiableMap(skillTreeDefinitions);
     }
 
-    /**
-     * Retorna el número de árboles registrados.
-     */
     public int getSkillTreeCount() {
         return skillTreeDefinitions.size();
     }

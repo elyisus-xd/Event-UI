@@ -238,13 +238,11 @@ public class EventCommandTabCompleter implements TabCompleter {
     private List<String> getAvailablePointTypes(String partial) {
         List<String> pointTypes = new ArrayList<>();
 
-        // Add point types from skill trees
         pointTypes.addAll(plugin.getSkillTreeStorage().getAllSkillTrees().values().stream()
                 .map(tree -> tree.getPointType())
                 .distinct()
                 .toList());
 
-        // Add aliases from config
         if (plugin.getSkillSourcesConfig() != null && plugin.getSkillSourcesConfig().getPointTypeResolver() != null) {
             var aliasesSection = plugin.getConfig().getConfigurationSection("skills.point_type_aliases");
             if (aliasesSection != null) {
@@ -252,7 +250,6 @@ public class EventCommandTabCompleter implements TabCompleter {
             }
         }
 
-        // Add point types from point distributions
         if (plugin.getSkillSourcesConfig() != null) {
             var sourcesConfig = plugin.getSkillSourcesConfig();
             pointTypes.addAll(sourcesConfig.getMobKillPointDistribution().keySet());

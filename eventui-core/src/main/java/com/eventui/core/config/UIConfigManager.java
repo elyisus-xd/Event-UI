@@ -53,7 +53,6 @@ public class UIConfigManager {
             validateCustomMode();
         }
 
-        // ── Messages ──
         this.messageConfig = new EventMessageConfig(
                 config.getBoolean("messages.enabled", true),
                 config.getBoolean("messages.progress.enabled",            true),
@@ -92,7 +91,6 @@ public class UIConfigManager {
             this.messenger.reload(messageConfig);
         }
 
-        // ── Skill Connections ──
         this.connectionsConfig = new SkillConnectionsConfig(
                 config.getString("skills.connections.style.type", "curved"),
                 config.getInt("skills.connections.style.thickness", 2),
@@ -111,7 +109,6 @@ public class UIConfigManager {
 
     public EventMessenger getMessenger() { return messenger; }
     public SkillConnectionsConfig getConnectionsConfig() { return connectionsConfig; }
-
 
     public boolean isEventsAlwaysActive() {
         return eventsAlwaysActive;
@@ -148,7 +145,6 @@ public class UIConfigManager {
         }
     }
 
-
     public Map<String, String> getUIModeResponse() {
         Map<String, String> response = new HashMap<>();
         response.put("mode", mode.toString().toLowerCase());
@@ -167,7 +163,6 @@ public class UIConfigManager {
         this.eventsAlwaysActive = false;        loadConfig();
         LOGGER.fine("✓ UI configuration reloaded");
     }
-
 
     public UIMode getMode() {
         return mode;
@@ -228,7 +223,6 @@ public class UIConfigManager {
 
                         reload();
 
-                        // Also reload skill sources config
                         plugin.setSkillSourcesConfig(new com.eventui.core.skill.SkillSourcesConfig(plugin.getConfig()));
                         plugin.setPointSourceManager(new com.eventui.core.skill.PointSourceManager(plugin.getSkillProgressStorage(), plugin.getSkillSourcesConfig(), plugin));
 
@@ -263,6 +257,5 @@ public class UIConfigManager {
             watcherExecutor = null;
         }
     }
-
 
 }

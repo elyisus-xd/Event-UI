@@ -4,7 +4,6 @@ import com.eventui.fabric.client.ui.animation.Easing;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.gui.GuiGraphics;
 
-
 public class ScreenTransitionRenderer {
 
     public static void applyTransitionIn(ScreenTransition transition, float progress,
@@ -45,6 +44,5 @@ public class ScreenTransitionRenderer {
             case FADE, NONE -> {}
         }
     }
-
 
 }

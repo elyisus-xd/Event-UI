@@ -26,7 +26,7 @@ public class ShapelessRecipeRenderer implements RecipeRenderer {
     public boolean usesVanillaCraftingFrame() { return true; }
 
     @Override
-    public int getHeight() { return 3 * SLOT_SIZE; }  // 54
+    public int getHeight() { return 3 * SLOT_SIZE; }  
 
     @Override
     public int getWidth(Font font) {
@@ -38,7 +38,6 @@ public class ShapelessRecipeRenderer implements RecipeRenderer {
         List<Ingredient> ingredients = recipe.getIngredients();
         long time = System.currentTimeMillis() / 1000;
 
-        // Fill grid linearly (col = i%3, row = i/3) - draw items only (frame handled by tooltip)
         for (int i = 0; i < Math.min(ingredients.size(), 9); i++) {
             Ingredient ingredient = ingredients.get(i);
             int col = i % 3;
@@ -54,12 +53,10 @@ public class ShapelessRecipeRenderer implements RecipeRenderer {
             }
         }
 
-        // Arrow (centred vertically in the grid)
         int arrowX = x + 3 * SLOT_SIZE + PADDING;
         int arrowY = y + (3 * SLOT_SIZE / 2) - 4;
         RecipeSlotHelper.drawArrow(graphics, font, arrowX, arrowY);
 
-        // Output
         int outputX = arrowX + ARROW_WIDTH + PADDING;
         int outputY = y + (3 * SLOT_SIZE / 2) - 8;
         try {

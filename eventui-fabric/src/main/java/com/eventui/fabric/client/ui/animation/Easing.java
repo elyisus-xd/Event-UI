@@ -1,6 +1,5 @@
 package com.eventui.fabric.client.ui.animation;
 
-
 @FunctionalInterface
 public interface Easing {
 

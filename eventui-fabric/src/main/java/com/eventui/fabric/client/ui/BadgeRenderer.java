@@ -27,14 +27,12 @@ public class BadgeRenderer {
     private static final Logger LOGGER = LoggerFactory.getLogger(BadgeRenderer.class);
     private static final Set<String> dismissedBadges = ConcurrentHashMap.newKeySet();
 
-    // Scheduler for timer-based badge dismissals
     private static final ScheduledExecutorService SCHEDULER = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "eventui-badge-scheduler");
         t.setDaemon(true);
         return t;
     });
 
-    // Map of badgeKey -> scheduled future to avoid double-scheduling and to allow cancellation
     private static final java.util.Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     public static void renderBadge(UIElement element, UIBadge badge, GuiGraphics graphics,
                                    int elementX, int elementY, Map<String, Object> context, String screenId) {
@@ -54,7 +52,6 @@ public class BadgeRenderer {
             }
         }
 
-        // Handle timer-based auto-dismiss: if configured, schedule dismissal when first rendered
         String disappearOn = element.getProperties().get("badge_disappear_on");
         if (disappearOn != null && disappearOn.startsWith("timer:")) {
             String badgeKeyForTimer = generateBadgeKey(element, screenId);
@@ -120,7 +117,7 @@ public class BadgeRenderer {
                 break;
             default:
                 if (disappearOn.startsWith("timer:")) {
-                    // If interaction triggers timer-start (not typical), schedule dismissal
+                    
                     try {
                         int seconds = Integer.parseInt(disappearOn.substring("timer:".length()).trim());
                         scheduleDismiss(element, screenId, seconds);
@@ -142,14 +139,12 @@ public class BadgeRenderer {
         dismissedBadges.add(badgeKey);
         LOGGER.debug("Badge dismissed: {}", badgeKey);
 
-        // Cancel any scheduled timer for this badge
         ScheduledFuture<?> f = scheduledTasks.remove(badgeKey);
         if (f != null) {
             f.cancel(false);
             LOGGER.debug("Cancelled scheduled dismissal for {}", badgeKey);
         }
 
-        // Notify server to persist dismissal
         try {
             var player = Minecraft.getInstance().player;
             if (player != null) {
@@ -165,9 +160,8 @@ public class BadgeRenderer {
         }
     }
 
-    // Replace dismissed badges list from server (overwrites local set)
     public static void replaceDismissedFromServer(java.util.Set<String> keys) {
-        // Cancel scheduled tasks for badges that the server reports as dismissed
+        
         for (String k : keys) {
             ScheduledFuture<?> f = scheduledTasks.remove(k);
             if (f != null) {

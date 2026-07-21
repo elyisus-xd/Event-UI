@@ -34,7 +34,6 @@ public class ConfigurableUIScreen extends Screen {
     private final EventViewModel viewModel;
     private List<EventViewModel.EventData> events;
 
-
     private ScreenTransition transitionIn;
     private ScreenTransition transitionOut;
     private long transitionStartTime;
@@ -50,7 +49,6 @@ public class ConfigurableUIScreen extends Screen {
 
     private final Consumer<Map<String, String>> uiStateListener = this::onUIStateChanged;
     private Easing transitionEasing;
-
 
     public ConfigurableUIScreen(UIConfig config) {
         super(Component.literal(config.getTitle()));
@@ -76,8 +74,7 @@ public class ConfigurableUIScreen extends Screen {
         ClientEventBridge.getInstance().requestUIState();
         LOGGER.info("Created ConfigurableUIScreen with config: {} ({} events)",
                 config.getId(), events.size());
-        
-        // If this screen contains a SKILL_TREE element, request fresh skill data from server
+
         boolean hasSkillTree = uiConfig.getRootElements().stream()
             .anyMatch(e -> e.getType() == UIElementType.SKILL_TREE);
         if (hasSkillTree) {
@@ -101,7 +98,6 @@ public class ConfigurableUIScreen extends Screen {
         LOGGER.debug("Transition config: in={}, out={}, duration={}ms, easing={}, blur={}",
                 transitionIn, transitionOut, transitionDuration, easingStr, enableBlur);
     }
-
 
     private ScreenTransition parseTransitionType(String type) {
         return switch (type.toLowerCase()) {
@@ -163,9 +159,6 @@ public class ConfigurableUIScreen extends Screen {
 
         LOGGER.debug("uiScale: {} | offset: ({}, {})", String.format("%.4f", uiScale), offsetX, offsetY);
     }
-
-
-
 
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -270,7 +263,6 @@ public class ConfigurableUIScreen extends Screen {
             ));
         }
 
-        // Add skill data for data binding
         Map<String, Object> skillsMap = new HashMap<>();
         var cachedPoints = ClientEventBridge.getInstance().getCache().getCachedSkillPoints();
         for (var entry : cachedPoints.entrySet()) {
@@ -279,7 +271,7 @@ public class ConfigurableUIScreen extends Screen {
             pointData.put("totalEarned", entry.getValue().totalEarned());
             skillsMap.put(entry.getKey(), pointData);
         }
-        // Always add skills to context, even if empty (data bindings need structure)
+        
         context.put("skills", skillsMap);
         if (!skillsMap.isEmpty()) {
             org.slf4j.LoggerFactory.getLogger(getClass()).debug("Added {} skill point types to context", skillsMap.size());
@@ -290,14 +282,12 @@ public class ConfigurableUIScreen extends Screen {
         return context;
     }
 
-
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0) {
             int localX = (int)((mouseX - offsetX) / uiScale);
             int localY = (int)((mouseY - offsetY) / uiScale);
 
-            // Handle skill tree drag start
             for (UIElement element : uiConfig.getRootElements()) {
                 if (element.getType() == UIElementType.SKILL_TREE) {
                     int resolvedX = element.getX();
@@ -336,7 +326,7 @@ public class ConfigurableUIScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        // Check if mouse is over a SKILL_TREE element
+        
         int localX = (int)((mouseX - offsetX) / uiScale);
         int localY = (int)((mouseY - offsetY) / uiScale);
 
@@ -365,7 +355,7 @@ public class ConfigurableUIScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        // Check if mouse is over a SKILL_TREE element
+        
         int localX = (int)((mouseX - offsetX) / uiScale);
         int localY = (int)((mouseY - offsetY) / uiScale);
 
@@ -388,7 +378,7 @@ public class ConfigurableUIScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        // Check if mouse is over a SKILL_TREE element
+        
         int localX = (int)((mouseX - offsetX) / uiScale);
         int localY = (int)((mouseY - offsetY) / uiScale);
 
@@ -433,10 +423,10 @@ public class ConfigurableUIScreen extends Screen {
         }
 
         if (element.getType() == UIElementType.SKILL_TREE) {
-            // Check if click lands inside the SKILL_TREE bounding box
+            
             if (mouseX >= resolvedX && mouseX <= resolvedX + element.getWidth() &&
                     mouseY >= resolvedY && mouseY <= resolvedY + element.getHeight()) {
-                // Convert to coordinates relative to the tree's top-left corner
+                
                 int localX = mouseX - resolvedX;
                 int localY = mouseY - resolvedY;
                 String clickedNodeId = SkillTreeRenderer.getClickedNodeId(element, localX, localY);
@@ -444,7 +434,6 @@ public class ConfigurableUIScreen extends Screen {
                     String treeId = element.getProperties().get("tree_id");
                     ClientEventBridge.getInstance().requestSkillSpend(treeId, clickedNodeId);
 
-                    // Click animation
                     String clickAnim = element.getProperties().getOrDefault("click_animation", "none");
                     if (!"none".equals(clickAnim)) {
                         int clickDuration = Integer.parseInt(
@@ -453,7 +442,6 @@ public class ConfigurableUIScreen extends Screen {
                                 "click:" + treeId + ":" + clickedNodeId, clickAnim, clickDuration);
                     }
 
-                    // Click sound
                     String clickSound = element.getProperties().get("click_sound");
                     if (clickSound != null && !clickSound.isEmpty()) {
                         float vol   = parseFloat(element.getProperties().get("click_sound_volume"),  1.0f);
@@ -493,7 +481,6 @@ public class ConfigurableUIScreen extends Screen {
             UISoundHandler.playSound(UISoundHandler.Sounds.BUTTON_CLICK);
         }
 
-        // Trigger click animation if configured
         String clickAnim = button.getProperties().getOrDefault("click_animation", "none");
         if (!"none".equals(clickAnim)) {
             int clickDuration = Integer.parseInt(
@@ -518,15 +505,12 @@ public class ConfigurableUIScreen extends Screen {
         }
     }
 
-
     public void navigateToScreen(String screenId) {
         LOGGER.debug("Navigating to screen: {}", screenId);
 
-        // Guardamos el stack ANTES de modificarlo
-        // Copiamos para no capturar una referencia mutable en el lambda
         Stack<String> stackForNext = new Stack<>();
         stackForNext.addAll(this.navigationStack);
-        stackForNext.push(this.currentScreenId); // la pantalla actual va al historial
+        stackForNext.push(this.currentScreenId); 
 
         var bridge = ClientEventBridge.getInstance();
         bridge.requestUIConfig(screenId).thenAccept(config ->
@@ -572,7 +556,6 @@ public class ConfigurableUIScreen extends Screen {
         );
     }
 
-
     @Override
     public void onClose() {
         if (transitionOut != ScreenTransition.NONE && !isClosing) {
@@ -603,7 +586,6 @@ public class ConfigurableUIScreen extends Screen {
         MiniMessageHelper.clearCache();
         super.onClose();
     }
-
 
     @Override
     public boolean isPauseScreen() {

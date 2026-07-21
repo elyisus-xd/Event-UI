@@ -82,7 +82,6 @@ public class EventUIPlugin extends JavaPlugin {
         loadSkillTrees();
         initializeBridge();
 
-        // Start hot reload watchers
         this.fileWatcher = new UIFileWatcher(this);
         this.fileWatcher.start();
 
@@ -114,7 +113,7 @@ public class EventUIPlugin extends JavaPlugin {
         getServer().getScheduler().runTaskTimer(this, () ->
                 getServer().getOnlinePlayers().forEach(player ->
                         playerDataManager.savePlayerData(player.getUniqueId())
-                ), 2400L, 2400L); // delay inicial = 2 min, intervalo = 2 min
+                ), 2400L, 2400L); 
 
         LOGGER.info("EventUI enabled — " + storage.getAllEventDefinitions().size()
                 + " events, " + skillTreeStorage.getSkillTreeCount()
@@ -170,7 +169,7 @@ public class EventUIPlugin extends JavaPlugin {
             LOGGER.warning("⚠ Dependency cycle detected in event configuration:");
             LOGGER.warning("  Error: " + e.getMessage());
             LOGGER.warning("  Fix the cycle in your event YAML files and reload.");
-            // Don't disable plugin — allow resilient operation
+            
         } catch (Exception e) {
             LOGGER.severe("Failed to load events: " + e.getMessage());
             e.printStackTrace();
@@ -191,7 +190,7 @@ public class EventUIPlugin extends JavaPlugin {
             LOGGER.warning("⚠ Dependency cycle detected in skill tree configuration:");
             LOGGER.warning("  Error: " + e.getMessage());
             LOGGER.warning("  Fix the cycle in your skill tree YAML files and reload.");
-            // Don't disable plugin — allow resilient operation
+            
         } catch (Exception e) {
             LOGGER.severe("Failed to load skill trees: " + e.getMessage());
             e.printStackTrace();

@@ -11,10 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class PlayerSkillProgressImpl implements PlayerSkillProgress {
 
     private final UUID playerId;
-    private final Map<String, Map<String, Integer>> nodeLevels;      // treeId -> (nodeId -> level)
-    private final Map<String, Integer> availablePoints;               // pointType -> amount
-    private final Map<String, Integer> totalEarnedPoints;             // pointType -> amount
-    private final Map<String, Map<String, String>> selectedBranches;  // treeId -> (groupId -> branchId)
+    private final Map<String, Map<String, Integer>> nodeLevels;      
+    private final Map<String, Integer> availablePoints;               
+    private final Map<String, Integer> totalEarnedPoints;             
+    private final Map<String, Map<String, String>> selectedBranches;  
 
     public PlayerSkillProgressImpl(UUID playerId) {
         this.playerId = playerId;
@@ -112,7 +112,6 @@ public class PlayerSkillProgressImpl implements PlayerSkillProgress {
         totalEarnedPoints.remove(pointType);
     }
 
-    // Helper methods for persistence
     public Map<String, Map<String, Integer>> getNodeLevelsSnapshot() {
         Map<String, Map<String, Integer>> snapshot = new HashMap<>();
         for (var entry : nodeLevels.entrySet()) {

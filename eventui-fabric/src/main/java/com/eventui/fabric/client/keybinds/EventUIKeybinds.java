@@ -13,7 +13,6 @@ import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 public class EventUIKeybinds {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EventUIKeybinds.class);
@@ -67,7 +66,6 @@ public class EventUIKeybinds {
             cachedUIMode = response.get("mode");
             cachedScreenId = response.get("screenId");
 
-            // capture tooltip defaults from server response (keys: tooltip.<key>)
             cachedTooltipDefaults.clear();
             response.forEach((k, v) -> {
                 if (k != null && k.startsWith("tooltip.")) {
@@ -115,13 +113,11 @@ public class EventUIKeybinds {
         QuestTrackerHUD.forceUpdate();
     }
 
-
     private static void handleToggleTracker(Minecraft client) {
         if (client.player != null) {
             QuestTrackerHUD.toggle();
         }
     }
-
 
     public static void invalidateCache() {
         LOGGER.info("[CACHE_DEBUG] invalidateCache() BEFORE — cachedUIMode='{}', cachedScreenId='{}', tooltipDefaults={}'", cachedUIMode, cachedScreenId, cachedTooltipDefaults);

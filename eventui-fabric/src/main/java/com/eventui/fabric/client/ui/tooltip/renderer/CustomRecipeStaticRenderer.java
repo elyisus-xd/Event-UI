@@ -28,11 +28,10 @@ public class CustomRecipeStaticRenderer extends StaticRecipeRenderer {
 
     @Override
     public void render(GuiGraphics graphics, Font font, int x, int y, Map<String, ?> data) {
-        // 1. Resolver dimensiones
+        
         texWidth = parseIntSafe(data.get("texture_width"), 64);
         texHeight = parseIntSafe(data.get("texture_height"), 64);
 
-        // 2. Resolver textura
         String textureStr = (String) data.get("texture");
         ResourceLocation texture = null;
         if (textureStr != null && !textureStr.isBlank()) {
@@ -43,10 +42,8 @@ public class CustomRecipeStaticRenderer extends StaticRecipeRenderer {
             }
         }
 
-        // 3. Dibujar fondo
         renderBackground(graphics, x, y, texture, texWidth, texHeight);
 
-        // 4. Parsear y renderizar slots
         String slotsStr = (String) data.get("slots");
         if (slotsStr == null || slotsStr.isBlank()) {
             LOGGER.warn("[CUSTOM_RECIPE] No slots defined");
@@ -56,7 +53,7 @@ public class CustomRecipeStaticRenderer extends StaticRecipeRenderer {
         String[] slotDefs = slotsStr.split("\\|");
         for (int i = 0; i < slotDefs.length; i++) {
             String slotDef = slotDefs[i].trim();
-            // Format: "role@slotX,slotY"
+            
             String[] parts = slotDef.split("@");
             if (parts.length != 2) {
                 LOGGER.warn("[CUSTOM_RECIPE] Invalid slot def: {}", slotDef);
@@ -78,7 +75,6 @@ public class CustomRecipeStaticRenderer extends StaticRecipeRenderer {
                 continue;
             }
 
-            // Obtener items para este slot (section_1_slot_0, slot_1, etc.)
             Object itemData = data.get("slot_" + i);
             List<ItemStack> items = resolveItems(itemData);
 

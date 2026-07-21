@@ -81,7 +81,6 @@ public class RewardManager {
         }
     }
 
-
     private ItemStack parseItemString(String itemString) {
         String[] parts = itemString.trim().split(" ");
 

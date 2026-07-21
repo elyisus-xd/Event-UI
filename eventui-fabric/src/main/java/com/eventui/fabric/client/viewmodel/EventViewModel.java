@@ -86,7 +86,6 @@ public class EventViewModel {
         ClientEventBridge.getInstance().requestSkillData();
     }
 
-
     private void updateStateInCache(String eventId, EventState newState) {
         EventData event = eventsCache.get(eventId);
 
@@ -244,7 +243,6 @@ public class EventViewModel {
             eventsCache.put(eventId, newEvent);
         }
     }
-
 
     public void requestEvents() {
         LOGGER.info("Requesting events from server via bridge...");

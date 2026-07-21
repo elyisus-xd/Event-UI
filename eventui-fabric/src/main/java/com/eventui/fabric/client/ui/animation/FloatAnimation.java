@@ -2,7 +2,6 @@ package com.eventui.fabric.client.ui.animation;
 
 import java.util.function.Consumer;
 
-
 public class FloatAnimation extends Animation {
 
     private final float from;

@@ -111,9 +111,6 @@ public class ObjectiveTracker implements Listener {
         }
     }
 
-
-
-
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         String block = event.getBlock().getType().getKey().toString();
@@ -423,7 +420,6 @@ public class ObjectiveTracker implements Listener {
         }
     }
 
-
     private String resolvePotionTypeKey(ItemStack item) {
         LOGGER.info("[BREW_DEBUG] resolvePotionTypeKey input: " + describeItemStack(item));
         if (item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
@@ -491,7 +487,6 @@ public class ObjectiveTracker implements Listener {
         }
     }
 
-
     private void checkStructureAt(Player player, org.bukkit.Location location) {
         int chunkX = location.getBlockX() >> 4;
         int chunkZ = location.getBlockZ() >> 4;
@@ -504,11 +499,6 @@ public class ObjectiveTracker implements Listener {
                     (s, obj) -> s.equalsIgnoreCase(obj.getParameters().get("structure_id")));
         }
     }
-
-
-
-
-
 
     private boolean tryAutoStart(Player player, EventDefinitionImpl eventDef, UUID playerId) {
         var progressOpt = plugin.getStorage().getProgress(playerId, eventDef.getId());
@@ -685,8 +675,7 @@ public class ObjectiveTracker implements Listener {
             if (progressOpt.isEmpty()) continue;
             
             EventProgressImpl progress = (EventProgressImpl) progressOpt.get();
-            
-            // Iterar por objetivos REACH_LOCATION de este evento
+
             for (ObjectiveDefinition objective : eventDef.getObjectives()) {
                 if (objective.getType() != ObjectiveType.REACH_LOCATION) continue;
                 
@@ -750,7 +739,6 @@ public class ObjectiveTracker implements Listener {
             }
         }
     }
-
 
     public void registerCustomHandler(CustomObjectiveHandler handler) {
         String customId = handler.getCustomId();
@@ -845,15 +833,12 @@ public class ObjectiveTracker implements Listener {
             notifyStateChange(player.getUniqueId(), eventDef.getId());
             plugin.getPlayerDataManager().requestSave(player.getUniqueId(), "event completed: " + eventDef.getId());
 
-            // Award points for event completion
             if (plugin.getPointSourceManager() != null) {
                 String difficulty = eventDef.getMetadata().getOrDefault("difficulty", "medium");
                 plugin.getPointSourceManager().handleEventComplete(player, eventDef.getId(), difficulty);
             }
         }
     }
-
-
 
     private void notifyStateChange(UUID playerId, String eventId) {
         plugin.getEventBridge().sendMessage(
@@ -872,6 +857,5 @@ public class ObjectiveTracker implements Listener {
             default -> "overworld";
         };
     }
-
 
 }

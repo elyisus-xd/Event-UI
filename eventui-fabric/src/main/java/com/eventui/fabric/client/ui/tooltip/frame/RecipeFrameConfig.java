@@ -17,8 +17,8 @@ public class RecipeFrameConfig {
     private final Map<String, ResourceLocation> defaultFrameTextures = new HashMap<>();
 
     public enum FallbackMode {
-        AUTOMATIC,  // Fallback automático al default sin error
-        ERROR       // Log error pero sigue con default
+        AUTOMATIC,  
+        ERROR       
     }
 
     public RecipeFrameConfig() {
@@ -26,7 +26,7 @@ public class RecipeFrameConfig {
     }
 
     private void initializeDefaultTextures() {
-        // Texturas por defecto (desde el JAR)
+        
         defaultFrameTextures.put("furnace", 
             ResourceLocation.fromNamespaceAndPath("eventui", "textures/gui/recipes/furnace.png"));
         defaultFrameTextures.put("smithing", 
@@ -37,8 +37,6 @@ public class RecipeFrameConfig {
             ResourceLocation.fromNamespaceAndPath("eventui", "textures/gui/recipes/brewing.png"));
 
     }
-
-    // Getters and Setters
 
     public boolean isEnabled() {
         return enabled;
@@ -73,9 +71,6 @@ public class RecipeFrameConfig {
         this.globalNamespace = globalNamespace;
     }
 
-    /**
-     * Obtiene la textura por defecto para un tipo de receta.
-     */
     public ResourceLocation getDefaultFrameTexture(String recipeType) {
         return defaultFrameTextures.get(recipeType);
     }
@@ -84,17 +79,11 @@ public class RecipeFrameConfig {
         return defaultFrameTextures.containsKey(recipeType);
     }
 
-    /**
-     * Establece la textura por defecto para un tipo de receta.
-     */
     public void setDefaultFrameTexture(String recipeType, ResourceLocation texture) {
         defaultFrameTextures.put(recipeType, texture);
         LOGGER.info("Set default texture for {}: {}", recipeType, texture);
     }
 
-    /**
-     * Log de la configuración actual (para debug).
-     */
     public void logConfig() {
         LOGGER.info("===== RecipeFrameConfig =====");
         LOGGER.info("Enabled: {}", enabled);

@@ -110,7 +110,7 @@ public class UIConfigLoader {
             LOGGER.severe("  Hint: Unknown element type.");
             LOGGER.severe("        Valid types: IMAGE, IMAGE_BUTTON, TEXT, BUTTON,");
             LOGGER.severe("                     PANEL, PROGRESS_BAR, ICON, TOOLTIP,");
-            LOGGER.severe("                     ENTITY_RENDER, ITEM_RENDER, BLOCK_RENDER, SKILL_TREE"); // Added SKILL_TREE here
+            LOGGER.severe("                     ENTITY_RENDER, ITEM_RENDER, BLOCK_RENDER, SKILL_TREE"); 
         } else if (msg.contains("duplicate")) {
             LOGGER.severe("  Hint: Duplicate key found in YAML.");
             LOGGER.severe("        Each element 'id' must be unique within the file.");
@@ -170,7 +170,7 @@ public class UIConfigLoader {
                 Map<String, Object> elementData = elementsData.get(i);
                 try {
                     UIElement parsedElement = parseUIElement(elementData);
-                    if (parsedElement != null) { // Add null check here
+                    if (parsedElement != null) { 
                         elements.add(parsedElement);
                         LOGGER.fine("[UI_PARSE_DEBUG] Element added to list");
                     } else {
@@ -298,7 +298,7 @@ public class UIConfigLoader {
                 Map<String, Object> childData = childrenData.get(i);
                 try {
                     UIElement parsedChild = parseUIElement(childData);
-                    if (parsedChild != null) { // Add null check here
+                    if (parsedChild != null) { 
                         children.add(parsedChild);
                     }
                 } catch (Exception e) {

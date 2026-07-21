@@ -104,7 +104,6 @@ public class PluginEventBridge implements EventBridge {
             UUID playerId = message.getPlayerId();
             plugin.getUIStateManager().pushStateToClient(playerId, true);
 
-            // Also push dismissed badges for this player
             java.util.List<String> list = new java.util.ArrayList<>(plugin.getPlayerDataManager().getDismissedBadges(playerId));
             String badgesJson = new com.google.gson.Gson().toJson(list);
             Map<String, String> payload = Map.of("badges", badgesJson);
@@ -193,7 +192,6 @@ public class PluginEventBridge implements EventBridge {
             handleButtonAction(player, action, buttonId);
         });
 
-        // Handle badge dismissals from client
         registerMessageHandler(MessageType.BADGE_DISMISS, message -> {
             UUID playerId = message.getPlayerId();
             Player player = plugin.getServer().getPlayer(playerId);
@@ -206,7 +204,6 @@ public class PluginEventBridge implements EventBridge {
             String badgeKey = (screenId == null || screenId.isEmpty()) ? ("unknown:" + elementId) : (screenId + ":" + elementId);
             plugin.getPlayerDataManager().addDismissedBadge(playerId, badgeKey);
 
-            // Send updated badges list back to player
             java.util.List<String> list = new java.util.ArrayList<>(plugin.getPlayerDataManager().getDismissedBadges(playerId));
             String badgesJson = new com.google.gson.Gson().toJson(list);
             Map<String, String> payload = Map.of("badges", badgesJson);
@@ -309,7 +306,6 @@ public class PluginEventBridge implements EventBridge {
         return null;
     }
 
-
         private void handleRequestEventData(Player player, BridgeMessage message) {
         UUID playerId = player.getUniqueId();
 
@@ -368,11 +364,9 @@ public class PluginEventBridge implements EventBridge {
                 }
             }
 
-
             eventData.put("isLocked", isLocked);
 
             LOGGER.fine("Event '" + eventDef.getId() + "' - locked: " + isLocked + ", deps: " + dependencies.size());
-
 
             var progressOpt = plugin.getStorage().getProgress(playerId, eventDef.getId());
 
@@ -382,7 +376,6 @@ public class PluginEventBridge implements EventBridge {
                 eventData.put("state", progress.getState().name());
                 eventData.put("overallProgress", String.valueOf(progress.getOverallProgress()));
                 eventData.put("startedAt", String.valueOf(progress.getStartedAt()));
-
 
                 if (progress.getState() == EventState.IN_PROGRESS) {
                     for (ObjectiveDefinition objDef : eventDef.getObjectives()) {
@@ -704,7 +697,6 @@ public class PluginEventBridge implements EventBridge {
 
         player.sendMessage("§a✓ Started event: " + eventDef.getDisplayName());
 
-
         notifyStateChange(player.getUniqueId(), eventId, EventState.IN_PROGRESS);
 
         if (!eventDef.getObjectives().isEmpty()) {
@@ -857,14 +849,12 @@ public class PluginEventBridge implements EventBridge {
 
         Map<String, Object> treesMap = new HashMap<>();
 
-        // Construir datos de todos los skill trees
         for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
             Map<String, Object> treeData = new HashMap<>();
             treeData.put("id", tree.getId());
             treeData.put("displayName", tree.getDisplayName());
             treeData.put("pointType", tree.getPointType());
 
-            // Exclusive groups data
             List<Map<String, Object>> exclusiveGroupsList = new ArrayList<>();
             for (var group : tree.getExclusiveGroups()) {
                 Map<String, Object> groupData = new HashMap<>();
@@ -886,7 +876,6 @@ public class PluginEventBridge implements EventBridge {
             }
             treeData.put("exclusiveGroups", exclusiveGroupsList);
 
-            // Selected branches for this player
             var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
             Map<String, String> selectedBranches = playerProgress.map(p -> p.getSelectedBranches(tree.getId())).orElse(Map.of());
             treeData.put("selectedBranches", selectedBranches);
@@ -906,15 +895,12 @@ public class PluginEventBridge implements EventBridge {
                 int currentLevel = playerProgress.map(p -> p.getNodeLevel(tree.getId(), node.getId())).orElse(0);
                 nodeData.put("currentLevel", currentLevel);
 
-                // Calcular costo del siguiente nivel
                 int costNextLevel = currentLevel >= node.getMaxLevel() ? -1 : node.getCostForLevel(currentLevel + 1);
                 nodeData.put("costNextLevel", costNextLevel);
 
-                // Calcular estado del nodo
                 String state = calculateNodeState(node, currentLevel, playerProgress.orElse(null), tree.getId());
                 nodeData.put("state", state);
 
-                // Requisitos
                 List<Map<String, Object>> requiresList = new ArrayList<>();
                 for (var req : node.getRequirements()) {
                     Map<String, Object> reqData = new HashMap<>();
@@ -925,18 +911,15 @@ public class PluginEventBridge implements EventBridge {
                 nodeData.put("requires", requiresList);
                 nodeData.put("requiresMode", node.getRequiresMode());
 
-                // Exclusive group data
                 nodeData.put("exclusiveGroupId", node.getExclusiveGroupId());
                 nodeData.put("exclusiveBranchId", node.getExclusiveBranchId());
 
-                // Point type (node-specific or fallback to tree point type)
                 String nodePointType = node.getPointType();
                 if (nodePointType == null || nodePointType.isEmpty()) {
                     nodePointType = tree.getPointType();
                 }
                 nodeData.put("pointType", nodePointType);
 
-                // Texture overrides
                 Map<String, String> textureOverrides = node.getTextureOverrides();
                 if (textureOverrides != null && !textureOverrides.isEmpty()) {
                     nodeData.put("textureOverrideLocked", textureOverrides.get("locked"));
@@ -952,16 +935,14 @@ public class PluginEventBridge implements EventBridge {
             treesMap.put(tree.getId(), treeData);
         }
 
-        // Construir datos de puntos disponibles
         Map<String, Object> pointsMap = new HashMap<>();
         var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
 
-        // Collect all known point types from skill trees and point sources config
         java.util.Set<String> knownPointTypes = new java.util.HashSet<>();
         for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
             knownPointTypes.add(tree.getPointType());
         }
-        // Add point types from point sources config
+        
         var sourcesConfig = plugin.getSkillSourcesConfig();
         knownPointTypes.addAll(sourcesConfig.getXpPointTypes());
         knownPointTypes.addAll(sourcesConfig.getMobKillPointTypes());
@@ -975,7 +956,7 @@ public class PluginEventBridge implements EventBridge {
         knownPointTypes.addAll(sourcesConfig.getPlaytimePointTypes());
 
         if (playerProgress.isPresent()) {
-            // Add all known point types with their values (0 if not present)
+            
             for (String pointType : knownPointTypes) {
                 int available = playerProgress.get().getAvailablePoints(pointType);
                 int totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
@@ -985,7 +966,7 @@ public class PluginEventBridge implements EventBridge {
                 pointsData.put("totalEarned", totalEarned);
                 pointsMap.put(pointType, pointsData);
             }
-            // Then, add any additional point types from player progress that aren't in known types
+            
             for (var pointType : playerProgress.get().getAllPointTypes()) {
                 if (!pointsMap.containsKey(pointType)) {
                     int available = playerProgress.get().getAvailablePoints(pointType);
@@ -1003,7 +984,6 @@ public class PluginEventBridge implements EventBridge {
         responseData.put("trees", treesMap);
         responseData.put("points", pointsMap);
 
-        // Add connections config
         var connectionsConfig = plugin.getUIConfigManager().getConnectionsConfig();
         Map<String, Object> connectionsMap = new HashMap<>();
         connectionsMap.put("type", connectionsConfig.getType().toString().toLowerCase());
@@ -1046,7 +1026,7 @@ public class PluginEventBridge implements EventBridge {
         }
 
         try {
-            // Obtener el nodo para información
+            
             var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
             if (treeOpt.isEmpty()) {
                 sendSkillSpendError(playerId, treeId, nodeId, "SKILL_TREE_NOT_FOUND", 0, 0);
@@ -1065,11 +1045,10 @@ public class PluginEventBridge implements EventBridge {
 
             var node = nodeOpt.get();
 
-            // Intentar gastar puntos
             var spendResult = plugin.getSkillNodeService().trySpendNode(playerId, treeId, nodeId);
 
             if (spendResult == com.eventui.core.skill.SpendResult.SUCCESS) {
-                // Obtener el nuevo nivel y estado
+                
                 var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId).orElse(null);
                 if (playerProgress == null) return;
 
@@ -1078,7 +1057,6 @@ public class PluginEventBridge implements EventBridge {
                 int costNextLevel = newLevel >= node.getMaxLevel() ? -1 : node.getCostForLevel(newLevel + 1);
                 int pointsAvailable = playerProgress.getAvailablePoints(tree.getPointType());
 
-                // Enviar actualización
                 com.google.gson.Gson gson = new com.google.gson.Gson();
                 Map<String, Object> updateData = new HashMap<>();
                 updateData.put("tree_id", treeId);
@@ -1104,7 +1082,7 @@ public class PluginEventBridge implements EventBridge {
                 LOGGER.fine("✓ Player " + player.getName() + " spent on " + nodeId + " (level " + newLevel + ")");
 
             } else {
-                // Error en el gasto
+                
                 var playerProgress = plugin.getSkillProgressStorage().getProgress(playerId);
                 int currentLevel = playerProgress.map(p -> p.getNodeLevel(treeId, nodeId)).orElse(0);
                 int cost = currentLevel >= node.getMaxLevel() ? 0 : node.getCostForLevel(currentLevel + 1);
@@ -1132,15 +1110,13 @@ public class PluginEventBridge implements EventBridge {
         if (currentLevel > 0) return "PARTIAL";
         if (playerProgress == null) return "LOCKED";
 
-        // Verificar grupo exclusivo
         String exclusiveGroupId = node.getExclusiveGroupId();
         if (exclusiveGroupId != null) {
             String selectedBranch = playerProgress.getSelectedBranch(treeId, exclusiveGroupId);
             String nodeBranch = node.getExclusiveBranchId();
 
-            // Si el jugador ya seleccionó una rama diferente, bloquear este nodo
             if (selectedBranch != null && !selectedBranch.equals(nodeBranch)) {
-                return "LOCKED"; // Bloqueado por selección de rama diferente
+                return "LOCKED"; 
             }
         }
 
@@ -1156,8 +1132,6 @@ public class PluginEventBridge implements EventBridge {
             if (!isAny && !met) return "LOCKED";
         }
 
-        // "all" mode: all requirements passed → AVAILABLE
-        // "any" mode: no requirement passed → LOCKED
         return isAny ? "LOCKED" : "AVAILABLE";
     }
 

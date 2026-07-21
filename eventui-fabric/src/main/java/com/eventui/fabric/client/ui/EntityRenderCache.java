@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
-
 public class EntityRenderCache {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EntityRenderCache.class);

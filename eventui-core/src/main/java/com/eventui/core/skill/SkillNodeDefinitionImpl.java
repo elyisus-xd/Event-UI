@@ -11,7 +11,7 @@ public record SkillNodeDefinitionImpl(
         String description,
         String icon,
         int maxLevel,
-        List<Integer> costPerLevel,  // almacenamos internamente como lista
+        List<Integer> costPerLevel,  
         List<SkillRequirement> requirements,
         String requiresMode,
         int positionX,
@@ -70,11 +70,11 @@ public record SkillNodeDefinitionImpl(
         if (level < 1 || level > maxLevel) {
             throw new IllegalArgumentException("Invalid level: " + level + " (valid: 1-" + maxLevel + ")");
         }
-        // Si costPerLevel es una lista, usar el index (level-1)
+        
         if (!costPerLevel.isEmpty()) {
             return costPerLevel.get(Math.min(level - 1, costPerLevel.size() - 1));
         }
-        // Si está vacía, retornar 0 (no debería pasar con validación adecuada)
+        
         return 0;
     }
 

@@ -10,14 +10,12 @@ public class SkillSourcesConfig {
     private static final Logger LOGGER = Logger.getLogger("EventUI");
     private final PointTypeResolver pointTypeResolver;
 
-    // ── XP Conversion ──────────────────────────────────────────
     private final boolean xpConversionEnabled;
     private final int levelsPerPoint;
     private final List<String> xpPointTypes;
     private final Map<String, Double> xpPointDistribution;
     private final boolean onlyOnLevelUp;
 
-    // ── Mob Kill ─────────────────────────────────────────────
     private final boolean mobKillEnabled;
     private final List<String> mobKillPointTypes;
     private final int mobKillBasePoints;
@@ -27,14 +25,12 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> mobKillCooldowns;
     private final List<String> mobKillAllowedMobs;
 
-    // ── Player Kill ───────────────────────────────────────────
     private final boolean playerKillEnabled;
     private final List<String> playerKillPointTypes;
     private final int playerKillPoints;
     private final Map<String, Double> playerKillPointDistribution;
     private final int playerKillCooldownPerVictim;
 
-    // ── Block Mine ───────────────────────────────────────────
     private final boolean blockMineEnabled;
     private final List<String> blockMinePointTypes;
     private final int blockMineBasePoints;
@@ -44,7 +40,6 @@ public class SkillSourcesConfig {
     private final int blockMineCooldownPerBlock;
     private final List<String> blockMineAllowedBlocks;
 
-    // ── Fishing ───────────────────────────────────────────────
     private final boolean fishingEnabled;
     private final List<String> fishingPointTypes;
     private final int fishingBasePoints;
@@ -52,7 +47,6 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> fishingMultipliers;
     private final boolean fishingLuckBonus;
 
-    // ── Crop Harvest ─────────────────────────────────────────
     private final boolean cropHarvestEnabled;
     private final List<String> cropHarvestPointTypes;
     private final int cropHarvestBasePoints;
@@ -61,7 +55,6 @@ public class SkillSourcesConfig {
     private final boolean cropHarvestRequireMature;
     private final boolean cropHarvestManualOnly;
 
-    // ── Animal Breed ─────────────────────────────────────────
     private final boolean animalBreedEnabled;
     private final List<String> animalBreedPointTypes;
     private final int animalBreedBasePoints;
@@ -69,7 +62,6 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> animalBreedMultipliers;
     private final int animalBreedCooldownPerEntity;
 
-    // ── Event Complete ───────────────────────────────────────
     private final boolean eventCompleteEnabled;
     private final List<String> eventCompletePointTypes;
     private final int eventCompleteBasePoints;
@@ -77,14 +69,12 @@ public class SkillSourcesConfig {
     private final Map<String, Integer> eventCompleteDifficultyMultipliers;
     private final boolean eventCompleteRequireCompletion;
 
-    // ── Objective Complete ───────────────────────────────────
     private final boolean objectiveCompleteEnabled;
     private final List<String> objectiveCompletePointTypes;
     private final int objectiveCompleteBasePoints;
     private final Map<String, Double> objectiveCompletePointDistribution;
     private final boolean objectiveCompleteRequireEventCompletion;
 
-    // ── Playtime ─────────────────────────────────────────────
     private final boolean playtimeEnabled;
     private final List<String> playtimePointTypes;
     private final int playtimePointsPerMinutes;
@@ -102,7 +92,6 @@ public class SkillSourcesConfig {
             pointSources = config.createSection("skills.point_sources");
         }
 
-        // XP Conversion
         ConfigurationSection xpSection = pointSources.getConfigurationSection("xp_conversion");
         this.xpConversionEnabled = xpSection != null && xpSection.getBoolean("enabled", true);
         this.levelsPerPoint = Math.max(1, xpSection != null ? xpSection.getInt("levels_per_point", 1) : 1);
@@ -110,7 +99,6 @@ public class SkillSourcesConfig {
         this.xpPointDistribution = loadPointDistribution(xpSection, this.xpPointTypes, this.levelsPerPoint);
         this.onlyOnLevelUp = xpSection != null && xpSection.getBoolean("only_on_level_up", true);
 
-        // Mob Kill
         ConfigurationSection mobKillSection = pointSources.getConfigurationSection("mob_kill");
         this.mobKillEnabled = mobKillSection != null && mobKillSection.getBoolean("enabled", true);
         this.mobKillPointTypes = loadPointTypes(mobKillSection, "combat_points");
@@ -123,7 +111,6 @@ public class SkillSourcesConfig {
                 ? mobKillSection.getStringList("allowed_mobs")
                 : null;
 
-        // Player Kill
         ConfigurationSection playerKillSection = pointSources.getConfigurationSection("player_kill");
         this.playerKillEnabled = playerKillSection != null && playerKillSection.getBoolean("enabled", true);
         this.playerKillPointTypes = loadPointTypes(playerKillSection, "combat_points");
@@ -131,7 +118,6 @@ public class SkillSourcesConfig {
         this.playerKillPointDistribution = loadPointDistribution(playerKillSection, this.playerKillPointTypes, this.playerKillPoints);
         this.playerKillCooldownPerVictim = playerKillSection != null ? playerKillSection.getInt("cooldown_per_victim_seconds", 300) : 300;
 
-        // Block Mine
         ConfigurationSection blockMineSection = pointSources.getConfigurationSection("block_mine");
         this.blockMineEnabled = blockMineSection != null && blockMineSection.getBoolean("enabled", true);
         this.blockMinePointTypes = loadPointTypes(blockMineSection, "gathering_points");
@@ -144,7 +130,6 @@ public class SkillSourcesConfig {
                 ? blockMineSection.getStringList("allowed_blocks")
                 : null;
 
-        // Fishing
         ConfigurationSection fishingSection = pointSources.getConfigurationSection("fishing");
         this.fishingEnabled = fishingSection != null && fishingSection.getBoolean("enabled", true);
         this.fishingPointTypes = loadPointTypes(fishingSection, "gathering_points");
@@ -153,7 +138,6 @@ public class SkillSourcesConfig {
         this.fishingMultipliers = loadMultipliers(fishingSection, "multipliers");
         this.fishingLuckBonus = fishingSection != null && fishingSection.getBoolean("luck_bonus", true);
 
-        // Crop Harvest
         ConfigurationSection cropHarvestSection = pointSources.getConfigurationSection("crop_harvest");
         this.cropHarvestEnabled = cropHarvestSection != null && cropHarvestSection.getBoolean("enabled", true);
         this.cropHarvestPointTypes = loadPointTypes(cropHarvestSection, "gathering_points");
@@ -163,7 +147,6 @@ public class SkillSourcesConfig {
         this.cropHarvestRequireMature = cropHarvestSection != null && cropHarvestSection.getBoolean("require_mature", true);
         this.cropHarvestManualOnly = cropHarvestSection != null && cropHarvestSection.getBoolean("manual_only", false);
 
-        // Animal Breed
         ConfigurationSection animalBreedSection = pointSources.getConfigurationSection("animal_breed");
         this.animalBreedEnabled = animalBreedSection != null && animalBreedSection.getBoolean("enabled", true);
         this.animalBreedPointTypes = loadPointTypes(animalBreedSection, "gathering_points");
@@ -172,7 +155,6 @@ public class SkillSourcesConfig {
         this.animalBreedMultipliers = loadMultipliers(animalBreedSection, "multipliers");
         this.animalBreedCooldownPerEntity = animalBreedSection != null ? animalBreedSection.getInt("cooldown_per_entity_seconds", 0) : 0;
 
-        // Event Complete
         ConfigurationSection eventCompleteSection = pointSources.getConfigurationSection("event_complete");
         this.eventCompleteEnabled = eventCompleteSection != null && eventCompleteSection.getBoolean("enabled", true);
         this.eventCompletePointTypes = loadPointTypes(eventCompleteSection, "skill_points");
@@ -181,7 +163,6 @@ public class SkillSourcesConfig {
         this.eventCompleteDifficultyMultipliers = loadMultipliers(eventCompleteSection, "difficulty_multipliers");
         this.eventCompleteRequireCompletion = eventCompleteSection != null && eventCompleteSection.getBoolean("require_completion", true);
 
-        // Objective Complete
         ConfigurationSection objectiveCompleteSection = pointSources.getConfigurationSection("objective_complete");
         this.objectiveCompleteEnabled = objectiveCompleteSection != null && objectiveCompleteSection.getBoolean("enabled", true);
         this.objectiveCompletePointTypes = loadPointTypes(objectiveCompleteSection, "skill_points");
@@ -189,7 +170,6 @@ public class SkillSourcesConfig {
         this.objectiveCompletePointDistribution = loadPointDistribution(objectiveCompleteSection, this.objectiveCompletePointTypes, this.objectiveCompleteBasePoints);
         this.objectiveCompleteRequireEventCompletion = objectiveCompleteSection != null && objectiveCompleteSection.getBoolean("require_event_completion", false);
 
-        // Playtime
         ConfigurationSection playtimeSection = pointSources.getConfigurationSection("playtime");
         this.playtimeEnabled = playtimeSection != null && playtimeSection.getBoolean("enabled", false);
         this.playtimePointTypes = loadPointTypes(playtimeSection, "skill_points");
@@ -216,7 +196,6 @@ public class SkillSourcesConfig {
     private List<String> loadPointTypes(ConfigurationSection section, String defaultType) {
         if (section == null) return List.of(pointTypeResolver.resolve(defaultType));
 
-        // Try loading as list first (new format)
         if (section.isList("point_types")) {
             List<String> types = section.getStringList("point_types");
             List<String> resolved = new ArrayList<>();
@@ -226,7 +205,6 @@ public class SkillSourcesConfig {
             return resolved;
         }
 
-        // Fallback to single string (old format)
         String singleType = section.getString("point_type");
         if (singleType != null && !singleType.isEmpty()) {
             return List.of(pointTypeResolver.resolve(singleType));
@@ -238,14 +216,13 @@ public class SkillSourcesConfig {
     private Map<String, Double> loadPointDistribution(ConfigurationSection section, List<String> pointTypes, double defaultValue) {
         Map<String, Double> distribution = new HashMap<>();
         if (section == null) {
-            // Fallback: distribute default value evenly among point types
+            
             for (String type : pointTypes) {
                 distribution.put(pointTypeResolver.resolve(type), defaultValue);
             }
             return distribution;
         }
 
-        // Try loading point_distribution map (new format)
         if (section.isConfigurationSection("point_distribution")) {
             ConfigurationSection distSection = section.getConfigurationSection("point_distribution");
             for (String key : distSection.getKeys(false)) {
@@ -254,21 +231,18 @@ public class SkillSourcesConfig {
             return distribution;
         }
 
-        // Fallback: distribute default value evenly among point types
         for (String type : pointTypes) {
             distribution.put(pointTypeResolver.resolve(type), defaultValue);
         }
         return distribution;
     }
 
-    // ── XP Conversion Getters ─────────────────────────────────
     public boolean isXpConversionEnabled() { return xpConversionEnabled; }
     public int getLevelsPerPoint() { return levelsPerPoint; }
     public List<String> getXpPointTypes() { return Collections.unmodifiableList(xpPointTypes); }
     public Map<String, Double> getXpPointDistribution() { return Collections.unmodifiableMap(xpPointDistribution); }
     public boolean isOnlyOnLevelUp() { return onlyOnLevelUp; }
 
-    // ── Mob Kill Getters ───────────────────────────────────────
     public boolean isMobKillEnabled() { return mobKillEnabled; }
     public List<String> getMobKillPointTypes() { return Collections.unmodifiableList(mobKillPointTypes); }
     public int getMobKillBasePoints() { return mobKillBasePoints; }
@@ -278,14 +252,12 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getMobKillCooldowns() { return Collections.unmodifiableMap(mobKillCooldowns); }
     public List<String> getMobKillAllowedMobs() { return mobKillAllowedMobs != null ? Collections.unmodifiableList(mobKillAllowedMobs) : null; }
 
-    // ── Player Kill Getters ────────────────────────────────────
     public boolean isPlayerKillEnabled() { return playerKillEnabled; }
     public List<String> getPlayerKillPointTypes() { return Collections.unmodifiableList(playerKillPointTypes); }
     public int getPlayerKillPoints() { return playerKillPoints; }
     public Map<String, Double> getPlayerKillPointDistribution() { return Collections.unmodifiableMap(playerKillPointDistribution); }
     public int getPlayerKillCooldownPerVictim() { return playerKillCooldownPerVictim; }
 
-    // ── Block Mine Getters ────────────────────────────────────
     public boolean isBlockMineEnabled() { return blockMineEnabled; }
     public List<String> getBlockMinePointTypes() { return Collections.unmodifiableList(blockMinePointTypes); }
     public int getBlockMineBasePoints() { return blockMineBasePoints; }
@@ -295,7 +267,6 @@ public class SkillSourcesConfig {
     public int getBlockMineCooldownPerBlock() { return blockMineCooldownPerBlock; }
     public List<String> getBlockMineAllowedBlocks() { return blockMineAllowedBlocks != null ? Collections.unmodifiableList(blockMineAllowedBlocks) : null; }
 
-    // ── Fishing Getters ────────────────────────────────────────
     public boolean isFishingEnabled() { return fishingEnabled; }
     public List<String> getFishingPointTypes() { return Collections.unmodifiableList(fishingPointTypes); }
     public int getFishingBasePoints() { return fishingBasePoints; }
@@ -303,7 +274,6 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getFishingMultipliers() { return Collections.unmodifiableMap(fishingMultipliers); }
     public boolean isFishingLuckBonus() { return fishingLuckBonus; }
 
-    // ── Crop Harvest Getters ───────────────────────────────────
     public boolean isCropHarvestEnabled() { return cropHarvestEnabled; }
     public List<String> getCropHarvestPointTypes() { return Collections.unmodifiableList(cropHarvestPointTypes); }
     public int getCropHarvestBasePoints() { return cropHarvestBasePoints; }
@@ -312,7 +282,6 @@ public class SkillSourcesConfig {
     public boolean isCropHarvestRequireMature() { return cropHarvestRequireMature; }
     public boolean isCropHarvestManualOnly() { return cropHarvestManualOnly; }
 
-    // ── Animal Breed Getters ───────────────────────────────────
     public boolean isAnimalBreedEnabled() { return animalBreedEnabled; }
     public List<String> getAnimalBreedPointTypes() { return Collections.unmodifiableList(animalBreedPointTypes); }
     public int getAnimalBreedBasePoints() { return animalBreedBasePoints; }
@@ -320,7 +289,6 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getAnimalBreedMultipliers() { return Collections.unmodifiableMap(animalBreedMultipliers); }
     public int getAnimalBreedCooldownPerEntity() { return animalBreedCooldownPerEntity; }
 
-    // ── Event Complete Getters ────────────────────────────────
     public boolean isEventCompleteEnabled() { return eventCompleteEnabled; }
     public List<String> getEventCompletePointTypes() { return Collections.unmodifiableList(eventCompletePointTypes); }
     public int getEventCompleteBasePoints() { return eventCompleteBasePoints; }
@@ -328,14 +296,12 @@ public class SkillSourcesConfig {
     public Map<String, Integer> getEventCompleteDifficultyMultipliers() { return Collections.unmodifiableMap(eventCompleteDifficultyMultipliers); }
     public boolean isEventCompleteRequireCompletion() { return eventCompleteRequireCompletion; }
 
-    // ── Objective Complete Getters ────────────────────────────
     public boolean isObjectiveCompleteEnabled() { return objectiveCompleteEnabled; }
     public List<String> getObjectiveCompletePointTypes() { return Collections.unmodifiableList(objectiveCompletePointTypes); }
     public int getObjectiveCompleteBasePoints() { return objectiveCompleteBasePoints; }
     public Map<String, Double> getObjectiveCompletePointDistribution() { return Collections.unmodifiableMap(objectiveCompletePointDistribution); }
     public boolean isObjectiveCompleteRequireEventCompletion() { return objectiveCompleteRequireEventCompletion; }
 
-    // ── Playtime Getters ──────────────────────────────────────
     public boolean isPlaytimeEnabled() { return playtimeEnabled; }
     public List<String> getPlaytimePointTypes() { return Collections.unmodifiableList(playtimePointTypes); }
     public int getPlaytimePointsPerMinutes() { return playtimePointsPerMinutes; }
@@ -344,6 +310,5 @@ public class SkillSourcesConfig {
     public boolean isPlaytimeRequireActivity() { return playtimeRequireActivity; }
     public int getPlaytimeActivityThreshold() { return playtimeActivityThreshold; }
 
-    // ── Point Type Resolver ───────────────────────────────────
     public PointTypeResolver getPointTypeResolver() { return pointTypeResolver; }
 }

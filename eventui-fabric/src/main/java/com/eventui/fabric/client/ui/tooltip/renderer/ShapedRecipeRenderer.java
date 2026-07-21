@@ -27,11 +27,11 @@ public class ShapedRecipeRenderer implements RecipeRenderer {
     }
 
     @Override
-    public int getHeight() { return 3 * SLOT_SIZE; }  // 54
+    public int getHeight() { return 3 * SLOT_SIZE; }  
 
     @Override
     public int getWidth(Font font) {
-        // grid(54) + padding(4) + arrow(14) + padding(4) + slot(18) + padding(4) = 98
+        
         return 3 * SLOT_SIZE + PADDING + ARROW_WIDTH + PADDING + SLOT_SIZE + PADDING;
     }
 
@@ -46,7 +46,6 @@ public class ShapedRecipeRenderer implements RecipeRenderer {
         int height = shaped.getHeight();
         long time = System.currentTimeMillis() / 1000;
 
-        // Grid 3x3: draw items only (vanilla frame will be drawn by RecipeTooltipComponent)
         int index = 0;
         for (int row = 0; row < height; row++) {
             for (int col = 0; col < width; col++) {
@@ -65,12 +64,10 @@ public class ShapedRecipeRenderer implements RecipeRenderer {
             }
         }
 
-        // Arrow (centred vertically in the grid)
         int arrowX = x + 3 * SLOT_SIZE + PADDING;
         int arrowY = y + (3 * SLOT_SIZE / 2) - 4;
         RecipeSlotHelper.drawArrow(graphics, font, arrowX, arrowY);
 
-        // Output
         int outputX = arrowX + ARROW_WIDTH + PADDING;
         int outputY = y + (3 * SLOT_SIZE / 2) - 8;
         try {

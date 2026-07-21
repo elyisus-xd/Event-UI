@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 public class HoverAnimationManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HoverAnimationManager.class);
@@ -69,7 +68,6 @@ public class HoverAnimationManager {
         long elapsed = System.currentTimeMillis() - state.startTime;
         float progress = elapsed / (float) state.animation.duration();
 
-        // Loop animation: use sine wave for continuous effect
         if (state.isLoop) {
             progress = (float) Math.abs(Math.sin(progress * Math.PI));
         } else {
@@ -143,7 +141,7 @@ public class HoverAnimationManager {
     public void cleanup() {
         long now = System.currentTimeMillis();
         activeAnimations.entrySet().removeIf(entry -> {
-            // Don't remove loop animations
+            
             if (entry.getValue().isLoop) return false;
             long elapsed = now - entry.getValue().startTime;
             return elapsed > entry.getValue().animation.duration() + 1000;
@@ -187,7 +185,6 @@ public class HoverAnimationManager {
         poseStack.mulPose(com.mojang.math.Axis.ZP.rotationDegrees(swingAngle));
         poseStack.translate(-centerX, -centerY, 0);
     }
-
 
     private void applyFloat(PoseStack poseStack, float progress, float intensity) {
         long time = System.currentTimeMillis();

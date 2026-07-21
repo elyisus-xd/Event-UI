@@ -7,9 +7,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Implementación inmutable de BridgeMessage.
- */
 public record BridgeMessageImpl(
         MessageType type,
         Map<String, String> payload,
@@ -19,12 +16,10 @@ public record BridgeMessageImpl(
         UUID replyToMessageId
 ) implements BridgeMessage {
 
-    // Constructor principal con todos los campos
     public BridgeMessageImpl {
         payload = payload != null ? Collections.unmodifiableMap(payload) : Map.of();
     }
 
-    // Constructor conveniente sin IDs de mensaje
     public BridgeMessageImpl(MessageType type, Map<String, String> payload, UUID playerId) {
         this(
                 type,
@@ -36,7 +31,6 @@ public record BridgeMessageImpl(
         );
     }
 
-    // Constructor para respuestas
     public BridgeMessageImpl(MessageType type, Map<String, String> payload, UUID playerId, UUID replyTo) {
         this(
                 type,

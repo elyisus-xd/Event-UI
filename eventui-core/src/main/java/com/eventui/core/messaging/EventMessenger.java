@@ -14,7 +14,6 @@ public class EventMessenger {
     private static final Logger LOGGER = Logger.getLogger("EventUI");
     private static final MiniMessage MM = MiniMessage.miniMessage();
 
-
     private final EventUIPlugin plugin;
     private EventMessageConfig config;
 
@@ -26,7 +25,6 @@ public class EventMessenger {
     public void reload(EventMessageConfig newConfig) {
         this.config = newConfig;
     }
-
 
     public void sendProgress(Player player, String description, int current, int target) {
         if (!config.isEnabled() || !config.isProgressEnabled()) return;
@@ -147,7 +145,7 @@ public class EventMessenger {
             plugin.adventure().player(player).sendMessage(component);
         } catch (Exception e) {
             LOGGER.warning("EventMessenger: formato inválido → " + e.getMessage());
-            player.sendMessage(MM.stripTags(format));  // fallback a texto plano
+            player.sendMessage(MM.stripTags(format));  
         }
     }
 }

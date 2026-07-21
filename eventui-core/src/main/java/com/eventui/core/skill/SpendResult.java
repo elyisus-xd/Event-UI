@@ -1,8 +1,5 @@
 package com.eventui.core.skill;
 
-/**
- * Resultado de intentar gastar puntos para subir de nivel un nodo.
- */
 public enum SpendResult {
     SUCCESS("Node upgraded successfully"),
     TREE_NOT_FOUND("Skill tree not found"),

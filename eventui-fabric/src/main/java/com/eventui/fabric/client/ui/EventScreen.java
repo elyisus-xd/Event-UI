@@ -15,7 +15,6 @@ import com.eventui.fabric.client.ui.animation.*;
 
 import java.util.*;
 
-
 public class EventScreen extends Screen {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EventScreen.class);
@@ -58,7 +57,6 @@ public class EventScreen extends Screen {
 
     private final List<ClickableButton> clickableButtons = new ArrayList<>();
 
-
     private final AnimationManager animationManager = new AnimationManager();
     private float screenAlpha = 0f;
     private float overlayAlpha = 0f;
@@ -90,7 +88,6 @@ public class EventScreen extends Screen {
             this.filteredEvents = List.of();
         }
     }
-
 
     @Override
     protected void init() {
@@ -215,9 +212,6 @@ public class EventScreen extends Screen {
 
         return totalHeight;
     }
-
-
-
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -374,7 +368,6 @@ public class EventScreen extends Screen {
             case COMPLETED -> event.state == com.eventui.api.event.EventState.COMPLETED;
         };
     }
-
 
     @Override
     public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
@@ -605,7 +598,6 @@ public class EventScreen extends Screen {
         };
     }
 
-
     private int getCategoryColor(String category) {
         return switch (category.toLowerCase()) {
             case "alchemy" -> 0xFFFF00FF;
@@ -626,8 +618,6 @@ public class EventScreen extends Screen {
             default -> 0xFF888888;
         };
     }
-
-
 
     private String getCategoryInitial(String category) {
         return switch (category.toLowerCase()) {
@@ -709,9 +699,6 @@ public class EventScreen extends Screen {
         }
         int liftOffset = (int)(currentHoverAlpha * -3);
         y += liftOffset;
-
-
-
 
         boolean isInProgress = event.state == com.eventui.api.event.EventState.IN_PROGRESS;
         boolean isCompleted = event.state == com.eventui.api.event.EventState.COMPLETED;
@@ -860,7 +847,6 @@ public class EventScreen extends Screen {
         return y + buttonHeight + 6;
     }
 
-
     private ButtonState getButton1State(EventViewModel.EventData event) {
         return switch (event.state) {
             case AVAILABLE -> new ButtonState(
@@ -992,7 +978,6 @@ public class EventScreen extends Screen {
         }
     }
 
-
     private void handleAbandonEvent(EventViewModel.EventData event) {
         if (event.repeatable) {
             executeAbandonEvent(event);
@@ -1073,8 +1058,6 @@ public class EventScreen extends Screen {
         }
     }
 
-
-
     private void renderProgressBar(GuiGraphics graphics, int x, int y, int width, int height, float progress) {
         graphics.fill(x, y, x + width, y + height, 0xFF1A1A1A);
 
@@ -1097,7 +1080,6 @@ public class EventScreen extends Screen {
         }
         super.onClose();
     }
-
 
     @Override
     public boolean isPauseScreen() {
@@ -1251,7 +1233,6 @@ public class EventScreen extends Screen {
 
         return "???";
     }
-
 
     private String formatElapsedTime(long millis) {
         long seconds = millis / 1000;
@@ -1479,7 +1460,6 @@ public class EventScreen extends Screen {
             graphics.fill(x + width, y, x + width + 1, y + height, 0x44FFFFFF);
         }
 
-
         int labelColor = isActive ? 0xFFFFFFFF : 0xFFCCCCCC;
         graphics.drawString(this.font, "§7" + label, x + 3, y + 3, labelColor, false);
 
@@ -1625,7 +1605,6 @@ public class EventScreen extends Screen {
 
         return height;
     }
-
 
     private int getBadgeColor(String category) {
         return switch (category.toLowerCase()) {

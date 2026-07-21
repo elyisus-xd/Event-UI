@@ -18,10 +18,6 @@ public class SkillTreeConfigLoader {
         this.yaml = new Yaml();
     }
 
-    /**
-     * Carga todos los árboles de habilidades desde el directorio skills/.
-     * Si un archivo individual falla, loguea el error y continúa con los demás.
-     */
     public Map<String, SkillTreeDefinition> loadAllSkillTrees(File skillsFolder) {
         Map<String, SkillTreeDefinition> trees = new HashMap<>();
 
@@ -85,9 +81,6 @@ public class SkillTreeConfigLoader {
         return trees;
     }
 
-    /**
-     * Carga un árbol de habilidades desde un archivo YAML.
-     */
     public SkillTreeDefinition loadSkillTreeFromFile(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             Map<String, Object> data = yaml.load(fis);
@@ -95,9 +88,6 @@ public class SkillTreeConfigLoader {
         }
     }
 
-    /**
-     * Parsea un árbol de habilidades desde un Map YAML.
-     */
     @SuppressWarnings("unchecked")
     private SkillTreeDefinition parseSkillTree(Map<String, Object> data) {
         String id = (String) data.get("id");
@@ -109,9 +99,8 @@ public class SkillTreeConfigLoader {
         if (displayName == null || displayName.isBlank()) throw new IllegalArgumentException("Missing required field: display_name");
         if (pointType == null || pointType.isBlank()) throw new IllegalArgumentException("Missing required field: point_type");
 
-        // Parsear grupos exclusivos primero (para poder asignar IDs a nodos después)
         List<ExclusiveGroup> exclusiveGroups = new ArrayList<>();
-        Map<String, Map<String, String>> nodeToBranchMap = new HashMap<>(); // nodeId -> (groupId, branchId)
+        Map<String, Map<String, String>> nodeToBranchMap = new HashMap<>(); 
 
         Object groupsObj = data.get("exclusive_groups");
         if (groupsObj instanceof List) {
@@ -140,9 +129,6 @@ public class SkillTreeConfigLoader {
         return new SkillTreeDefinitionImpl(id, displayName, description, pointType, nodes, exclusiveGroups);
     }
 
-    /**
-     * Parsea un grupo exclusivo de ramas.
-     */
     @SuppressWarnings("unchecked")
     private ExclusiveGroup parseExclusiveGroup(Map<String, Object> groupData, Map<String, Map<String, String>> nodeToBranchMap) {
         String id = (String) groupData.get("id");
@@ -168,9 +154,6 @@ public class SkillTreeConfigLoader {
         return new ExclusiveGroupImpl(id, name, description, maxSelections, branches);
     }
 
-    /**
-     * Parsea una rama exclusiva.
-     */
     @SuppressWarnings("unchecked")
     private ExclusiveBranch parseExclusiveBranch(Map<String, Object> branchData, String groupId, Map<String, Map<String, String>> nodeToBranchMap) {
         String id = (String) branchData.get("id");
@@ -185,7 +168,7 @@ public class SkillTreeConfigLoader {
             for (Object nodeIdObj : (List<?>) nodesObj) {
                 String nodeId = nodeIdObj.toString();
                 nodeIds.add(nodeId);
-                // Guardar mapeo para asignar al nodo después
+                
                 Map<String, String> branchInfo = new HashMap<>();
                 branchInfo.put("groupId", groupId);
                 branchInfo.put("branchId", id);
@@ -196,10 +179,6 @@ public class SkillTreeConfigLoader {
         return new ExclusiveBranchImpl(id, name, nodeIds);
     }
 
-    /**
-     * Parsea un nodo individual.
-     * Maneja cost_per_level como número fijo O como lista.
-     */
     @SuppressWarnings("unchecked")
     private SkillNodeDefinition parseNode(Map<String, Object> nodeData, Map<String, Map<String, String>> nodeToBranchMap) {
         String id = (String) nodeData.get("id");
@@ -211,17 +190,16 @@ public class SkillTreeConfigLoader {
         if (id == null || id.isBlank()) throw new IllegalArgumentException("Node missing required field: id");
         if (displayName == null || displayName.isBlank()) throw new IllegalArgumentException("Node missing required field: display_name");
 
-        // Parsear cost_per_level: puede ser número o lista de números
         List<Integer> costs = new ArrayList<>();
         Object costObj = nodeData.get("cost_per_level");
         if (costObj instanceof Number) {
-            // Número fijo: replicar para cada nivel
+            
             int fixedCost = ((Number) costObj).intValue();
             for (int i = 0; i < maxLevel; i++) {
                 costs.add(fixedCost);
             }
         } else if (costObj instanceof List) {
-            // Lista de costos
+            
             for (Object c : (List<?>) costObj) {
                 if (c instanceof Number) {
                     costs.add(((Number) c).intValue());
@@ -229,7 +207,6 @@ public class SkillTreeConfigLoader {
             }
         }
 
-        // Parsear requisitos
         List<SkillRequirement> requirements = new ArrayList<>();
         Object requiresObj = nodeData.get("requires");
         if (requiresObj instanceof List) {
@@ -247,7 +224,6 @@ public class SkillTreeConfigLoader {
         int posX = parseIntSafe(nodeData.get("x"), 0);
         int posY = parseIntSafe(nodeData.get("y"), 0);
 
-        // Parsear position
         Object posObj = nodeData.get("position");
         if (posObj instanceof Map) {
             Map<String, Object> pos = (Map<String, Object>) posObj;
@@ -255,7 +231,6 @@ public class SkillTreeConfigLoader {
             posY = parseIntSafe(pos.get("y"), 0);
         }
 
-        // Parsear efectos
         List<SkillEffect> effects = new ArrayList<>();
         Object effectsObj = nodeData.get("effects");
         if (effectsObj instanceof List) {
@@ -274,7 +249,6 @@ public class SkillTreeConfigLoader {
             }
         }
 
-        // Parsear texture overrides
         Map<String, String> textures = new HashMap<>();
         Object texObj = nodeData.get("texture_override");
         if (texObj instanceof Map) {
@@ -284,7 +258,6 @@ public class SkillTreeConfigLoader {
             }
         }
 
-        // Asignar grupo y rama exclusiva si el nodo está en el mapa
         String exclusiveGroupId = null;
         String exclusiveBranchId = null;
         Map<String, String> branchInfo = nodeToBranchMap.get(id);
@@ -293,7 +266,6 @@ public class SkillTreeConfigLoader {
             exclusiveBranchId = branchInfo.get("branchId");
         }
 
-        // Parsear point_type específico del nodo (opcional)
         String pointType = (String) nodeData.get("point_type");
 
         return new SkillNodeDefinitionImpl(
@@ -302,20 +274,16 @@ public class SkillTreeConfigLoader {
         );
     }
 
-    /**
-     * Valida referencias entre nodos (ciclos, requisitos rotos, etc.)
-     */
     private void validateSkillTreeReferences(Map<String, SkillTreeDefinition> trees) {
         boolean foundIssues = false;
 
         for (SkillTreeDefinition tree : trees.values()) {
-            // Crear mapa de nodos por ID para validación rápida
+            
             Map<String, SkillNodeDefinition> nodesById = new HashMap<>();
             for (SkillNodeDefinition node : tree.getNodes()) {
                 nodesById.put(node.getId(), node);
             }
 
-            // 1. Validar referencias de requisitos (intra-árbol)
             for (SkillNodeDefinition node : tree.getNodes()) {
                 for (SkillRequirement req : node.getRequirements()) {
                     if (!nodesById.containsKey(req.getNodeId())) {
@@ -332,7 +300,6 @@ public class SkillTreeConfigLoader {
                 }
             }
 
-            // 2. Validar ciclos de dependencia
             Set<String> visited = new HashSet<>();
             Set<String> recursionStack = new HashSet<>();
             List<String> currentPath = new ArrayList<>();
@@ -348,7 +315,6 @@ public class SkillTreeConfigLoader {
                 }
             }
 
-            // 3. Advertencia: requires_mode=any con 0 o 1 requisito
             for (SkillNodeDefinition node : tree.getNodes()) {
                 if ("any".equalsIgnoreCase(node.getRequiresMode())) {
                     if (node.getRequirements().isEmpty() || node.getRequirements().size() == 1) {
@@ -365,9 +331,6 @@ public class SkillTreeConfigLoader {
         }
     }
 
-    /**
-     * Detecta ciclos en requisitos usando DFS.
-     */
     private boolean hasNodeCycleDFS(
             String nodeId,
             Map<String, SkillNodeDefinition> nodesById,

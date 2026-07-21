@@ -5,7 +5,7 @@ import java.util.Map;
 public class RecipeGridConfig {
 
     private boolean showGridFrame = true;
-    private int slotSpacing = 18;       // 16px item + 2px gap
+    private int slotSpacing = 18;       
     private String gridFrameTexture = "eventui:textures/ui/widgets/crafting_frame.png";
     private int gridFrameWidth = 54;
     private int gridFrameHeight = 54;
@@ -48,7 +48,6 @@ public class RecipeGridConfig {
         try { return Integer.parseInt(s); } catch (Exception e) { return def; }
     }
 
-    // --- Getters ---
     public boolean isShowGridFrame() { return showGridFrame; }
     public int getSlotSpacing() { return slotSpacing; }
     public String getGridFrameTexture() { return gridFrameTexture; }

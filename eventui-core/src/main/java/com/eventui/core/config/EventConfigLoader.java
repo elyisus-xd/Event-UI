@@ -80,7 +80,7 @@ public class EventConfigLoader {
 
         }
 
-            validateDependencyGraph(events);      // ya existía — detecta ciclos
+            validateDependencyGraph(events);      
             validateDependencyReferences(events);
 
         if (events.isEmpty()) {
@@ -213,7 +213,6 @@ public class EventConfigLoader {
         return yamlFiles;
     }
 
-
         public EventDefinition loadEventFromFile(File file) throws IOException {
         try (FileInputStream fis = new FileInputStream(file)) {
             Map<String, Object> data = yaml.load(fis);
@@ -317,7 +316,6 @@ public class EventConfigLoader {
         return new EventDefinitionImpl(id, displayName, description, objectives, uiResources, metadata, dependencies, alwaysActive);
     }
 
-
     @SuppressWarnings("unchecked")
     private ObjectiveDefinition parseObjective(Map<String, Object> data) {
         String id = (String) data.get("id");
@@ -355,7 +353,7 @@ public class EventConfigLoader {
         Map<String, Object> parametersData = (Map<String, Object>) data.get("parameters");
         if (parametersData != null) {
             parametersData.forEach((key, value) -> {
-                if (!"target_amount".equals(key)) {   // target_amount se lee aparte
+                if (!"target_amount".equals(key)) {   
                     parameters.put(key, value.toString());
                 }
             });
@@ -377,8 +375,7 @@ public class EventConfigLoader {
                 });
             }
         }
-        
-        // Validación de parámetros requeridos
+
         if (type == ObjectiveType.REACH_LOCATION) {
             if (!parameters.containsKey("x") || !parameters.containsKey("y") || !parameters.containsKey("z")) {
                 LOGGER.warning("⚠ REACH_LOCATION objetivo '" + id + "' falta parámetros requeridos:");
@@ -419,7 +416,6 @@ public class EventConfigLoader {
 
     private static final Set<ObjectiveType> UNIMPLEMENTED_TYPES = Set.of();
 
-    // Tipos con implementación parcial — funcionan con limitaciones conocidas
     private static final Set<ObjectiveType> PARTIAL_TYPES = Set.of();
 
     private int parseTargetAmount(Object value, String objectiveId) {
@@ -437,8 +433,6 @@ public class EventConfigLoader {
                 + value.getClass().getSimpleName() + ". Se usará 1.");
         return 1;
     }
-
-
 
     private void createExampleEventFile() {
         File exampleFile = new File(eventsDirectory, "tutorial_mining.yml");

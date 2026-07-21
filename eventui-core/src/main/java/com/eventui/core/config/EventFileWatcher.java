@@ -186,7 +186,6 @@ public class EventFileWatcher {
 
                 LOGGER.info("[EventUI] Hot Reload: Recargando evento desde " + fileName);
 
-                // Load single event file
                 var eventDef = plugin.getConfigLoader().loadEventFromFile(eventFile);
                 if (eventDef != null) {
                     plugin.getStorage().registerEvent(eventDef);

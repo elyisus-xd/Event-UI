@@ -57,8 +57,6 @@ public class ClientEventBridge implements EventBridge {
         LOGGER.info("ClientEventBridge initialized and connected");
     }
 
-
-
     public static ClientEventBridge getInstance() {
         if (instance == null) {
             instance = new ClientEventBridge();
@@ -170,7 +168,6 @@ public class ClientEventBridge implements EventBridge {
         return future;
     }
 
-
     @Override
     public void notifyButtonClick(String buttonId, String eventId, UUID playerId) {
         BridgeMessage message = new BridgeMessageImpl(
@@ -250,7 +247,7 @@ public class ClientEventBridge implements EventBridge {
                 Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
                     LOGGER.info("[RELOAD_NOTIF] Skill tree hot reload: {}", treeId);
-                    // Request skill data again to get the updated tree
+                    
                     requestSkillData();
                 });
             } else {
@@ -265,7 +262,6 @@ public class ClientEventBridge implements EventBridge {
             }
         });
 
-        // Handle badges update from server
         registerMessageHandler(MessageType.BADGES_UPDATE, message -> {
             String badgesJson = message.getPayload().get("badges");
             if (badgesJson == null || badgesJson.isEmpty()) return;
@@ -314,12 +310,10 @@ public class ClientEventBridge implements EventBridge {
             });
         });
 
-        // Skill-related handlers
         registerMessageHandler(MessageType.SKILL_DATA_RESPONSE, this::handleSkillDataResponse);
         registerMessageHandler(MessageType.SKILL_NODE_UPDATE, this::handleSkillNodeUpdate);
         registerMessageHandler(MessageType.SKILL_SPEND_ERROR, this::handleSkillSpendError);
     }
-
 
     public void requestUIState() {
         UUID playerId = getLocalPlayerId();
@@ -343,7 +337,6 @@ public class ClientEventBridge implements EventBridge {
         this.connected = true;
         LOGGER.info("ClientEventBridge connected");
     }
-
 
     public void onDisconnect() {
         this.connected = false;
@@ -466,7 +459,6 @@ public class ClientEventBridge implements EventBridge {
 
             cache.updateSkillData(trees, points);
 
-            // Parse connections config
             Map<String, Object> connectionsMap = (Map<String, Object>) fullSkillData.get("connections");
             if (connectionsMap != null) {
                 SkillConnectionsConfig connectionsConfig = new SkillConnectionsConfig(
@@ -515,7 +507,6 @@ public class ClientEventBridge implements EventBridge {
             cache.updateNodeLevel(treeId, nodeId, newLevel, newState, costNextLevel, pointsAvailable);
             skillDataDirty = true;
 
-            // Trigger the click animation now that the server confirmed success
             Minecraft.getInstance().execute(() ->
                 com.eventui.fabric.client.ui.SkillTreeRenderer.confirmSpend(treeId, nodeId, "punch", 150)
             );
@@ -602,7 +593,6 @@ public class ClientEventBridge implements EventBridge {
         int screenHeight = data.containsKey("screen_height")
                 ? ((Number) data.get("screen_height")).intValue()
                 : ((Number) data.getOrDefault("screenHeight", 240)).intValue();
-
 
         Map<String, String> screenProperties = new HashMap<>();
         Object propsObj = data.get("screen_properties");

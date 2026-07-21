@@ -24,7 +24,6 @@ public class UISoundHandler {
         }
     }
 
-
     public static void playSound(String soundId) {
         playSound(soundId, 1.0f, 1.0f);
     }

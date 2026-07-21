@@ -255,7 +255,6 @@ public class EventCommand implements CommandExecutor {
         }
     }
 
-
         private void handleReset(CommandSender sender, String[] args) {
         if (args.length < 4) {
             sender.sendMessage("§cUsage: /ev reset <events|skills> <player> <id|all>");
@@ -516,7 +515,6 @@ public class EventCommand implements CommandExecutor {
                         objective.getDescription()
                 );
 
-                // Award points for objective completion
                 if (justCompleted && plugin.getPointSourceManager() != null) {
                     boolean eventAlsoCompleted = progress.areAllObjectivesCompleted();
                     plugin.getPointSourceManager().handleObjectiveComplete((Player) sender, eventId, eventAlsoCompleted);
@@ -769,7 +767,6 @@ public class EventCommand implements CommandExecutor {
                 " §7â†’ §a" + targets.size() + " jugador(es)");
     }
 
-
     private void handleGetUIVar(CommandSender sender, String[] args) {
         if (args.length < 3) {
             sender.sendMessage("§cUso: /eventui getuivar <jugador> <key>");
@@ -810,7 +807,6 @@ public class EventCommand implements CommandExecutor {
 
         sender.sendMessage("§aâœ“ UI state cleared for " + targets.size() + " jugador(es)");
     }
-
 
     private void handleDumpUIVars(CommandSender sender, String[] args) {
         if (args.length < 2) {
@@ -923,8 +919,6 @@ public class EventCommand implements CommandExecutor {
             sender.sendMessage("  §f" + node.getDisplayName() + " " + status);
         }
 
-
-        // Show active point sources configuration
         var sourcesConfig = plugin.getSkillSourcesConfig();
         sender.sendMessage("§6────────────────────────────────");
         sender.sendMessage("§6[Active Point Sources]");
@@ -971,12 +965,10 @@ public class EventCommand implements CommandExecutor {
             return;
         }
 
-        // Resolve point type alias to internal ID
         String resolvedPointType = plugin.getSkillSourcesConfig().getPointTypeResolver().resolve(pointType);
 
         plugin.getSkillNodeService().grantPoints(target, resolvedPointType, amount);
 
-        // Push updated skill data to client immediately
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
             if (target.isOnline()) {
                 plugin.getEventBridge().sendSkillDataToPlayer(target);
@@ -1003,7 +995,6 @@ public class EventCommand implements CommandExecutor {
         String treeId = args[3];
         String nodeId = args[4];
 
-        // Obtener definiciones
         var treeOpt = plugin.getSkillTreeStorage().getSkillTree(treeId);
         if (treeOpt.isEmpty()) {
             sender.sendMessage("§cSkill tree not found: " + treeId);
@@ -1021,11 +1012,10 @@ public class EventCommand implements CommandExecutor {
 
         var node = nodeOpt.get();
 
-        // Intentar gastar puntos
         var result = plugin.getSkillNodeService().trySpendNode(target.getUniqueId(), treeId, nodeId);
 
         if (result == com.eventui.core.skill.SpendResult.SUCCESS) {
-            // Push updated skill data to client immediately
+            
             plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
                 if (target.isOnline()) {
                     plugin.getEventBridge().sendSkillDataToPlayer(target);

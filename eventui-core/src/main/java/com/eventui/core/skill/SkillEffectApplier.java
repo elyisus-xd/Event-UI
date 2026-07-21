@@ -12,10 +12,6 @@ import org.bukkit.entity.Player;
 
 import java.util.logging.Logger;
 
-/**
- * Aplica efectos de nodos de habilidad a jugadores.
- * Maneja atributos de Bukkit y ejecución de comandos.
- */
 public class SkillEffectApplier {
 
     private static final Logger LOGGER = Logger.getLogger("EventUI");
@@ -23,17 +19,10 @@ public class SkillEffectApplier {
     public SkillEffectApplier(EventUIPlugin plugin) {
     }
 
-    /**
-     * Aplica los efectos de un nodo al jugador.
-     * Parámetro includeCommands: si false, solo aplica atributos (para reconexión)
-     */
     public void applyNodeEffects(Player player, SkillNodeDefinition node, int newLevel) {
         applyNodeEffects(player, node, newLevel, true);
     }
 
-    /**
-     * Aplica los efectos de un nodo al jugador.
-     */
     public void applyNodeEffects(Player player, SkillNodeDefinition node, int newLevel, boolean includeCommands) {
         for (SkillEffect effect : node.getEffects()) {
             String type = effect.getType();
@@ -76,10 +65,6 @@ public class SkillEffectApplier {
         }
     }
 
-    /**
-     * Aplica un efecto de atributo de Bukkit.
-     * Usa NamespacedKey determinística para que los modifiers se reemplacen, no se acumulen.
-     */
     private void applyAttributeEffect(Player player, SkillNodeDefinition node, SkillEffect effect, int newLevel) {
         var data = effect.getData();
 
@@ -115,10 +100,8 @@ public class SkillEffectApplier {
             double valuePerLevel = Double.parseDouble(valuePerLevelStr);
             double totalValue = valuePerLevel * newLevel;
 
-            // NamespacedKey determinística para el modifier
             NamespacedKey modifierKey = new NamespacedKey("eventui", "skill_" + node.getId());
 
-            // Remover modifier anterior si existe (por key)
             for (AttributeModifier existing : attrInstance.getModifiers()) {
                 if (modifierKey.equals(existing.getKey())) {
                     attrInstance.removeModifier(existing);
@@ -126,7 +109,6 @@ public class SkillEffectApplier {
                 }
             }
 
-            // Crear e aplicar nuevo modifier con NamespacedKey (1.21+ compatible)
             AttributeModifier.Operation operation = parseOperation(operationStr);
 
             AttributeModifier modifier = new AttributeModifier(
@@ -145,10 +127,6 @@ public class SkillEffectApplier {
         }
     }
 
-    /**
-     * Ejecuta un comando asociado a un efecto.
-     * Solo ejecuta si el level actual coincide con at_level (si está especificado).
-     */
     private void applyCommandEffect(Player player, SkillEffect effect, int newLevel) {
         var data = effect.getData();
 
@@ -160,12 +138,11 @@ public class SkillEffectApplier {
             return;
         }
 
-        // Si at_level está especificado, solo ejecutar cuando newLevel sea exactamente ese valor
         if (atLevelStr != null && !atLevelStr.isBlank()) {
             try {
                 int atLevel = Integer.parseInt(atLevelStr);
                 if (newLevel != atLevel) {
-                    return; // No ejecutar en este level
+                    return; 
                 }
             } catch (NumberFormatException e) {
                 LOGGER.warning("Invalid at_level value: " + atLevelStr);
@@ -173,20 +150,13 @@ public class SkillEffectApplier {
             }
         }
 
-        // Reemplazar placeholder {player} con el nombre del jugador
         String finalCommand = command.replace("{player}", player.getName());
 
-        // Ejecutar comando desde la consola
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
 
         LOGGER.fine("Executed skill command: " + finalCommand);
     }
 
-    /**
-     * Parse operation string to AttributeModifier.Operation.
-     * Supports: "add", "add_number" (adds fixed value), "add_percent", "add_scalar" (adds percentage of base value), "multiply"
-     * Defaults to ADD_NUMBER if unknown or null.
-     */
     private AttributeModifier.Operation parseOperation(String operationStr) {
         if (operationStr == null || operationStr.isBlank()) {
             return AttributeModifier.Operation.ADD_NUMBER;

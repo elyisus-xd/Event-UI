@@ -18,10 +18,8 @@ public class QuestTrackerHUD {
     private static long lastUpdate = 0;
     private static final long UPDATE_INTERVAL = 500;
 
-
     private static float alpha = 0.0f;
     private static final float FADE_SPEED = 0.05f;
-
 
     public static void render(GuiGraphics graphics) {
         if (!enabled) {
@@ -108,11 +106,9 @@ public class QuestTrackerHUD {
         int borderColor = (alphaHex & 0xFF000000) | 0xFFAA00;
         graphics.fill(x, y, x + width, y + 2, borderColor);
 
-
         int shadowColor = (int)(0x66 * alpha) << 24;
         graphics.fill(x + 2, y + height, x + width, y + height + 2, shadowColor);
         graphics.pose().pushPose();
-
 
         try {
             if (activeQuest.icon != null) {

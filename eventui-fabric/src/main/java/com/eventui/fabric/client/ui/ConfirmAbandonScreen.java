@@ -4,7 +4,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
-
 public class ConfirmAbandonScreen extends Screen {
 
     private final Screen parentScreen;

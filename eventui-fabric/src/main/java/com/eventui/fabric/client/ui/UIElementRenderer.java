@@ -18,7 +18,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-
 public class UIElementRenderer {
 
     private final Map<String, GlowData> pendingGlowElements = new LinkedHashMap<>();
@@ -26,7 +25,6 @@ public class UIElementRenderer {
     private static final Logger LOGGER = LoggerFactory.getLogger(UIElementRenderer.class);
     private final com.eventui.fabric.client.ui.animation.AnimationManager animationManager =
             new com.eventui.fabric.client.ui.animation.AnimationManager();
-
 
     private UIElement hoveredElement = null;
     private int lastScreenMouseX = 0;
@@ -44,7 +42,6 @@ public class UIElementRenderer {
     public void setUiScale(float uiScale) {
         this.uiScale = uiScale;
     }
-
 
     private record PositionedElement(UIElement delegate, int resolvedX, int resolvedY) implements UIElement {
 
@@ -76,11 +73,9 @@ public class UIElementRenderer {
             }
         }
 
-
         animationManager.tick();
         boolean isHovered = isMouseOver(element, mouseX, mouseY);
 
-        // Don't apply hover effects to SKILL_TREE elements (nodes handle their own hover)
         if (element.getType() == UIElementType.SKILL_TREE) {
             isHovered = false;
         }
@@ -99,7 +94,6 @@ public class UIElementRenderer {
                         BadgeRenderer.InteractionType.HOVER, this.currentScreenId);
             }
         }
-
 
         boolean hasHoverTransform = applyHoverTransform(element, graphics, isHovered);
 
@@ -162,9 +156,6 @@ public class UIElementRenderer {
             }
         }
 
-
-
-
         if (hasHoverTransform) {
             graphics.pose().popPose();
         }
@@ -174,7 +165,6 @@ public class UIElementRenderer {
         String hoverAnim = element.getProperties().get("hover_animation");
         String loopAnim = element.getProperties().get("loop_animation");
 
-        // Check for loop animation first (takes priority)
         boolean isLoop = loopAnim != null && !loopAnim.isEmpty() && !loopAnim.equals("none");
         boolean hasHover = hoverAnim != null && !hoverAnim.isEmpty() && !hoverAnim.equals("none");
 
@@ -182,7 +172,6 @@ public class UIElementRenderer {
             return false;
         }
 
-        // Don't apply transform to SKILL_TREE elements
         if (element.getType() == UIElementType.SKILL_TREE) {
             return false;
         }
@@ -190,10 +179,10 @@ public class UIElementRenderer {
         HoverAnimation animation = parseHoverAnimation(element, isLoop ? loopAnim : hoverAnim);
 
         if (isLoop) {
-            // Loop animation: always active
+            
             hoverAnimationManager.startAnimation(element.getId(), animation, true);
         } else if (isHovered) {
-            // Hover animation: only on hover
+            
             hoverAnimationManager.startAnimation(element.getId(), animation, false);
         } else {
             hoverAnimationManager.stopAnimation(element.getId());
@@ -363,7 +352,6 @@ public class UIElementRenderer {
                 localX = avail - textWidth;
             }
 
-            // Apply scale transformation for this line only
             poseStack.pushPose();
             poseStack.translate(localX, localY, 0);
             poseStack.scale(fontSize, fontSize, 1.0f);
@@ -375,7 +363,6 @@ public class UIElementRenderer {
 
         poseStack.popPose();
     }
-
 
     private void renderButton(UIElement element, GuiGraphics graphics, Font font, int mouseX, int mouseY) {
         boolean isHovered = isMouseOver(element, mouseX, mouseY);
@@ -411,7 +398,6 @@ public class UIElementRenderer {
     private void renderProgressBar(UIElement element, GuiGraphics graphics, Map<String, Object> context) {
         float progress = resolveProgressValue(element, context);
 
-        // Fondo
         String bgColorStr = element.getProperties().getOrDefault("background_color", "1A1A1A");
         int bgColor = parseColor(bgColorStr);
         graphics.fill(
@@ -421,7 +407,6 @@ public class UIElementRenderer {
                 bgColor
         );
 
-        // Barra de relleno
         int fillWidth = (int)(element.getWidth() * progress);
         if (fillWidth > 0) {
             String fgColorStr = element.getProperties().getOrDefault("color", "5cb85c");
@@ -434,7 +419,6 @@ public class UIElementRenderer {
             );
         }
 
-        // Borde sutil
         graphics.fill(element.getX(), element.getY(),
                 element.getX() + element.getWidth(), element.getY() + 1, 0xFF666666);
         graphics.fill(element.getX(), element.getY() + element.getHeight() - 1,
@@ -465,7 +449,6 @@ public class UIElementRenderer {
                     element.getId(), eventId);
             return 0.0f;
         }
-
 
         if (eventId != null && !eventId.isEmpty()) {
             if (context != null) {
@@ -500,7 +483,6 @@ public class UIElementRenderer {
         }
     }
 
-
     @SuppressWarnings("unused")
     private void renderPanel(UIElement element, GuiGraphics graphics, Font font, int mouseX, int mouseY, Map<String, Object> context) {
         String bgColor = element.getProperties().get("background_color");
@@ -515,7 +497,6 @@ public class UIElementRenderer {
             );
         }
     }
-
 
     private boolean isMouseOver(UIElement element, int mouseX, int mouseY) {
         if (mouseX < element.getX() || mouseX > element.getX() + element.getWidth() ||
@@ -584,7 +565,6 @@ public class UIElementRenderer {
             return;
         }
 
-
         try {
             ResourceLocation textureLocation = ResourceLocation.parse(texture);
             var poseStack = graphics.pose();
@@ -624,7 +604,6 @@ public class UIElementRenderer {
                 poseStack.popPose();
             }
 
-
             if (isHovered && !wasHoveredLastFrame(element.getId())) {
                 String hoverSound = element.getProperties().get("hover_sound");
                 if (hoverSound != null && !hoverSound.isEmpty()) {
@@ -635,7 +614,6 @@ public class UIElementRenderer {
             }
             updateHoverState(element.getId(), isHovered);
 
-            // Click animation for image buttons
             float clickProgress = ClickAnimationManager.getInstance().getProgress(element.getId());
             if (clickProgress > 0f) {
                 String clickAnimType = ClickAnimationManager.getInstance()
@@ -652,7 +630,7 @@ public class UIElementRenderer {
                         poseStack.translate(cx, cy, 0);
                         poseStack.scale(scale, scale, 1f);
                         poseStack.translate(-cx, -cy, 0);
-                        // NOTE: must pop after drawing — handled below
+                        
                     }
                     case "shake" -> {
                         float offsetX = (float) Math.sin(t * Math.PI * 5) * 3f * clickProgress;
@@ -697,14 +675,13 @@ public class UIElementRenderer {
                 }
             }
 
-            // Pop click animation transform if active
             if (clickProgress > 0f) {
                 String clickAnimType = ClickAnimationManager.getInstance()
                         .getAnimationType(element.getId());
                 if (!"flash".equals(clickAnimType) && !"none".equals(clickAnimType)) {
                     poseStack.popPose();
                 }
-                // Flash overlay
+                
                 if ("flash".equals(clickAnimType)) {
                     int flashAlpha = (int)(clickProgress * 160);
                     graphics.fill(element.getX(), element.getY(),
@@ -732,8 +709,6 @@ public class UIElementRenderer {
             previouslyHovered.remove(elementId);
         }
     }
-
-
 
     private void applyAllHoverEffects(UIElement element,
                                       com.mojang.blaze3d.vertex.PoseStack poseStack,
@@ -807,7 +782,6 @@ public class UIElementRenderer {
 
             net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(item);
 
-
             float iconScaleProp = com.eventui.api.ui.UIElementHelper.getIconScale(element);
             int offsetX = com.eventui.api.ui.UIElementHelper.getIconOffsetX(element);
             int offsetY = com.eventui.api.ui.UIElementHelper.getIconOffsetY(element);
@@ -831,8 +805,6 @@ public class UIElementRenderer {
             LOGGER.error("Failed to render icon: {}", iconId, e);
         }
     }
-
-
 
     private void renderOverlay(UIElement element, GuiGraphics graphics, String overlayTexture) {
         try {

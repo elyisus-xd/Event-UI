@@ -47,18 +47,15 @@ public class UIDebugOverlay {
 
         graphics.fill(offsetX, designCenterY, panelRight, designCenterY + 1, 0x55FFFFFF);
 
-
         graphics.fill(offsetX,          offsetY,           panelRight,      offsetY + 1,      0xAAFFFFFF);
         graphics.fill(offsetX,          panelBottom - 1,   panelRight,      panelBottom,      0xAAFFFFFF);
         graphics.fill(offsetX,          offsetY,           offsetX + 1,     panelBottom,      0xAAFFFFFF);
         graphics.fill(panelRight - 1,   offsetY,           panelRight,      panelBottom,      0xAAFFFFFF);
 
-
         String mouseInfo = String.format("§eMouse: §f%d, %d  §7(screen: %d, %d)",
                 localMouseX, localMouseY, mouseX, mouseY);
         graphics.fill(4, 4, font.width(mouseInfo) + 8, 14, 0xAA000000);
         graphics.drawString(font, mouseInfo, 6, 6, 0xFFFFFF, false);
-
 
         String scaleInfo = String.format("§7Design: §f%dx%d  §7Scale: §f%.3f  §7Offset: §f%d,%d",
                 config.getScreenWidth(), config.getScreenHeight(), uiScale, offsetX, offsetY);
@@ -76,7 +73,6 @@ public class UIDebugOverlay {
         for (UIElement element : elements) {
             if (element.getType() == com.eventui.api.ui.UIElementType.TOOLTIP) continue;
 
-
             int resolvedX = element.getX();
             int resolvedY = element.getY();
             if (designWidth > 0 && element.getProperties().containsKey("anchor")) {
@@ -91,7 +87,6 @@ public class UIDebugOverlay {
             int screenY = offsetY + (int)(resolvedY * uiScale);
             int screenW = (int)(element.getWidth()  * uiScale);
             int screenH = (int)(element.getHeight() * uiScale);
-
 
             boolean hovered = localMouseX >= resolvedX
                     && localMouseX <= resolvedX + element.getWidth()
@@ -110,7 +105,6 @@ public class UIDebugOverlay {
             int fillColor   = getFillColor(element);
             int borderColor = getBorderColor(element);
 
-
             graphics.fill(screenX, screenY, screenX + screenW, screenY + screenH, fillColor);
 
             graphics.fill(screenX,              screenY,              screenX + screenW, screenY + 1,          borderColor);
@@ -123,7 +117,6 @@ public class UIDebugOverlay {
             }
         }
     }
-
 
     private static void renderHoverInfo(GuiGraphics graphics, Font font,
                                         UIElement element, int mouseX, int mouseY) {

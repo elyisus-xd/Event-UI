@@ -13,7 +13,6 @@ public class AnimationManager {
         this.activeAnimations = new ArrayList<>();
     }
 
-
     public void play(Animation animation) {
         if (animation == null) {
             throw new IllegalArgumentException("Animation cannot be null");

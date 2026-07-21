@@ -55,10 +55,9 @@ public class RecipeTooltipComponent implements ClientTooltipComponent {
     public void renderImage(Font font, int x, int y, GuiGraphics graphics) {
         LOG.debug("Rendering recipe tooltip for {}", recipe.getClass().getSimpleName());
         if (renderer.usesVanillaCraftingFrame() && gridConfig.isShowGridFrame()) {
-            // Determinar el tipo de frame (shaped vs shapeless)
-            String frameType = recipe instanceof ShapedRecipe ? "shaped_frame" : "shapeless_frame";
             
-            // Resolver frame: primero custom (si está en YAML), luego default
+            String frameType = recipe instanceof ShapedRecipe ? "shaped_frame" : "shapeless_frame";
+
             ResourceLocation frameTexture = null;
             if (customFrame != null && !customFrame.isEmpty()) {
                 try {
@@ -67,15 +66,14 @@ public class RecipeTooltipComponent implements ClientTooltipComponent {
                     LOG.warn("Failed to parse custom frame '{}': {}", customFrame, e.getMessage());
                 }
             }
-            
-            // Si no hay custom o falló, usar RecipeFrameManager
+
             if (frameTexture == null) {
                 frameTexture = RecipeFrameManager.getInstance()
                     .resolveFrameTexture(frameType, null);
             }
             
             if (frameTexture == null) {
-                // No hay textura custom ni default configurada: usar frame vanilla como antes
+                
                 renderVanillaFrame(graphics, x, y);
             } else {
                 renderFrame(graphics, x, y, frameTexture);
@@ -89,7 +87,7 @@ public class RecipeTooltipComponent implements ClientTooltipComponent {
             graphics.blit(frameTexture, x, y, 0, 0, gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight(), gridConfig.getGridFrameWidth(), gridConfig.getGridFrameHeight());
         } catch (Exception e) {
             LOG.warn("Failed to render frame '{}': {}", frameTexture, e.getMessage());
-            // Fallback a vanilla frame si falla
+            
             renderVanillaFrame(graphics, x, y);
         }
     }
@@ -104,6 +102,5 @@ public class RecipeTooltipComponent implements ClientTooltipComponent {
         );
     }
 
-    // Keep an inner data record for legacy TooltipComponent usage
     public record Data(Recipe<?> recipe, String customFrame) implements TooltipComponent {}
 }

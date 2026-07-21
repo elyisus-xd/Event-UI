@@ -23,7 +23,6 @@ public class UIStateManager {
         this.plugin = plugin;
     }
 
-
         public void setVariable(UUID playerId, String key, String value) {
         playerState.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
                 .put(key, value);
@@ -70,7 +69,6 @@ public class UIStateManager {
         }
     }
 
-
     public void loadPlayerState(UUID playerId) {
         File file = getStateFile(playerId);
         if (!file.exists()) return;
@@ -105,9 +103,6 @@ public class UIStateManager {
     private File getStateFile(UUID playerId) {
         return new File(plugin.getDataFolder(), "playerstate/" + playerId + ".yml");
     }
-
-
-
 
         public void pushStateToClient(UUID playerId, boolean replace) {
         var player = plugin.getServer().getPlayer(playerId);

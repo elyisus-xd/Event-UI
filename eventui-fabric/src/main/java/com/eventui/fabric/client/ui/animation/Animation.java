@@ -1,10 +1,5 @@
 package com.eventui.fabric.client.ui.animation;
 
-/**
- * Clase base abstracta para animaciones basadas en tiempo con easing.
- * Las subclases implementan update(progress) para aplicar el efecto
- * según el progreso normalizado (0.0 - 1.0) tras aplicar el easing.
- */
 public abstract class Animation {
 
     private final long durationMs;

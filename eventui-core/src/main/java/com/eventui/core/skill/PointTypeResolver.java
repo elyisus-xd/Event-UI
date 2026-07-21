@@ -23,7 +23,6 @@ public class PointTypeResolver {
             }
         }
 
-        // Default aliases if not configured (case-insensitive)
         if (aliases.isEmpty()) {
             aliases.put("puntos de combate", "combat_points");
             aliases.put("puntos de habilidad", "skill_points");
@@ -31,43 +30,30 @@ public class PointTypeResolver {
             aliases.put("combat points", "combat_points");
             aliases.put("skill points", "skill_points");
             aliases.put("gathering points", "gathering_points");
-            // Also add capitalized variants
+            
             aliases.put("puntos de combate", "combat_points");
             aliases.put("puntos de habilidad", "skill_points");
             aliases.put("puntos de recolección", "gathering_points");
         }
     }
 
-    /**
-     * Resolves a point type name (could be alias or internal ID) to internal ID.
-     * @param input The input name (alias or internal ID)
-     * @return The internal ID (e.g., "combat_points")
-     */
     public String resolve(String input) {
         if (input == null || input.isEmpty()) return input;
 
         String lowerInput = input.toLowerCase();
 
-        // If it's already an internal ID (contains underscore), return as-is
         if (input.contains("_")) {
             return input;
         }
 
-        // Check if it's an alias
         String resolved = aliases.get(lowerInput);
         if (resolved != null) {
             return resolved;
         }
 
-        // Return as-is if no alias found
         return input;
     }
 
-    /**
-     * Gets the display name for a point type (reverse lookup).
-     * @param internalId The internal ID (e.g., "combat_points")
-     * @return The display name (e.g., "Puntos de Combate") or the internal ID if no alias exists
-     */
     public String getDisplayName(String internalId) {
         if (internalId == null || internalId.isEmpty()) return internalId;
 
@@ -75,9 +61,6 @@ public class PointTypeResolver {
         return displayName != null ? displayName : internalId;
     }
 
-    /**
-     * Checks if a name is an alias (not an internal ID).
-     */
     public boolean isAlias(String name) {
         if (name == null || name.isEmpty()) return false;
         return aliases.containsKey(name.toLowerCase());

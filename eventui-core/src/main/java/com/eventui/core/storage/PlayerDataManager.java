@@ -28,7 +28,7 @@ public class PlayerDataManager {
     private final Map<UUID, BukkitTask> scheduledSaves = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> saveInProgress = ConcurrentHashMap.newKeySet();
     private final java.util.Set<UUID> saveAgainAfterCurrent = ConcurrentHashMap.newKeySet();
-    // Dismissed badges persisted per-player
+    
     private final Map<UUID, java.util.Set<String>> dismissedBadges = new ConcurrentHashMap<>();
 
     public PlayerDataManager(EventUIPlugin plugin) {
@@ -60,7 +60,6 @@ public class PlayerDataManager {
             dismissedBadges.put(playerId, set);
         }
 
-        // Cargar progreso de habilidades
         var skillsSection = yaml.getConfigurationSection("skills");
         if (skillsSection != null) {
             loadSkillProgress(playerId, yaml);
@@ -313,13 +312,11 @@ public class PlayerDataManager {
             );
         }
 
-        // Persistir badges descartados
         java.util.Set<String> badges = dismissedBadges.get(playerId);
         if (badges != null && !badges.isEmpty()) {
             yaml.set("badges.dismissed", new ArrayList<>(badges));
         }
 
-        // Persistir progreso de habilidades
         var skillProgress = plugin.getSkillProgressStorage().getPlayerProgressSnapshot(playerId);
         if (skillProgress != null && skillProgress.getPlayerId() != null) {
             var availablePts = ((com.eventui.core.skill.PlayerSkillProgressImpl) skillProgress).getAvailablePointsSnapshot();
@@ -366,7 +363,6 @@ public class PlayerDataManager {
         plugin.getServer().getOnlinePlayers().forEach(p -> savePlayerData(p.getUniqueId()));
     }
 
-    // Badge persistence helpers
     public java.util.Set<String> getDismissedBadges(UUID playerId) {
         return java.util.Collections.unmodifiableSet(
                 dismissedBadges.getOrDefault(playerId, java.util.Set.of())
@@ -382,36 +378,29 @@ public class PlayerDataManager {
         return new File(plugin.getDataFolder(), "playerdata/" + playerId + ".yml");
     }
 
-    /**
-     * Reaaplica los efectos de atributos de los nodos después de cargar datos al reconectar.
-     * Los comandos NO se reaaplican (solo los atributos).
-     */
     private void reapplySkillEffects(UUID playerId) {
         org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerId);
         if (player == null || !player.isOnline()) {
-            return; // Jugador no en línea aún
+            return; 
         }
 
         var skillProgress = plugin.getSkillProgressStorage().getProgress(playerId);
         if (skillProgress.isEmpty()) {
-            return; // Sin datos de skills
+            return; 
         }
 
         var progress = skillProgress.get();
         var effectApplier = plugin.getSkillNodeService().getEffectApplier();
 
-        // Iterar todos los árboles
         for (var tree : plugin.getSkillTreeStorage().getAllSkillTrees().values()) {
             String treeId = tree.getId();
 
-            // Iterar todos los nodos
             for (var node : tree.getNodes()) {
                 String nodeId = node.getId();
                 int level = progress.getNodeLevel(treeId, nodeId);
 
-                // Si el jugador tiene un nivel > 0 en este nodo, reaaplica los efectos
                 if (level > 0) {
-                    // Pasar false para que SOLO reaaplique atributos, no comandos
+                    
                     effectApplier.applyNodeEffects(player, node, level, false);
                 }
             }

@@ -29,7 +29,6 @@ public class PointSourceListener implements Listener {
         return plugin.getPointSourceManager();
     }
 
-    // ── XP Conversion ──────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerLevelChange(PlayerLevelChangeEvent event) {
         if (event.getNewLevel() > event.getOldLevel()) {
@@ -37,7 +36,6 @@ public class PointSourceListener implements Listener {
         }
     }
 
-    // ── Mob Kill ─────────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDeath(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
@@ -46,7 +44,6 @@ public class PointSourceListener implements Listener {
         }
     }
 
-    // ── Player Kill ───────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerDeath(PlayerDeathEvent event) {
         Player killer = event.getPlayer().getKiller();
@@ -55,13 +52,11 @@ public class PointSourceListener implements Listener {
         }
     }
 
-    // ── Block Mine ───────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
         Block block = event.getBlock();
         String blockId = block.getType().getKey().toString();
 
-        // Check correct tool requirement
         SkillSourcesConfig config = plugin.getSkillSourcesConfig();
         if (config != null && config.isBlockMineRequireCorrectTool()) {
             ItemStack tool = event.getPlayer().getInventory().getItemInMainHand();
@@ -73,13 +68,11 @@ public class PointSourceListener implements Listener {
         getPointSourceManager().handleBlockMine(event.getPlayer(), blockId);
     }
 
-    // ── Fishing ───────────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerFish(PlayerFishEvent event) {
         getPointSourceManager().handleFishing(event);
     }
 
-    // ── Crop Harvest ─────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreakCrop(BlockBreakEvent event) {
         Block block = event.getBlock();
@@ -91,12 +84,11 @@ public class PointSourceListener implements Listener {
         }
 
         String cropId = block.getType().getKey().toString();
-        boolean isManual = true; // Simplified - could check for dispenser
+        boolean isManual = true; 
 
         getPointSourceManager().handleCropHarvest(event.getPlayer(), cropId, isMature, isManual);
     }
 
-    // ── Animal Breed ─────────────────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityBreed(EntityBreedEvent event) {
         if (!(event.getBreeder() instanceof Player player)) return;
@@ -107,7 +99,6 @@ public class PointSourceListener implements Listener {
         getPointSourceManager().handleAnimalBreed(player, entityId);
     }
 
-    // ── Playtime Activity Tracking ─────────────────────────────
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
         if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
@@ -115,18 +106,15 @@ public class PointSourceListener implements Listener {
             event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
             return;
         }
-        // Update activity timestamp separately from playtime tick
+        
         getPointSourceManager().updateActivity(event.getPlayer().getUniqueId());
         getPointSourceManager().handlePlaytimeTick(event.getPlayer());
     }
-
-    // ── Helper Methods ────────────────────────────────────────
 
     private boolean isCorrectTool(Block block, ItemStack tool) {
         Material blockType = block.getType();
         Material toolType = tool.getType();
 
-        // Simplified tool check - could be more comprehensive
         if (blockType.name().endsWith("_ORE") || blockType.name().endsWith("_LOG")) {
             return toolType.name().endsWith("_PICKAXE") || toolType.name().endsWith("_AXE");
         }

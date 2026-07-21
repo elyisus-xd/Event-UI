@@ -129,7 +129,6 @@ public class NetworkHandler {
 
             long timestamp = in.readLong();
 
-
             UUID messageId = null;
             if (in.readBoolean()) {
                 long mostSigBits = in.readLong();

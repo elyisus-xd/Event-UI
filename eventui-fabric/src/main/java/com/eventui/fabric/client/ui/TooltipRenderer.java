@@ -46,9 +46,6 @@ public class TooltipRenderer {
         graphics.renderTooltip(font, components, java.util.Optional.empty(), mouseX, mouseY);
     }
 
-
-
-
     private static void renderTextOnlyTooltip(TooltipConfig config, GuiGraphics graphics,
                                               Font font, int mouseX, int mouseY) {
         String content = config.getContent().replace("\\n", "\n");
@@ -73,9 +70,6 @@ public class TooltipRenderer {
             currentY += font.lineHeight + 1;
         }
     }
-
-
-
 
     private static void renderAdvancedTooltipNative(TooltipConfig config, GuiGraphics graphics,
                                                     Font font, int mouseX, int mouseY) {
@@ -110,8 +104,6 @@ public class TooltipRenderer {
         poseStack.popPose();
     }
 
-
-
     private static int renderSectionInline(TooltipConfig.TooltipSection section, GuiGraphics graphics,
                                            Font font, int x, int y, int availableWidth) {
         return switch (section.getType()) {
@@ -127,7 +119,6 @@ public class TooltipRenderer {
                 }
                 yield h;
             }
-
 
             case ITEM -> {
                 String itemId   = section.getData().get("item");
@@ -161,7 +152,6 @@ public class TooltipRenderer {
                 String customFrame = section.getData().get("frame");
                 if (recipeId == null || recipeId.isBlank()) yield 0;
 
-                // parse grid config from section properties
                 RecipeGridConfig gridConfig = RecipeGridConfig.fromMap(section.getData());
                 LOGGER.debug("Recipe section '{}' gridConfig={}", recipeId, gridConfig);
 
@@ -261,8 +251,6 @@ public class TooltipRenderer {
         };
     }
 
-
-
     private static TooltipDimensions calculateTooltipDimensions(TooltipConfig config, Font font) {
         int maxWidth    = 0;
         int totalHeight = 12;
@@ -347,8 +335,6 @@ public class TooltipRenderer {
         return new TooltipDimensions(maxWidth, totalHeight);
     }
 
-
-
     private static void renderTooltipBackground(GuiGraphics graphics,
                                                 int x, int y, int width, int height) {
         int bgColor    = 0xF0100010;
@@ -363,7 +349,6 @@ public class TooltipRenderer {
     }
 
     private record TooltipDimensions(int width, int height) {}
-
 
     private record CustomTooltipComponent(Type type, Object component) {
         enum Type { ITEM, RECIPE, ENTITY }

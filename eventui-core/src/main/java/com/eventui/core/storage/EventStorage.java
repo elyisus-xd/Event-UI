@@ -27,7 +27,6 @@ public class EventStorage {
         this.playerProgress = new ConcurrentHashMap<>();
         this.plugin = plugin;    }
 
-
         public void registerEvent(EventDefinition definition) {
         eventDefinitions.put(definition.getId(), definition);
     }
@@ -35,7 +34,6 @@ public class EventStorage {
         public void registerEvents(Map<String, EventDefinition> events) {
         eventDefinitions.putAll(events);
 
-        // Update existing player progress with new target amounts
         for (Map.Entry<UUID, Map<String, EventProgressImpl>> playerEntry : playerProgress.entrySet()) {
             for (Map.Entry<String, EventProgressImpl> progressEntry : playerEntry.getValue().entrySet()) {
                 String eventId = progressEntry.getKey();
@@ -43,7 +41,7 @@ public class EventStorage {
 
                 EventDefinition newDefinition = eventDefinitions.get(eventId);
                 if (newDefinition != null) {
-                    // Update target amounts for existing objectives
+                    
                     for (var objective : newDefinition.getObjectives()) {
                         progress.registerObjective(objective.getId(), objective.getTargetAmount());
                     }
@@ -59,7 +57,6 @@ public class EventStorage {
         public Map<String, EventDefinition> getAllEventDefinitions() {
         return Map.copyOf(eventDefinitions);
     }
-
 
         public EventProgressImpl getOrCreateProgress(UUID playerId, String eventId) {
         EventDefinition definition = eventDefinitions.get(eventId);

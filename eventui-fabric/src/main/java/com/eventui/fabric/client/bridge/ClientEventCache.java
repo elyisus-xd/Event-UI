@@ -185,8 +185,7 @@ public class ClientEventCache {
             );
             tree.nodes().put(nodeId, newNode);
             LOGGER.debug("Updated node {}.{} to level {}", treeId, nodeId, newLevel);
-            
-            // Also update available points for the relevant point type
+
             if (tree.pointType() != null) {
                 String pointType = tree.pointType();
                 SkillPointsData oldPoints = cachedSkillPoints.get(pointType);
@@ -195,18 +194,11 @@ public class ClientEventCache {
                 LOGGER.debug("Updated points for type '{}': available={}", pointType, pointsAvailable);
             }
 
-            // Recalculate states for all nodes in this tree
-            // so neighboring nodes that depend on this node update immediately
             recalculateAllNodeStates(treeId);
             ClientEventBridge.skillDataDirty = true;
         }
     }
 
-    /**
-     * Recalculates the state of every node in a tree based on current node levels.
-     * Called after any node level change so neighboring nodes update immediately
-     * (e.g. a LOCKED node that just became AVAILABLE because its requirement was met).
-     */
     private void recalculateAllNodeStates(String treeId) {
         SkillTreeData tree = cachedSkillTrees.get(treeId);
         if (tree == null) return;
@@ -214,7 +206,7 @@ public class ClientEventCache {
         Map<String, SkillNodeData> nodes = tree.nodes();
 
         boolean changed = true;
-        int maxPasses = 10; // safety limit to prevent infinite loops
+        int maxPasses = 10; 
         int pass = 0;
         while (changed && pass < maxPasses) {
             changed = false;
@@ -247,10 +239,6 @@ public class ClientEventCache {
         }
     }
 
-    /**
-     * Calculates the state of a single node based on its current level
-     * and the levels of its required nodes.
-     */
     private String calculateClientNodeState(SkillNodeData node,
                                             Map<String, SkillNodeData> allNodes) {
         int currentLevel = node.currentLevel();
@@ -258,7 +246,6 @@ public class ClientEventCache {
         if (currentLevel >= node.maxLevel()) return "MAXED";
         if (currentLevel > 0) return "PARTIAL";
 
-        // currentLevel == 0: check requirements
         java.util.List<SkillRequirementData> requires = node.requires();
         if (requires == null || requires.isEmpty()) return "AVAILABLE";
 
@@ -273,8 +260,6 @@ public class ClientEventCache {
             if (!isAll && met) return "AVAILABLE";
         }
 
-        // All mode: all requirements passed -> AVAILABLE
-        // Any mode: no requirement passed -> LOCKED
         return isAll ? "AVAILABLE" : "LOCKED";
     }
 }

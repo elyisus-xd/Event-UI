@@ -21,8 +21,7 @@ public class SkillNodeDataAdapter implements JsonDeserializer<SkillNodeData> {
         int currentLevel = obj.get("currentLevel").getAsInt();
         int costNextLevel = obj.get("costNextLevel").getAsInt();
         String state = obj.get("state").getAsString();
-        
-        // Parse requirements
+
         List<SkillRequirementData> requires = new ArrayList<>();
         JsonElement requiresElem = obj.get("requires");
         if (requiresElem != null && requiresElem.isJsonArray()) {
@@ -45,8 +44,7 @@ public class SkillNodeDataAdapter implements JsonDeserializer<SkillNodeData> {
         
         String exclusiveGroupId = obj.has("exclusiveGroupId") ? obj.get("exclusiveGroupId").getAsString() : null;
         String exclusiveBranchId = obj.has("exclusiveBranchId") ? obj.get("exclusiveBranchId").getAsString() : null;
-        
-        // pointType is optional, fallback to null
+
         String pointType = obj.has("pointType") ? obj.get("pointType").getAsString() : null;
         
         return new SkillNodeData(

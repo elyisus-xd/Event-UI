@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 public class TextureAlphaCache {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TextureAlphaCache.class);
@@ -82,7 +81,6 @@ public class TextureAlphaCache {
 
         textureX = Math.max(0, Math.min(textureX, alphaData.width - 1));
         textureY = Math.max(0, Math.min(textureY, alphaData.height - 1));
-
 
         return alphaData.alphaMap[textureX][textureY];
     }

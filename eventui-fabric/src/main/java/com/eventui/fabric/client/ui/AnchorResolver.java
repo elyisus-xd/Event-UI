@@ -2,7 +2,6 @@ package com.eventui.fabric.client.ui;
 
 import com.eventui.api.ui.UIElement;
 
-
 public class AnchorResolver {
 
     public record ResolvedPos(int x, int y) {}
@@ -14,7 +13,6 @@ public class AnchorResolver {
 
         int offsetX = parseIntProp(element, "anchor_offset_x", 0);
         int offsetY = parseIntProp(element, "anchor_offset_y", 0);
-
 
         int anchorPointX = resolveAnchorX(anchor, designWidth);
         int anchorPointY = resolveAnchorY(anchor, designHeight);

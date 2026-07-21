@@ -17,13 +17,9 @@ public abstract class StaticRecipeRenderer {
     private static final Logger LOGGER = LoggerFactory.getLogger(StaticRecipeRenderer.class);
 
     protected StaticRecipeRenderer() {
-        // Constructor sin parámetros para subclases
+        
     }
 
-    /**
-     * Render background with explicit texture (used by frame manager-aware renderers).
-     * Avoids calling initialize() every frame.
-     */
     protected void renderBackground(GuiGraphics graphics, int x, int y,
                                    ResourceLocation frameTexture,
                                    int frameWidth, int frameHeight) {
@@ -78,8 +74,6 @@ public abstract class StaticRecipeRenderer {
         List<ItemStack> stacks = new ArrayList<>();
         if (value == null || value.isBlank()) return stacks;
 
-        // Keep compatibility with the current tooltip parser, which provides section values as strings.
-        // Multiple ids can be supplied as a comma-separated list (e.g. "minecraft:iron_ore,minecraft:raw_iron").
         String[] parts = value.split(",");
         for (String rawId : parts) {
             String itemId = rawId.trim();

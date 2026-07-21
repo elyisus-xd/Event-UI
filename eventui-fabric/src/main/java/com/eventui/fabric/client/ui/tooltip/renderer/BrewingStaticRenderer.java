@@ -26,7 +26,7 @@ public class BrewingStaticRenderer extends StaticRecipeRenderer {
 
     @Override
     public void render(GuiGraphics graphics, Font font, int x, int y, Map<String, ?> data) {
-        // Resolver frame texture con override si existe
+        
         String customFrameStr = (String) data.get("recipe_frame");
         ResourceLocation customFrame = null;
         if (customFrameStr != null && !customFrameStr.isEmpty()) {

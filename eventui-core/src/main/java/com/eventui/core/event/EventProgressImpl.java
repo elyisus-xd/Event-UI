@@ -72,7 +72,6 @@ public class EventProgressImpl implements EventProgress {
         return completedAt;
     }
 
-
         public synchronized void start() {
         if (state == EventState.AVAILABLE) {
             state = EventState.IN_PROGRESS;
@@ -105,6 +104,5 @@ public class EventProgressImpl implements EventProgress {
         return objectivesProgress.values().stream()
                 .allMatch(ObjectiveProgress::isCompleted);
     }
-
 
 }
