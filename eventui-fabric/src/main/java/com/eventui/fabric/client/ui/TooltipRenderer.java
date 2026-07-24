@@ -48,6 +48,10 @@ public class TooltipRenderer {
 
     private static void renderTextOnlyTooltip(TooltipConfig config, GuiGraphics graphics,
                                               Font font, int mouseX, int mouseY) {
+        var poseStack = graphics.pose();
+        poseStack.pushPose();
+        poseStack.translate(0, 0, 400f);
+
         String content = config.getContent().replace("\\n", "\n");
         String[] lines = content.split("\n|<br>|<newline>");
 
@@ -69,6 +73,8 @@ public class TooltipRenderer {
             graphics.drawString(font, lineComp, textX, currentY, 0xFFFFFF, shadow);
             currentY += font.lineHeight + 1;
         }
+
+        poseStack.popPose();
     }
 
     private static void renderAdvancedTooltipNative(TooltipConfig config, GuiGraphics graphics,
@@ -82,9 +88,9 @@ public class TooltipRenderer {
         int screenWidth  = Minecraft.getInstance().getWindow().getGuiScaledWidth();
         int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
-        int x = mouseX + 12;
-        int y = mouseY - 12;
-        if (x + dims.width  > screenWidth  - 4) x = mouseX - dims.width  - 12;
+        int x = mouseX + 8;
+        int y = mouseY - 8;
+        if (x + dims.width  > screenWidth  - 4) x = mouseX - dims.width  - 8;
         if (y + dims.height > screenHeight - 4) y = screenHeight - dims.height - 4;
         x = Math.max(4, x);
         y = Math.max(4, y);

@@ -51,6 +51,17 @@ public class EntityRenderCache {
         });
     }
 
+    public static void tick() {
+        var mc = Minecraft.getInstance();
+        if (mc.level == null) return;
+
+        for (LivingEntity entity : cache.values()) {
+            if (entity != null) {
+                entity.tickCount++;
+            }
+        }
+    }
+
     public static void clear() {
         LOGGER.info("Clearing entity render cache ({} entries)", cache.size());
         cache.clear();

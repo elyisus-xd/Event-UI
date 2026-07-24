@@ -11,7 +11,7 @@ val shadowMe: Configuration by configurations.creating {
 dependencies {
     minecraft("com.mojang:minecraft:1.21.1")
     mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:0.18.2")
+    modImplementation("net.fabricmc:fabric-loader:0.18.4")
     modImplementation("net.fabricmc.fabric-api:fabric-api:0.108.0+1.21.1")
 
     implementation(project(":eventui-core"))

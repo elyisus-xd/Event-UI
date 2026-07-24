@@ -75,6 +75,14 @@ public class ConfigurableUIScreen extends Screen {
         LOGGER.info("Created ConfigurableUIScreen with config: {} ({} events)",
                 config.getId(), events.size());
 
+        Map<String, String> props = uiConfig.getScreenProperties();
+        String openSound = props.get("open_sound");
+        if (openSound != null && !openSound.isEmpty()) {
+            float volume = parseFloat(props.get("open_sound_volume"), 0.5f);
+            float pitch = parseFloat(props.get("open_sound_pitch"), 1.0f);
+            UISoundHandler.playSound(openSound, volume, pitch);
+        }
+
         boolean hasSkillTree = uiConfig.getRootElements().stream()
             .anyMatch(e -> e.getType() == UIElementType.SKILL_TREE);
         if (hasSkillTree) {
@@ -176,17 +184,44 @@ public class ConfigurableUIScreen extends Screen {
         ScreenTransition activeTransition = isClosing ? transitionOut : transitionIn;
 
         boolean hasTransform = activeTransition != ScreenTransition.NONE &&
-                activeTransition != ScreenTransition.FADE &&
                 transitionProgress < 1.0f;
+
+        boolean shouldRender = !isClosing || transitionProgress < 1.0f;
+
+        float fadeAlpha = 1.0f;
+        if (activeTransition == ScreenTransition.FADE && transitionProgress < 1.0f) {
+            if (isClosing) {
+                fadeAlpha = 1.0f - transitionProgress;
+            } else {
+                fadeAlpha = transitionProgress;
+            }
+        }
 
         if (hasTransform) {
             graphics.pose().pushPose();
-            ScreenTransitionRenderer.applyTransitionIn(
-                    activeTransition, transitionProgress, graphics,
-                    this.width, this.height, this.transitionEasing);
+            if (isClosing) {
+                ScreenTransitionRenderer.applyTransitionOut(
+                        activeTransition, transitionProgress, graphics,
+                        this.width, this.height, this.transitionEasing);
+            } else {
+                ScreenTransitionRenderer.applyTransitionIn(
+                        activeTransition, transitionProgress, graphics,
+                        this.width, this.height, this.transitionEasing);
+            }
+        }
+
+        com.mojang.blaze3d.systems.RenderSystem.enableBlend();
+        com.mojang.blaze3d.systems.RenderSystem.defaultBlendFunc();
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, fadeAlpha);
+
+        if (shouldRender) {
+            EntityRenderCache.tick();
         }
 
         Map<String, Object> context = createDataContext();
+        context.put("uiScale", uiScale);
+        context.put("uiOffsetX", offsetX);
+        context.put("uiOffsetY", offsetY);
 
         int localMouseX = (int)((mouseX - offsetX) / uiScale);
         int localMouseY = (int)((mouseY - offsetY) / uiScale);
@@ -199,23 +234,24 @@ public class ConfigurableUIScreen extends Screen {
         renderer.setUiScale(uiScale);
         renderer.setScreenMouse(mouseX, mouseY);
 
-        for (UIElement element : uiConfig.getRootElements()) {
-            renderer.render(element, graphics, this.font, localMouseX, localMouseY, context);
+        if (shouldRender) {
+            for (UIElement element : uiConfig.getRootElements()) {
+                renderer.render(element, graphics, this.font, localMouseX, localMouseY, context);
+            }
         }
-
-        renderer.renderPendingTooltips(graphics, this.font, localMouseX, localMouseY, context);
 
         graphics.pose().popPose();
 
-        if (activeTransition == ScreenTransition.FADE && transitionProgress < 1.0f) {
-            int alpha;
-            if (isClosing) {
-                alpha = (int)(transitionProgress * 255);
-            } else {
-                alpha = (int)((1.0f - transitionProgress) * 255);
-            }
-            graphics.fill(0, 0, this.width, this.height, (alpha << 24));
+        if (hasTransform) {
+            graphics.pose().popPose();
         }
+
+        if (shouldRender) {
+            renderer.renderPendingTooltips(graphics, this.font, mouseX, mouseY, context);
+        }
+
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+        com.mojang.blaze3d.systems.RenderSystem.disableBlend();
 
         if (debugOverlayEnabled) {
             UIDebugOverlay.render(graphics, this.font, uiConfig,
@@ -290,19 +326,7 @@ public class ConfigurableUIScreen extends Screen {
 
             for (UIElement element : uiConfig.getRootElements()) {
                 if (element.getType() == UIElementType.SKILL_TREE) {
-                    int resolvedX = element.getX();
-                    int resolvedY = element.getY();
-                    if (element.getProperties().containsKey("anchor")) {
-                        AnchorResolver.ResolvedPos resolved = 
-                                AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
-                        resolvedX = resolved.x();
-                        resolvedY = resolved.y();
-                    }
-
-                    if (localX >= resolvedX && localX <= resolvedX + element.getWidth() &&
-                            localY >= resolvedY && localY <= resolvedY + element.getHeight()) {
-                        SkillTreeRenderer.handleMousePress(element, (int)mouseX, (int)mouseY, button, resolvedX, resolvedY);
-                    }
+                    SkillTreeRenderer.handleMousePress(element, (int)mouseX, (int)mouseY, button);
                 }
             }
 
@@ -321,33 +345,29 @@ public class ConfigurableUIScreen extends Screen {
             LOGGER.info("Debug overlay: {}", debugOverlayEnabled ? "ON" : "OFF");
             return true;
         }
+
+        if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE) {
+            Map<String, String> props = uiConfig.getScreenProperties();
+            String closeSound = props.get("close_sound");
+            if (closeSound != null && !closeSound.isEmpty()) {
+                float volume = parseFloat(props.get("close_sound_volume"), 0.5f);
+                float pitch = parseFloat(props.get("close_sound_pitch"), 1.0f);
+                UISoundHandler.playSound(closeSound, volume, pitch);
+            }
+        }
+
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        
-        int localX = (int)((mouseX - offsetX) / uiScale);
-        int localY = (int)((mouseY - offsetY) / uiScale);
 
         for (UIElement element : uiConfig.getRootElements()) {
             if (element.getType() == UIElementType.SKILL_TREE) {
-                int resolvedX = element.getX();
-                int resolvedY = element.getY();
-                if (element.getProperties().containsKey("anchor")) {
-                    AnchorResolver.ResolvedPos resolved = 
-                            AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
-                    resolvedX = resolved.x();
-                    resolvedY = resolved.y();
-                }
-
-                if (localX >= resolvedX && localX <= resolvedX + element.getWidth() &&
-                        localY >= resolvedY && localY <= resolvedY + element.getHeight()) {
-                    boolean ctrlPressed = hasControlDown();
-                    SkillTreeRenderer.handleMouseWheel(element, (int)mouseX, (int)mouseY, 
-                            horizontal, vertical, ctrlPressed);
-                    return true;
-                }
+                boolean ctrlPressed = hasControlDown();
+                SkillTreeRenderer.handleMouseWheel(element, (int)mouseX, (int)mouseY,
+                        horizontal, vertical, ctrlPressed);
+                return true;
             }
         }
         return super.mouseScrolled(mouseX, mouseY, horizontal, vertical);
@@ -355,21 +375,9 @@ public class ConfigurableUIScreen extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
-        
-        int localX = (int)((mouseX - offsetX) / uiScale);
-        int localY = (int)((mouseY - offsetY) / uiScale);
 
         for (UIElement element : uiConfig.getRootElements()) {
             if (element.getType() == UIElementType.SKILL_TREE) {
-                int resolvedX = element.getX();
-                int resolvedY = element.getY();
-                if (element.getProperties().containsKey("anchor")) {
-                    AnchorResolver.ResolvedPos resolved = 
-                            AnchorResolver.resolve(element, uiConfig.getScreenWidth(), uiConfig.getScreenHeight());
-                    resolvedX = resolved.x();
-                    resolvedY = resolved.y();
-                }
-
                 SkillTreeRenderer.handleMouseDrag(element, (int)mouseX, (int)mouseY, button);
             }
         }
@@ -378,13 +386,10 @@ public class ConfigurableUIScreen extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        
-        int localX = (int)((mouseX - offsetX) / uiScale);
-        int localY = (int)((mouseY - offsetY) / uiScale);
 
         for (UIElement element : uiConfig.getRootElements()) {
             if (element.getType() == UIElementType.SKILL_TREE) {
-                SkillTreeRenderer.handleMouseRelease(element, (int)mouseX, (int)mouseY, button);
+                SkillTreeRenderer.handleMouseRelease(element, button);
             }
         }
         return super.mouseReleased(mouseX, mouseY, button);
@@ -472,13 +477,25 @@ public class ConfigurableUIScreen extends Screen {
         String action = button.getProperties().get("action");
         LOGGER.info("Button clicked: {} - action: {}", button.getId(), action);
 
-        String clickSound = button.getProperties().get("click_sound");
-        if (clickSound != null && !clickSound.isEmpty()) {
-            float volume = parseFloat(button.getProperties().get("click_sound_volume"), 1.0f);
-            float pitch  = parseFloat(button.getProperties().get("click_sound_pitch"), 1.0f);
-            UISoundHandler.playSound(clickSound, volume, pitch);
+        if ("close".equals(action)) {
+            Map<String, String> props = uiConfig.getScreenProperties();
+            String closeSound = props.get("close_sound");
+            if (closeSound != null && !closeSound.isEmpty()) {
+                float volume = parseFloat(props.get("close_sound_volume"), 0.5f);
+                float pitch = parseFloat(props.get("close_sound_pitch"), 1.0f);
+                UISoundHandler.playSound(closeSound, volume, pitch);
+            } else {
+                UISoundHandler.playSound(UISoundHandler.Sounds.BUTTON_CLICK);
+            }
         } else {
-            UISoundHandler.playSound(UISoundHandler.Sounds.BUTTON_CLICK);
+            String clickSound = button.getProperties().get("click_sound");
+            if (clickSound != null && !clickSound.isEmpty()) {
+                float volume = parseFloat(button.getProperties().get("click_sound_volume"), 1.0f);
+                float pitch  = parseFloat(button.getProperties().get("click_sound_pitch"), 1.0f);
+                UISoundHandler.playSound(clickSound, volume, pitch);
+            } else {
+                UISoundHandler.playSound(UISoundHandler.Sounds.BUTTON_CLICK);
+            }
         }
 
         String clickAnim = button.getProperties().getOrDefault("click_animation", "none");

@@ -955,18 +955,22 @@ public class PluginEventBridge implements EventBridge {
         knownPointTypes.addAll(sourcesConfig.getObjectiveCompletePointTypes());
         knownPointTypes.addAll(sourcesConfig.getPlaytimePointTypes());
 
-        if (playerProgress.isPresent()) {
-            
-            for (String pointType : knownPointTypes) {
-                int available = playerProgress.get().getAvailablePoints(pointType);
-                int totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
+        for (String pointType : knownPointTypes) {
+            int available = 0;
+            int totalEarned = 0;
 
-                Map<String, Object> pointsData = new HashMap<>();
-                pointsData.put("available", available);
-                pointsData.put("totalEarned", totalEarned);
-                pointsMap.put(pointType, pointsData);
+            if (playerProgress.isPresent()) {
+                available = playerProgress.get().getAvailablePoints(pointType);
+                totalEarned = playerProgress.get().getTotalEarnedPoints(pointType);
             }
-            
+
+            Map<String, Object> pointsData = new HashMap<>();
+            pointsData.put("available", available);
+            pointsData.put("totalEarned", totalEarned);
+            pointsMap.put(pointType, pointsData);
+        }
+
+        if (playerProgress.isPresent()) {
             for (var pointType : playerProgress.get().getAllPointTypes()) {
                 if (!pointsMap.containsKey(pointType)) {
                     int available = playerProgress.get().getAvailablePoints(pointType);

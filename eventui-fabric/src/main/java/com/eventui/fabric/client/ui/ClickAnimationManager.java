@@ -16,9 +16,15 @@ public class ClickAnimationManager {
     public static ClickAnimationManager getInstance() { return INSTANCE; }
 
     public void triggerClick(String elementId, String animationType, int durationMs) {
+        if (animationType == null || animationType.isEmpty()) {
+            animationType = "punch";
+        }
+        if (!animationType.equals("punch") && !animationType.equals("shake") && !animationType.equals("bounce")) {
+            animationType = "punch";
+        }
         clickTimestamps.put(elementId, System.currentTimeMillis());
-        clickAnimTypes.put(elementId,  animationType != null ? animationType : "punch");
-        clickDurations.put(elementId,  durationMs > 0 ? durationMs : 150);
+        clickAnimTypes.put(elementId, animationType);
+        clickDurations.put(elementId, durationMs > 0 ? durationMs : 150);
     }
 
     public float getProgress(String elementId) {

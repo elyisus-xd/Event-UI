@@ -763,8 +763,8 @@ public class EventCommand implements CommandExecutor {
             plugin.getUIStateManager().setVariable(target.getUniqueId(), key, value);
         }
 
-        sender.sendMessage("§aâœ“ UIVar §e" + key + " §7= §f" + value +
-                " §7â†’ §a" + targets.size() + " jugador(es)");
+        sender.sendMessage("§a UIVar §e" + key + " §7= §f" + value +
+                " §7’ §a" + targets.size() + " jugador(es)");
     }
 
     private void handleGetUIVar(CommandSender sender, String[] args) {
@@ -805,7 +805,7 @@ public class EventCommand implements CommandExecutor {
             plugin.getUIStateManager().clearVariables(target.getUniqueId());
         }
 
-        sender.sendMessage("§aâœ“ UI state cleared for " + targets.size() + " jugador(es)");
+        sender.sendMessage("§a UI state cleared for " + targets.size() + " jugador(es)");
     }
 
     private void handleDumpUIVars(CommandSender sender, String[] args) {
@@ -824,7 +824,7 @@ public class EventCommand implements CommandExecutor {
 
         sender.sendMessage("§6UIState de " + target.getName() + " (" + vars.size() + " vars):");
         if (vars.isEmpty()) {
-            sender.sendMessage("  §7(vacÃ­o)");
+            sender.sendMessage("  §7");
         } else {
             vars.forEach((k, v) -> sender.sendMessage("  §e" + k + " §7= §f" + v));
         }

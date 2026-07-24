@@ -17,10 +17,9 @@ public class PlayerDataListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.getPlayerDataManager().loadPlayerData(event.getPlayer().getUniqueId());
+        plugin.getUIStateManager().loadPlayerState(event.getPlayer().getUniqueId());
 
-        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-            plugin.getEventBridge().sendSkillDataToPlayer(event.getPlayer());
-        }, 60L);
+        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> plugin.getEventBridge().sendSkillDataToPlayer(event.getPlayer()), 60L);
     }
 
     @EventHandler

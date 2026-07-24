@@ -1,7 +1,6 @@
 package com.eventui.fabric.client.ui;
 
 import com.eventui.api.ui.*;
-import com.eventui.fabric.client.ui.ClickAnimationManager;
 import com.eventui.fabric.client.ui.sound.UISoundHandler;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -301,64 +300,90 @@ public class UIElementRenderer {
         float fontSize  = parseFloatProp(element, "font_size", 1.0f);
         fontSize        = Math.max(0.1f, fontSize);
         int effectiveWidth = Math.max(element.getWidth(), 0);
+        
+        int anchorOffsetX = parseIntProp(element, "anchor_offset_x", 0);
+        int anchorOffsetY = parseIntProp(element, "anchor_offset_y", 0);
+        int lineSpacing = parseIntProp(element, "line_spacing", 0);
+        int paragraphSpacing = parseIntProp(element, "paragraph_spacing", 10);
 
-        String[] explicitLines = content.split("\\\\n|\\n|\\r\\n|/n|<br>|<newline>");
-        List<String> lines = new ArrayList<>();
 
-        for (String line : explicitLines) {
-            boolean hasMM = MiniMessageHelper.hasMiniMessageTags(line);
+        String[] paragraphs = content.split("\n\s*\n");
+        List<String[]> paragraphLines = new ArrayList<>();
 
-            if (!hasMM && effectiveWidth > 0 && font.width(line) > effectiveWidth) {
-                String[] words = line.split(" ");
-                StringBuilder currentLine = new StringBuilder();
-                for (String word : words) {
-                    String test = currentLine.isEmpty() ? word : currentLine + " " + word;
-                    if (font.width(test) <= effectiveWidth) {
-                        if (!currentLine.isEmpty()) currentLine.append(" ");
-                        currentLine.append(word);
-                    } else {
-                        if (!currentLine.isEmpty()) lines.add(currentLine.toString());
-                        currentLine = new StringBuilder(word);
+        for (String paragraph : paragraphs) {
+            paragraph = paragraph.trim();
+            if (paragraph.isEmpty()) continue;
+            
+
+            String[] rawLines = paragraph.split("\n");
+            List<String> wrappedLines = new ArrayList<>();
+            
+            for (String rawLine : rawLines) {
+                rawLine = rawLine.trim();
+                if (rawLine.isEmpty()) continue;
+                
+                boolean hasMM = MiniMessageHelper.hasMiniMessageTags(rawLine);
+                
+                if (!hasMM && effectiveWidth > 0 && font.width(rawLine) > effectiveWidth) {
+
+                    String[] words = rawLine.split(" ");
+                    StringBuilder currentLine = new StringBuilder();
+                    for (String word : words) {
+                        String test = currentLine.isEmpty() ? word : currentLine + " " + word;
+                        if (font.width(test) <= effectiveWidth) {
+                            if (!currentLine.isEmpty()) currentLine.append(" ");
+                            currentLine.append(word);
+                        } else {
+                            if (!currentLine.isEmpty()) wrappedLines.add(currentLine.toString());
+                            currentLine = new StringBuilder(word);
+                        }
                     }
+                    if (!currentLine.isEmpty()) wrappedLines.add(currentLine.toString());
+                } else {
+                    wrappedLines.add(rawLine);
                 }
-                if (!currentLine.isEmpty()) lines.add(currentLine.toString());
-            } else {
-                lines.add(line);
             }
+            
+            paragraphLines.add(wrappedLines.toArray(new String[0]));
         }
 
         var poseStack = graphics.pose();
         poseStack.pushPose();
-        poseStack.translate(element.getX(), element.getY(), 0);
+        poseStack.translate(element.getX() + anchorOffsetX, element.getY() + anchorOffsetY, 0);
 
+        int baseLineHeight = (int)(font.lineHeight * fontSize);
+        int lineHeight = baseLineHeight + lineSpacing;
+        
+        // Render
         int localY = 0;
-        int lineHeight = 10;
+        for (int p = 0; p < paragraphLines.size(); p++) {
+            for (String line : paragraphLines.get(p)) {
+                var lineComponent = MiniMessageHelper.parse(line);
+                int textWidth = font.width(lineComponent);
+                int scaledTextWidth = (int)(textWidth * fontSize);
+                int localX = 0;
 
-        for (String line : lines) {
-            if (line.trim().isEmpty()) {
+                if ("center".equalsIgnoreCase(align)) {
+                    int avail = effectiveWidth > 0 ? effectiveWidth : scaledTextWidth;
+                    localX = (avail / 2) - (scaledTextWidth / 2);
+                } else if ("right".equalsIgnoreCase(align)) {
+                    int avail = effectiveWidth > 0 ? effectiveWidth : scaledTextWidth;
+                    localX = avail - scaledTextWidth;
+                }
+
+                poseStack.pushPose();
+                poseStack.translate(localX, localY, 0);
+                poseStack.scale(fontSize, fontSize, 1.0f);
+                graphics.drawString(font, lineComponent, 0, 0, 0xFFFFFF, shadow);
+                poseStack.popPose();
+
                 localY += lineHeight;
-                continue;
             }
-
-            var lineComponent = MiniMessageHelper.parse(line);
-            int textWidth = font.width(lineComponent);
-            int localX = 0;
-
-            if ("center".equalsIgnoreCase(align)) {
-                int avail = effectiveWidth > 0 ? effectiveWidth : textWidth;
-                localX = (avail / 2) - (textWidth / 2);
-            } else if ("right".equalsIgnoreCase(align)) {
-                int avail = effectiveWidth > 0 ? effectiveWidth : textWidth;
-                localX = avail - textWidth;
+            
+            // Add paragraph_spacing after each paragraph (except last)
+            if (p < paragraphLines.size() - 1) {
+                localY += paragraphSpacing;
             }
-
-            poseStack.pushPose();
-            poseStack.translate(localX, localY, 0);
-            poseStack.scale(fontSize, fontSize, 1.0f);
-            graphics.drawString(font, lineComponent, 0, 0, 0xFFFFFF, shadow);
-            poseStack.popPose();
-
-            localY += lineHeight;
         }
 
         poseStack.popPose();
@@ -574,6 +599,63 @@ public class UIElementRenderer {
             String elementId = element.getId();
             boolean shouldApplyTransform = false;
 
+            float clickProgress = ClickAnimationManager.getInstance().getProgress(element.getId());
+            if (clickProgress > 0f) {
+                String clickAnimType = ClickAnimationManager.getInstance()
+                        .getAnimationType(element.getId());
+                float cx = element.getX() + element.getWidth() / 2f;
+                float cy = element.getY() + element.getHeight() / 2f;
+                float t = 1f - clickProgress;
+
+                poseStack.pushPose();
+
+                switch (clickAnimType) {
+                    case "punch" -> {
+                        float shrink = (float) Math.sin(t * Math.PI) * 0.18f;
+                        float scale = 1f - shrink;
+                        poseStack.translate(cx, cy, 0);
+                        poseStack.scale(scale, scale, 1f);
+                        poseStack.translate(-cx, -cy, 0);
+                    }
+                    case "shake" -> {
+                        float offsetX = (float) Math.sin(t * Math.PI * 5) * 3f * clickProgress;
+                        poseStack.translate(offsetX, 0, 0);
+                    }
+                    case "bounce" -> {
+                        float offsetY = -(float) Math.abs(Math.sin(t * Math.PI)) * 5f * clickProgress;
+                        poseStack.translate(0, offsetY, 0);
+                    }
+                }
+
+                if (!effects.isEmpty()) {
+                    applyAllHoverEffects(element, poseStack, effects, elementId, isHovered);
+                }
+
+                graphics.blit(
+                        textureLocation,
+                        element.getX(),
+                        element.getY(),
+                        0, 0,
+                        element.getWidth(),
+                        element.getHeight(),
+                        element.getWidth(),
+                        element.getHeight()
+                );
+                renderCenteredIcon(element, graphics, poseStack);
+                String overlay = StateTextureResolver.resolveOverlay(element, context);
+                if (overlay != null && !overlay.isEmpty()) {
+                    renderOverlay(element, graphics, overlay);
+                }
+
+                com.eventui.api.ui.UIBadge badge = com.eventui.api.ui.UIElementHelper.parseBadge(element);
+                if (badge != null) {
+                    BadgeRenderer.renderBadge(element, badge, graphics, element.getX(), element.getY(), context, this.currentScreenId);
+                }
+
+                poseStack.popPose();
+                return;
+            }
+
             if (!effects.isEmpty()) {
                 shouldApplyTransform = true;
                 poseStack.pushPose();
@@ -613,37 +695,6 @@ public class UIElementRenderer {
                 }
             }
             updateHoverState(element.getId(), isHovered);
-
-            float clickProgress = ClickAnimationManager.getInstance().getProgress(element.getId());
-            if (clickProgress > 0f) {
-                String clickAnimType = ClickAnimationManager.getInstance()
-                        .getAnimationType(element.getId());
-                float cx = element.getX() + element.getWidth() / 2f;
-                float cy = element.getY() + element.getHeight() / 2f;
-                float t = 1f - clickProgress;
-
-                switch (clickAnimType) {
-                    case "punch" -> {
-                        float shrink = (float) Math.sin(t * Math.PI) * 0.18f;
-                        float scale = 1f - shrink;
-                        poseStack.pushPose();
-                        poseStack.translate(cx, cy, 0);
-                        poseStack.scale(scale, scale, 1f);
-                        poseStack.translate(-cx, -cy, 0);
-                        
-                    }
-                    case "shake" -> {
-                        float offsetX = (float) Math.sin(t * Math.PI * 5) * 3f * clickProgress;
-                        poseStack.pushPose();
-                        poseStack.translate(offsetX, 0, 0);
-                    }
-                    case "bounce" -> {
-                        float offsetY = -(float) Math.abs(Math.sin(t * Math.PI)) * 5f * clickProgress;
-                        poseStack.pushPose();
-                        poseStack.translate(0, offsetY, 0);
-                    }
-                }
-            }
 
             if (isHovered && effects.isEmpty() && element.getType() != UIElementType.SKILL_TREE) {
                 graphics.fill(
@@ -882,13 +933,14 @@ public class UIElementRenderer {
     public void renderPendingTooltips(GuiGraphics graphics, Font font,
                                       int mouseX, int mouseY, Map<String, Object> context) {
         if (hoveredElement == null) return;
+
         for (UIElement child : hoveredElement.getChildren()) {
             if (child.getType() == UIElementType.TOOLTIP) {
                 TooltipConfig tooltipConfig =
                         com.eventui.api.ui.UIElementHelper.parseTooltipConfig(child);
                 if (tooltipConfig != null) {
                     TooltipRenderer.renderTooltip(tooltipConfig, graphics, font,
-                            lastScreenMouseX, lastScreenMouseY);
+                            mouseX, mouseY);
                     return;
                 }
             }
@@ -934,46 +986,66 @@ public class UIElementRenderer {
 
         float centerX = element.getX() + element.getWidth() / 2f;
         float baseY   = element.getY() + element.getHeight();
-        Quaternionf pose = new Quaternionf().rotateZ((float) Math.PI);
-
-        Quaternionf cameraOrientation;
 
         switch (rotationMode.toLowerCase()) {
             case "follow_mouse" -> {
-                float dx = centerX - mouseX;
-                float dy = (element.getY() + element.getHeight() / 2f) - mouseY;
-                cameraOrientation = new Quaternionf()
-                        .rotateX(dy * 0.03f)
-                        .rotateY(dx * 0.03f);
-            }
-            case "static" -> {
-                pose.rotateY(staticRotY * (float)(Math.PI / 180.0));
-                cameraOrientation = null;
-            }
-            case "spin" -> {
-                float angle = (System.currentTimeMillis() % (long)(6000.0 / spinSpeed))
-                        / (6000.0f / spinSpeed) * 360.0f;
-                pose.rotateY(angle * (float)(Math.PI / 180.0));
-                cameraOrientation = null;
+                Quaternionf pose = new Quaternionf().rotateX((float) Math.PI);
+                float dx = (mouseX - centerX) / 150f;
+                float dy = (mouseY - (element.getY() + element.getHeight() / 2f)) / 150f;
+
+                dx = Math.clamp(dx, -1.0f, 1.0f);
+                dy = Math.clamp(dy, -0.5f, 0.5f);
+                pose.rotateY(dx);
+                pose.rotateX(dy * 0.5f);
+
+                try {
+                    InventoryScreen.renderEntityInInventory(
+                            graphics,
+                            centerX, baseY,
+                            scale,
+                            new Vector3f(0, yOffset, 0),
+                            pose,
+                            null,
+                            entity
+                    );
+                } catch (Exception e) {
+                    LOGGER.error("Failed to render entity with follow_mouse: {}", e.getMessage(), e);
+                }
+                return;
             }
             default -> {
-                LOGGER.warn("Unknown rotation_mode '{}' on element '{}'", rotationMode, element.getId());
-                cameraOrientation = null;
-            }
-        }
+                Quaternionf pose = new Quaternionf().rotateX((float) Math.PI);
+                Quaternionf cameraOrientation = null;
 
-        try {
-            InventoryScreen.renderEntityInInventory(
-                    graphics,
-                    centerX, baseY,
-                    scale,
-                    new Vector3f(0, yOffset, 0),
-                    pose,
-                    cameraOrientation,
-                    entity
-            );
-        } catch (Exception e) {
-            LOGGER.error("Failed to render entity '{}': {}", entityId, e.getMessage());
+                switch (rotationMode.toLowerCase()) {
+                    case "static", "fixed" -> {
+                        pose.rotateY(staticRotY * (float)(Math.PI / 180.0));
+                    }
+                    case "spin" -> {
+                        long time = System.currentTimeMillis();
+                        float angle = (time % (long)(6000.0 / spinSpeed))
+                                / (6000.0f / spinSpeed) * 360.0f;
+                        pose.rotateY(angle * (float)(Math.PI / 180.0));
+                    }
+                    default -> {
+                        LOGGER.warn("Unknown rotation_mode '{}' on element '{}'", rotationMode, element.getId());
+                    }
+                }
+
+                try {
+                    InventoryScreen.renderEntityInInventory(
+                            graphics,
+                            centerX, baseY,
+                            scale,
+                            new Vector3f(0, yOffset, 0),
+                            pose,
+                            cameraOrientation,
+                            entity
+                    );
+                } catch (Exception e) {
+                    LOGGER.error("Failed to render entity: {}", e.getMessage());
+                }
+            }
         }
     }
 

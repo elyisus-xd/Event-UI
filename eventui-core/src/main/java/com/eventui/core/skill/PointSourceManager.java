@@ -377,21 +377,20 @@ public class PointSourceManager {
 
         int ticksPerMinute = 1200;
         if (ticks >= ticksPerMinute) {
-            int minutesPassed = ticks / ticksPerMinute;
-            int pointsToAward = minutesPassed * config.getPlaytimePointsPerMinutes();
+            int pointsPerMinute = config.getPlaytimePointsPerMinutes();
 
-            LOGGER.info("[Playtime] Awarding " + pointsToAward + " points to " + player.getName() + " for " + minutesPassed + " minutes");
+            LOGGER.info("[Playtime] Awarding " + pointsPerMinute + " points to " + player.getName() + " for 1 minute");
 
             Map<String, Double> distribution = config.getPlaytimePointDistribution();
             if (distribution != null && !distribution.isEmpty()) {
                 for (Map.Entry<String, Double> entry : distribution.entrySet()) {
-                    addPoints(player, entry.getKey(), entry.getValue() * pointsToAward);
+                    addPoints(player, entry.getKey(), entry.getValue() * pointsPerMinute);
                 }
             } else {
-                addPoints(player, config.getPlaytimePointTypes().getFirst(), pointsToAward);
+                addPoints(player, config.getPlaytimePointTypes().getFirst(), pointsPerMinute);
             }
 
-            dailyPlaytimePoints.put(playerId, earnedToday + pointsToAward);
+            dailyPlaytimePoints.put(playerId, earnedToday + pointsPerMinute);
             playtimeTicks.put(playerId, ticks % ticksPerMinute);
         }
     }
@@ -407,13 +406,12 @@ public class PointSourceManager {
         if (pointsToAdd <= 0) return;
 
         String resolvedPointType = config.getPointTypeResolver().resolve(pointType);
+        String displayName = config.getPointTypeResolver().getDisplayName(resolvedPointType);
 
         PlayerSkillProgressImpl progress = storage.getOrCreateProgress(player.getUniqueId());
         progress.addEarnedPoints(resolvedPointType, pointsToAdd);
 
-        LOGGER.info("Added " + pointsToAdd + " " + resolvedPointType + " to " + player.getName());
-
-        String displayName = config.getPointTypeResolver().getDisplayName(resolvedPointType);
+        LOGGER.info("Added " + pointsToAdd + " " + displayName + " to " + player.getName());
         plugin.getMessenger().sendPointsGranted(player, pointsToAdd, displayName);
 
         plugin.getServer().getScheduler().runTask(plugin, () -> {

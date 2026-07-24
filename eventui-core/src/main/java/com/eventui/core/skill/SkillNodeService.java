@@ -91,12 +91,13 @@ public class SkillNodeService {
         }
 
         int cost = nodeDef.getCostForLevel(nextLevel);
-        String pointType = treeDef.getPointType();
+        String pointType = plugin.getSkillSourcesConfig().getPointTypeResolver().resolve(treeDef.getPointType());
         int available = skillProgress.getAvailablePoints(pointType);
 
         if (available < cost) {
+            String displayName = plugin.getSkillSourcesConfig().getPointTypeResolver().getDisplayName(pointType);
             sendIfOnline(playerId, player ->
-                    plugin.getMessenger().sendInsufficientPoints(player, nodeDef.getDisplayName(), cost, available, pointType));
+                    plugin.getMessenger().sendInsufficientPoints(player, nodeDef.getDisplayName(), cost, available, displayName));
             return SpendResult.INSUFFICIENT_POINTS;
         }
 
@@ -127,6 +128,8 @@ public class SkillNodeService {
 
         plugin.getPlayerDataManager().requestSave(playerId,
                 "skill spend: " + treeId + "/" + nodeId + " -> level " + nextLevel);
+
+        plugin.getEventBridge().sendSkillDataToPlayer(player);
 
         LOGGER.info("Player " + playerId + " upgraded " + treeId + ":" + nodeId + " to level " + nextLevel);
 

@@ -126,6 +126,13 @@ public class DataBinder {
             return expected.equals(state.getOrDefault(key, ""));
         }
 
+        if (condition.contains("=") && !condition.contains("==") && !condition.contains("!=")) {
+            String[] parts = condition.split("=", 2);
+            String key   = parts[0].trim();
+            String expected = parts[1].trim();
+            return expected.equals(state.getOrDefault(key, ""));
+        }
+
         if (condition.contains("!=")) {
             String[] parts = condition.split("!=", 2);
             String key   = parts[0].trim();

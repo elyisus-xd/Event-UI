@@ -40,8 +40,6 @@ public class SkillTreeRenderer {
     private static final float MIN_ZOOM = 0.5f;
     private static final float MAX_ZOOM = 2.0f;
 
-    private static long animationTime = System.currentTimeMillis();
-
     private static int cachedMouseX = -1;
     private static int cachedMouseY = -1;
 
@@ -103,15 +101,6 @@ public class SkillTreeRenderer {
                 properties.getOrDefault("hover_sound_volume", "0.5"));
         float hoverSoundPitch = Float.parseFloat(
                 properties.getOrDefault("hover_sound_pitch", "1.0"));
-
-        String clickAnimStr = properties.getOrDefault("click_animation", "none");
-        int clickAnimDuration = Integer.parseInt(
-                properties.getOrDefault("click_animation_duration", "150"));
-        String clickSoundId = properties.get("click_sound");
-        float clickSoundVolume = Float.parseFloat(
-                properties.getOrDefault("click_sound_volume", "1.0"));
-        float clickSoundPitch = Float.parseFloat(
-                properties.getOrDefault("click_sound_pitch", "1.0"));
 
         com.eventui.api.ui.HoverAnimation.AnimationType hoverAnimType =
             switch (hoverAnimStr.toLowerCase()) {
@@ -295,12 +284,6 @@ public class SkillTreeRenderer {
                 }
             }
 
-            if (isSpendPending(treeId, nodeId)) {
-                long t = System.currentTimeMillis() % 600;
-                float pulse = (float) Math.abs(Math.sin(t / 600.0 * Math.PI));
-                int pulseAlpha = (int)(pulse * 100);
-                
-            }
 
             ResourceLocation nodeTexture = getEffectiveNodeTexture(node,
                     nodeTextureLocked, nodeTextureAvailable, nodeTexturePartial, nodeTextureMaxed);
@@ -356,15 +339,6 @@ public class SkillTreeRenderer {
                 }
             }
 
-            if (isSpendPending(treeId, nodeId)) {
-                long t = System.currentTimeMillis() % 600;
-                float pulse = (float) Math.abs(Math.sin(t / 600.0 * Math.PI));
-                int pulseAlpha = (int)(pulse * 80);
-                graphics.fill(nodePixelX + 1, nodePixelY + 1,
-                              nodePixelX + nodeSize - 1, nodePixelY + nodeSize - 1,
-                              (pulseAlpha << 24) | 0xFFFFAA);
-            }
-
             if (hasTransform) {
                 graphics.pose().popPose();
             }
@@ -380,21 +354,19 @@ public class SkillTreeRenderer {
         previouslyHoveredNodes.clear();
         previouslyHoveredNodes.addAll(currentlyHovered);
 
-        graphics.pose().popPose();
-
         if (context.containsKey("mouseX") && context.containsKey("mouseY")) {
             int mx = (int) context.get("mouseX");
             int my = (int) context.get("mouseY");
 
             float transformedMx = ((mx - centerX) / state.zoom) - state.offsetX + centerX;
             float transformedMy = ((my - centerY) / state.zoom) - state.offsetY + centerY;
-            
+
             for (SkillNodeData node : tree.nodes().values()) {
                 int[] pos = nodePosMap.get(node.id());
                 if (pos == null) continue;
-                if (transformedMx >= pos[0] && transformedMx <= pos[0] + nodeSize 
+                if (transformedMx >= pos[0] && transformedMx <= pos[0] + nodeSize
                         && transformedMy >= pos[1] && transformedMy <= pos[1] + nodeSize) {
-                    
+
                     List<net.minecraft.network.chat.Component> lines = new java.util.ArrayList<>();
                     lines.add(net.minecraft.network.chat.Component.literal("§6" + node.displayName()));
                     lines.add(net.minecraft.network.chat.Component.literal("§7" + node.description()));
@@ -452,7 +424,7 @@ public class SkillTreeRenderer {
                         }
 
                         if (branch != null && !branch.nodeIds().isEmpty()) {
-                            String firstNodeId = branch.nodeIds().get(0);
+                            String firstNodeId = branch.nodeIds().getFirst();
                             if (node.id().equals(firstNodeId)) {
                                 lines.add(net.minecraft.network.chat.Component.literal(""));
                                 lines.add(net.minecraft.network.chat.Component.literal("§bRama: §f" + branch.name()));
@@ -467,24 +439,50 @@ public class SkillTreeRenderer {
 
                         lines.add(net.minecraft.network.chat.Component.literal(""));
                         if (selectedBranch != null && !selectedBranch.equals(node.exclusiveBranchId())) {
-                            
+
                             lines.add(net.minecraft.network.chat.Component.literal("§cRama bloqueada"));
                             lines.add(net.minecraft.network.chat.Component.literal("§7Ya seleccionaste otra rama en este grupo"));
                         } else if (selectedBranch == null) {
-                            
+
                             lines.add(net.minecraft.network.chat.Component.literal("§aRama disponible"));
                             lines.add(net.minecraft.network.chat.Component.literal("§7Seleccionar esta rama bloqueará las otras"));
                         } else {
-                            
+
                             lines.add(net.minecraft.network.chat.Component.literal("§aRama seleccionada"));
                         }
                     }
 
-                    graphics.renderTooltip(font, lines, java.util.Optional.empty(), screenMouseX, screenMouseY);
+                    graphics.pose().popPose();
+
+                    float uiScale = 1.0f;
+                    int uiOffsetX = 0;
+                    int uiOffsetY = 0;
+
+                    if (context.containsKey("uiScale")) {
+                        uiScale = (float) context.get("uiScale");
+                    }
+                    if (context.containsKey("uiOffsetX")) {
+                        uiOffsetX = (int) context.get("uiOffsetX");
+                    }
+                    if (context.containsKey("uiOffsetY")) {
+                        uiOffsetY = (int) context.get("uiOffsetY");
+                    }
+
+                    int tooltipX = (int)((screenMouseX - uiOffsetX) / uiScale);
+                    int tooltipY = (int)((screenMouseY - uiOffsetY) / uiScale);
+
+                    graphics.renderTooltip(font, lines, java.util.Optional.empty(), tooltipX, tooltipY);
+
+                    graphics.pose().pushPose();
+                    graphics.pose().translate(elementX + elementWidth / 2f, elementY + elementHeight / 2f, 0);
+                    graphics.pose().scale(state.zoom, state.zoom, 1f);
+                    graphics.pose().translate(-elementX - elementWidth / 2f + state.offsetX, -elementY - elementHeight / 2f + state.offsetY, 0);
                     break;
                 }
             }
         }
+
+        graphics.pose().popPose();
     }
 
     private static @NotNull String getString(SkillRequirementData req, SkillNodeData reqNode) {
@@ -493,10 +491,9 @@ public class SkillTreeRenderer {
 
         String reqName = (reqNode != null) ? reqNode.displayName() : req.nodeId();
         String checkmark = met ? "§a✔ " : "§c✘ ";
-        String reqText = checkmark + "§f" + reqName
+        return checkmark + "§f" + reqName
                 + " §7(Nivel " + req.minLevel() + ")"
                 + (met ? "" : " §8[" + reqCurrentLevel + "/" + req.minLevel() + "]");
-        return reqText;
     }
 
     private static int parseHexColor(String hexColor) {
@@ -639,30 +636,27 @@ public class SkillTreeRenderer {
             
             float zoomFactor = 1.0f + (float) vertical * 0.1f;
             float newZoom = state.zoom * zoomFactor;
-            state.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+            state.zoom = Math.clamp(newZoom, MIN_ZOOM, MAX_ZOOM);
         } else {
-            
+
             state.offsetX += (float) horizontal * 20;
             state.offsetY += (float) vertical * 20;
         }
     }
 
-    public static void handleMousePress(UIElement element, int mouseX, int mouseY, int button, 
-                                         Integer elementX, Integer elementY) {
+    public static void handleMousePress(UIElement element, int mouseX, int mouseY, int button) {
         String treeId = element.getProperties().get("tree_id");
         if (treeId == null) return;
 
-        if (button == 0) { 
-            
-            int elemX = (elementX != null) ? elementX : element.getX();
-            int elemY = (elementY != null) ? elementY : element.getY();
-            
+        if (button == 0) {
+            int elemX = element.getX();
+            int elemY = element.getY();
+
             int localX = mouseX - elemX;
             int localY = mouseY - elemY;
             String clickedNodeId = getClickedNodeId(element, localX, localY);
-            
+
             if (clickedNodeId == null) {
-                
                 isDragging = true;
                 dragStartX = mouseX;
                 dragStartY = mouseY;
@@ -671,12 +665,8 @@ public class SkillTreeRenderer {
         }
     }
 
-    public static void handleMousePress(UIElement element, int mouseX, int mouseY, int button) {
-        handleMousePress(element, mouseX, mouseY, button, null, null);
-    }
-
-    public static void handleMouseRelease(UIElement element, int mouseX, int mouseY, int button) {
-        if (button == 0) { 
+    public static void handleMouseRelease(UIElement element, int button) {
+        if (button == 0) {
             isDragging = false;
             draggingTreeId = null;
         }
@@ -699,14 +689,6 @@ public class SkillTreeRenderer {
 
         dragStartX = mouseX;
         dragStartY = mouseY;
-    }
-
-    public static void clearPanZoomState(String treeId) {
-        panZoomStates.remove(treeId);
-    }
-
-    public static void clearAllPanZoomStates() {
-        panZoomStates.clear();
     }
 
     private static void drawConnection(GuiGraphics graphics, int x1, int y1, int x2, int y2,
@@ -763,7 +745,7 @@ public class SkillTreeRenderer {
         int y = y1;
 
         while (true) {
-            
+
             graphics.fill(
                     x - halfThickness,
                     y - halfThickness,
@@ -853,13 +835,9 @@ public class SkillTreeRenderer {
     private static void drawSolidCurvedLine(GuiGraphics graphics, int x1, int y1, int x2, int y2,
                                              int color, int thickness) {
         int halfThickness = thickness / 2;
-
-        int controlX = x1;
-        int controlY = y2;
-
         int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 2;
-        steps = Math.min(steps, 100); 
-        if (steps < 20) steps = 20; 
+        steps = Math.min(steps, 100);
+        if (steps < 20) steps = 20;
 
         for (int i = 0; i <= steps; i++) {
             float t = (float) i / steps;
@@ -867,8 +845,8 @@ public class SkillTreeRenderer {
             float mt = 1 - t;
             float mt2 = mt * mt;
 
-            int bx = (int) (mt2 * x1 + 2 * mt * t * controlX + t2 * x2);
-            int by = (int) (mt2 * y1 + 2 * mt * t * controlY + t2 * y2);
+            int bx = (int) (mt2 * x1 + 2 * mt * t * x1 + t2 * x2);
+            int by = (int) (mt2 * y1 + 2 * mt * t * y2 + t2 * y2);
 
             graphics.fill(
                     bx - halfThickness,
@@ -886,11 +864,8 @@ public class SkillTreeRenderer {
         int dashLength = 8;
         int gapLength = 4;
 
-        int controlX = x1;
-        int controlY = y2;
-
         int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 2;
-        steps = Math.min(steps, 100); 
+        steps = Math.min(steps, 100);
         if (steps < 20) steps = 20;
 
         boolean inDash = true;
@@ -902,8 +877,8 @@ public class SkillTreeRenderer {
             float mt = 1 - t;
             float mt2 = mt * mt;
 
-            int bx = (int) (mt2 * x1 + 2 * mt * t * controlX + t2 * x2);
-            int by = (int) (mt2 * y1 + 2 * mt * t * controlY + t2 * y2);
+            int bx = (int) (mt2 * x1 + 2 * mt * t * x1 + t2 * x2);
+            int by = (int) (mt2 * y1 + 2 * mt * t * y2 + t2 * y2);
 
             if (inDash) {
                 graphics.fill(
@@ -1030,12 +1005,9 @@ public class SkillTreeRenderer {
                 }
                 break;
             case CURVED:
-                
-                int controlX = x1;
-                int controlY = y2;
 
                 int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 2;
-                steps = Math.min(steps, 100); 
+                steps = Math.min(steps, 100);
                 if (steps < 20) steps = 20;
 
                 for (int i = 0; i <= steps; i++) {
@@ -1044,8 +1016,8 @@ public class SkillTreeRenderer {
                     float mt = 1 - t;
                     float mt2 = mt * mt;
 
-                    int bx = (int) (mt2 * x1 + 2 * mt * t * controlX + t2 * x2);
-                    int by = (int) (mt2 * y1 + 2 * mt * t * controlY + t2 * y2);
+                    int bx = (int) (mt2 * x1 + 2 * mt * t * x1 + t2 * x2);
+                    int by = (int) (mt2 * y1 + 2 * mt * t * y2 + t2 * y2);
 
                     graphics.fill(
                             bx - halfThickness,
@@ -1081,7 +1053,6 @@ public class SkillTreeRenderer {
                                           int color, int thickness, SkillConnectionsConfig.ConnectionType type) {
         
         long currentTime = System.currentTimeMillis();
-        animationTime = currentTime;
 
         float animOffset = (currentTime % 2000) / 2000.0f;
 
@@ -1100,14 +1071,11 @@ public class SkillTreeRenderer {
                     py = y1 + (int) ((y2 - y1) * t);
                     break;
                 case CURVED:
-                    
-                    int controlX = x1;
-                    int controlY = y2;
                     float t2 = t * t;
                     float mt = 1 - t;
                     float mt2 = mt * mt;
-                    px = (int) (mt2 * x1 + 2 * mt * t * controlX + t2 * x2);
-                    py = (int) (mt2 * y1 + 2 * mt * t * controlY + t2 * y2);
+                    px = (int) (mt2 * x1 + 2 * mt * t * x1 + t2 * x2);
+                    py = (int) (mt2 * y1 + 2 * mt * t * y2 + t2 * y2);
                     break;
                 case ORTHOGONAL:
                     if (t < 0.5f) {
@@ -1125,7 +1093,7 @@ public class SkillTreeRenderer {
                     py = y1 + (int) ((y2 - y1) * t);
             }
 
-            int particleColor = (color & 0x00FFFFFF) | 0xFFFFFFFF; 
+            int particleColor = 0xFFFFFFFF;
 
             graphics.fill(
                     px - particleSize / 2,
@@ -1171,7 +1139,7 @@ public class SkillTreeRenderer {
         }
 
         float t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-        t = Math.max(0, Math.min(1, t));
+        t = Math.clamp(t, 0, 1);
 
         float closestX = x1 + t * dx;
         float closestY = y1 + t * dy;
@@ -1180,10 +1148,8 @@ public class SkillTreeRenderer {
     }
 
     private static boolean distanceToCurve(float px, float py, int x1, int y1, int x2, int y2, int threshold) {
-        
+
         int steps = 20;
-        int controlX = x1;
-        int controlY = y2;
 
         for (int i = 0; i <= steps; i++) {
             float t = (float) i / steps;
@@ -1191,8 +1157,8 @@ public class SkillTreeRenderer {
             float mt = 1 - t;
             float mt2 = mt * mt;
 
-            int bx = (int) (mt2 * x1 + 2 * mt * t * controlX + t2 * x2);
-            int by = (int) (mt2 * y1 + 2 * mt * t * controlY + t2 * y2);
+            int bx = (int) (mt2 * x1 + 2 * mt * t * x1 + t2 * x2);
+            int by = (int) (mt2 * y1 + 2 * mt * t * y2 + t2 * y2);
 
             float dist = (float) Math.sqrt((px - bx) * (px - bx) + (py - by) * (py - by));
             if (dist <= threshold) {
