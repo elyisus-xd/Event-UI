@@ -44,7 +44,7 @@ public class DataBinder {
         Object current = context.get(parts[0]);
 
         if (current == null) {
-            LOGGER.warn("Variable not found in context: {}", parts[0]);
+            LOGGER.debug("Variable not found in context: {}", parts[0]);
             return "{{" + varPath + "}}";
         }
 
@@ -56,7 +56,7 @@ public class DataBinder {
             } else if (current instanceof Map) {
                 current = ((Map<?, ?>) current).get(property);
             } else {
-                LOGGER.warn("Cannot navigate path: {} on {}", property, current.getClass());
+                LOGGER.debug("Cannot navigate path: {} on {}", property, current.getClass());
                 return "{{" + varPath + "}}";
             }
 
@@ -79,10 +79,20 @@ public class DataBinder {
             case "currentObjective", "current_objective" ->
                     event.currentObjectiveDescription != null ? event.currentObjectiveDescription : "";
             case "progressPercentage", "progress_percentage" ->
-                    String.format("%.0f%%", event.getProgressPercentage() * 100);
+                    String.format("%.0f", event.getProgressPercentage() * 100);
+            case "progress", "progressValue" -> event.getProgressPercentage();
             case "repeatable" -> event.repeatable;
+            case "icon" -> event.icon != null ? event.icon : "";
+            case "entityType", "entity_type" -> {
+                LOGGER.debug("DataBinder: entityType requested, value = {}", event.entityType);
+                yield event.entityType != null ? event.entityType : "";
+            }
+            case "blockType", "block_type" -> {
+                LOGGER.debug("DataBinder: blockType requested, value = {}", event.blockType);
+                yield event.blockType != null ? event.blockType : "";
+            }
             default -> {
-                LOGGER.warn("Unknown event property: {}", property);
+                LOGGER.debug("Unknown event property: {}", property);
                 yield "{{" + property + "}}";
             }
         };

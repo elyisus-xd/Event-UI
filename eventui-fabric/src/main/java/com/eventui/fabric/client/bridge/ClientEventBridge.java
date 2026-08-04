@@ -53,8 +53,6 @@ public class ClientEventBridge implements EventBridge {
         this.connected = true;
 
         registerDefaultHandlers();
-
-        LOGGER.info("ClientEventBridge initialized and connected");
     }
 
     public static ClientEventBridge getInstance() {
@@ -228,17 +226,14 @@ public class ClientEventBridge implements EventBridge {
             String reason = message.getPayload().get("reason");
             String screenId = message.getPayload().get("screenId");
             String treeId = message.getPayload().get("treeId");
-            LOGGER.info("[RELOAD_NOTIF] === EVENT_RELOAD_NOTIFICATION === reason='{}', screenId='{}', treeId='{}'", reason, screenId, treeId);
 
             if ("hotreload".equals(reason) && screenId != null) {
                 Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
                     if (client.screen instanceof ConfigurableUIScreen activeScreen
                             && screenId.equals(activeScreen.getCurrentScreenId())) {
-                        LOGGER.info("[RELOAD_NOTIF] Hot reloading active screen: {}", screenId);
                         client.setScreen(new CustomEventScreen(screenId, new java.util.Stack<>()));
                     } else {
-                        LOGGER.info("[RELOAD_NOTIF] Screen '{}' not currently open, invalidating keybind cache", screenId);
                         EventUIKeybinds.invalidateCache();
                         RecipeCache.clear();
                     }
@@ -246,12 +241,15 @@ public class ClientEventBridge implements EventBridge {
             } else if ("skilltreereload".equals(reason) && treeId != null) {
                 Minecraft client = Minecraft.getInstance();
                 client.execute(() -> {
-                    LOGGER.info("[RELOAD_NOTIF] Skill tree hot reload: {}", treeId);
-                    
                     requestSkillData();
                 });
+            } else if ("questtrackerreload".equals(reason)) {
+                String configContent = message.getPayload().get("config");
+                Minecraft client = Minecraft.getInstance();
+                client.execute(() -> {
+                    QuestTrackerHUD.reloadConfig(configContent);
+                });
             } else {
-                LOGGER.info("[RELOAD_NOTIF] Config reload (non-hotreload), invalidating keybind cache");
                 EventUIKeybinds.invalidateCache();
                 RecipeCache.clear();
                 Minecraft client = Minecraft.getInstance();
@@ -295,13 +293,94 @@ public class ClientEventBridge implements EventBridge {
             }
         });
 
+        registerMessageHandler(MessageType.OBJECTIVE_COMPLETED_NOTIFICATION, message -> {
+            String dataJson = message.getPayload().get("data");
+            if (dataJson != null && !dataJson.isEmpty()) {
+                try {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> data = gson.fromJson(dataJson, type);
+                    String objectiveName = (String) data.get("objective_name");
+                    QuestTrackerHUD.showObjectiveCompleteNotification(objectiveName);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse OBJECTIVE_COMPLETED_NOTIFICATION", e);
+                }
+            }
+        });
+
+        registerMessageHandler(MessageType.QUEST_PROGRESS_NOTIFICATION, message -> {
+            String dataJson = message.getPayload().get("data");
+            if (dataJson != null && !dataJson.isEmpty()) {
+                try {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> data = gson.fromJson(dataJson, type);
+                    String objective = (String) data.get("objective");
+                    int current = ((Number) data.getOrDefault("current", 0)).intValue();
+                    int target = ((Number) data.getOrDefault("target", 0)).intValue();
+                    String questName = QuestTrackerHUD.getActiveQuest() != null ? QuestTrackerHUD.getActiveQuest().displayName : "Quest";
+                    QuestTrackerHUD.showQuestProgressNotification(questName, objective, current, target);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse QUEST_PROGRESS_NOTIFICATION", e);
+                }
+            }
+        });
+
+        registerMessageHandler(MessageType.EVENT_STARTED_NOTIFICATION, message -> {
+            String dataJson = message.getPayload().get("data");
+            if (dataJson != null && !dataJson.isEmpty()) {
+                try {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> data = gson.fromJson(dataJson, type);
+                    String questName = (String) data.get("quest_name");
+                    QuestTrackerHUD.showEventStartedNotification(questName);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse EVENT_STARTED_NOTIFICATION", e);
+                }
+            }
+        });
+
+        registerMessageHandler(MessageType.EVENT_COMPLETED_NOTIFICATION, message -> {
+            String dataJson = message.getPayload().get("data");
+            if (dataJson != null && !dataJson.isEmpty()) {
+                try {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> data = gson.fromJson(dataJson, type);
+                    String questName = (String) data.get("quest_name");
+                    QuestTrackerHUD.showEventCompletedNotification(questName);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse EVENT_COMPLETED_NOTIFICATION", e);
+                }
+            }
+        });
+
+        registerMessageHandler(MessageType.EVENT_FAILED_NOTIFICATION, message -> {
+            String dataJson = message.getPayload().get("data");
+            if (dataJson != null && !dataJson.isEmpty()) {
+                try {
+                    Gson gson = new Gson();
+                    Type type = new TypeToken<Map<String, Object>>() {}.getType();
+                    Map<String, Object> data = gson.fromJson(dataJson, type);
+                    String questName = (String) data.get("quest_name");
+                    QuestTrackerHUD.showEventFailedNotification(questName);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to parse EVENT_FAILED_NOTIFICATION", e);
+                }
+            }
+        });
+
+        registerMessageHandler(MessageType.EVENT_LOCKED_NOTIFICATION, message -> {
+            QuestTrackerHUD.showEventLockedNotification();
+        });
+
         registerMessageHandler(MessageType.OPEN_UI_COMMAND, message -> {
             String screenId = message.getPayload().get("screen_id");
             if (screenId == null || screenId.isEmpty()) {
                 LOGGER.warn("OPEN_UI_COMMAND received without screen_id");
                 return;
             }
-            LOGGER.info("OPEN_UI_COMMAND received — opening screen: {}", screenId);
             Minecraft client = Minecraft.getInstance();
             client.execute(() -> {
                 if (client.player != null) {
@@ -335,13 +414,11 @@ public class ClientEventBridge implements EventBridge {
 
     public void onConnect() {
         this.connected = true;
-        LOGGER.info("ClientEventBridge connected");
     }
 
     public void onDisconnect() {
         this.connected = false;
         cache.clear();
-        LOGGER.info("ClientEventBridge disconnected");
     }
 
     public ClientEventCache getCache() {

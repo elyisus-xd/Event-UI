@@ -39,7 +39,6 @@ public class ClientEventCache {
 
     public void cacheUIConfig(String uiId, String uiDataJson) {
         uiConfigs.put(uiId, uiDataJson);
-        LOGGER.info("Cached UI config: {}", uiId);
     }
 
     public String getCachedUIConfig(String uiId) {
@@ -76,7 +75,6 @@ public class ClientEventCache {
 
         try {
             String eventId = message.getPayload().get("event_id");
-            LOGGER.info("Received event data for: {}", eventId);
 
         } catch (Exception e) {
             LOGGER.error("Failed to parse EVENT_DATA_RESPONSE", e);
@@ -94,7 +92,6 @@ public class ClientEventCache {
 
         try {
             String eventId = message.getPayload().get("event_id");
-            LOGGER.info("Received progress data for: {}", eventId);
 
         } catch (Exception e) {
             LOGGER.error("Failed to parse EVENT_PROGRESS_RESPONSE", e);
@@ -121,8 +118,6 @@ public class ClientEventCache {
                 future.completeExceptionally(new IllegalStateException("Bridge disconnected"))
         );
         pendingRequests.clear();
-
-        LOGGER.info("Cache cleared");
     }
 
     public EventDefinition getCachedEvent(String eventId) {
@@ -138,7 +133,6 @@ public class ClientEventCache {
         cachedSkillTrees.putAll(trees);
         cachedSkillPoints.clear();
         cachedSkillPoints.putAll(points);
-        LOGGER.info("Updated skill data: {} trees, {} point types", trees.size(), points.size());
     }
 
     public Map<String, SkillTreeData> getCachedSkillTrees() {

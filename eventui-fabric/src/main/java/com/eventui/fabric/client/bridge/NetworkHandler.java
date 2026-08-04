@@ -47,8 +47,6 @@ public class NetworkHandler {
                     });
                 }
         );
-
-        LOGGER.info("Network receiver registered on channel: {}", CHANNEL_ID);
     }
 
     public CompletableFuture<Void> sendMessage(BridgeMessage message) {
@@ -178,7 +176,5 @@ public class NetworkHandler {
     public static void registerPayloadType() {
         PayloadTypeRegistry.playS2C().register(EventUIPayload.ID, EventUIPayload.CODEC);
         PayloadTypeRegistry.playC2S().register(EventUIPayload.ID, EventUIPayload.CODEC);
-
-        LOGGER.info("Registered EventUI payload type");
     }
 }

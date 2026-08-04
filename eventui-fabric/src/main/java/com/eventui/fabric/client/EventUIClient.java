@@ -4,6 +4,8 @@ import com.eventui.fabric.client.bridge.ClientEventBridge;
 import com.eventui.fabric.client.bridge.NetworkHandler;
 import com.eventui.fabric.client.keybinds.EventUIKeybinds;
 import com.eventui.fabric.client.ui.EntityRenderCache;
+import com.eventui.fabric.client.ui.HUDElementFactory;
+import com.eventui.fabric.client.ui.NotificationSystem;
 import com.eventui.fabric.client.ui.QuestTrackerHUD;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -18,30 +20,26 @@ public class EventUIClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Initializing EventUI client...");
-
         try {
             NetworkHandler.registerPayloadType();
             ClientEventBridge.getInstance();
-            LOGGER.info("Registering keybinds...");
             EventUIKeybinds.register();
-            LOGGER.info("Registering Quest Tracker HUD...");
             HudRenderCallback.EVENT.register((graphics, tickDelta) -> QuestTrackerHUD.render(graphics));
 
             ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-                LOGGER.info("[JOIN_DEBUG] === JOIN EVENT FIRED === Thread: {}", Thread.currentThread().getName());
                 EventUIKeybinds.invalidateCache();
-                LOGGER.info("[JOIN_DEBUG] invalidateCache() done, calling onConnect/requestUIState");
                 ClientEventBridge bridge = ClientEventBridge.getInstance();
                 bridge.onConnect();
                 bridge.requestUIState();
             });
 
             ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-                LOGGER.info("[DISCONNECT_DEBUG] === DISCONNECT EVENT FIRED === Thread: {}", Thread.currentThread().getName());
                 EventUIKeybinds.invalidateCache();
-                LOGGER.info("[DISCONNECT_DEBUG] invalidateCache() done, calling onDisconnect");
                 ClientEventBridge.getInstance().onDisconnect();
+                QuestTrackerHUD.reset();
+                NotificationSystem.getInstance().clear();
+                EntityRenderCache.clear();
+                HUDElementFactory.clearStaticCache();
             });
 
             net.fabricmc.fabric.api.resource.ResourceManagerHelper.get(
@@ -55,7 +53,6 @@ public class EventUIClient implements ClientModInitializer {
 
                 @Override
                 public void onResourceManagerReload(net.minecraft.server.packs.resources.ResourceManager resourceManager) {
-                    LOGGER.info("Clearing texture alpha cache...");
                     com.eventui.fabric.client.ui.TextureAlphaCache.clear();
                     EntityRenderCache.clear();
                 }
@@ -64,7 +61,5 @@ public class EventUIClient implements ClientModInitializer {
         } catch (Exception e) {
             LOGGER.error("ERROR during initialization!", e);
         }
-
-        LOGGER.info("EventUI client initialized!");
     }
 }

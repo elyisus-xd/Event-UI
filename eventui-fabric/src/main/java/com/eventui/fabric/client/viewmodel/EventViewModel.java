@@ -123,6 +123,8 @@ public class EventViewModel {
                 String category = (String) eventMap.getOrDefault("category", "general");
                 String difficulty = (String) eventMap.getOrDefault("difficulty", "easy");
                 String rewardsJson = (String) eventMap.getOrDefault("rewards", "{}");
+                String entityType = (String) eventMap.get("entityType");
+                String blockType = (String) eventMap.get("blockType");
 
                 EventState state = EventState.valueOf(stateStr);
 
@@ -191,7 +193,9 @@ public class EventViewModel {
                         rewardsJson,
                         startedAt,
                         dependencies,
-                        isLocked
+                        isLocked,
+                        entityType,
+                        blockType
                 );
 
                 eventsCache.put(id, eventData);
@@ -237,7 +241,9 @@ public class EventViewModel {
                     "{}",
                     0L,
                     new ArrayList<>(),
-                    false
+                    false,
+                    null,
+                    null
             );
 
             eventsCache.put(eventId, newEvent);
@@ -317,12 +323,14 @@ public class EventViewModel {
         public final List<String> dependencies;
         public final boolean isLocked;
         public boolean hasRewards;
+        public final String entityType;
+        public final String blockType;
 
         public EventData(String id, String displayName, String description, EventState state,
                          int currentProgress, int targetProgress, String currentObjectiveDescription,
                          boolean repeatable, String icon, String category, String difficulty,
                          String rewardsJson, long startedAt, List<String> dependencies,
-                         boolean isLocked) {
+                         boolean isLocked, String entityType, String blockType) {
             this.id = id;
             this.displayName = displayName;
             this.description = description;
@@ -338,6 +346,8 @@ public class EventViewModel {
             this.startedAt = startedAt;
             this.dependencies = dependencies;
             this.isLocked = isLocked;
+            this.entityType = entityType;
+            this.blockType = blockType;
         }
 
         public boolean hasRewards() {

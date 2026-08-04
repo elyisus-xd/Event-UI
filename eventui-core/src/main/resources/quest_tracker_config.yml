@@ -1,0 +1,167 @@
+# Quest Tracker HUD Configuration
+# Este archivo configura el HUD persistente y las notificaciones temporales
+
+quest_tracker:
+  # HUD persistente (siempre visible cuando hay quest activa)
+  persistent_hud:
+    enabled: true  # Habilita/deshabilita el HUD persistente
+    mode: "custom"  # "custom" usa el config YAML, "hardcoded" usa el HUD por defecto del código
+    position:
+      x: "screen_width - 210"  # Soporta expresiones: screen_width, screen_height
+      y: 10
+      anchor: "top_right"      # top_left, top_right, bottom_left, bottom_right, center
+    elements:
+      - type: "panel"
+        id: "hud_background"
+        width: 200
+        height: 70
+        properties:
+          background_color: "#63B352"
+          alpha: 0.4  # Transparencia del panel (0.0 = invisible, 1.0 = opaco)
+        children:
+          - type: "icon"
+            id: "quest_icon"
+            x: 4
+            y: 4
+            width: 32
+            height: 32
+            properties:
+              item: "{{quest.icon}}"
+              background_color: "#88000000"
+          - type: "entity_render"
+            id: "quest_entity"
+            x: 150
+            y: 25
+            width: 32
+            height: 32
+            properties:
+              entity: "{{quest.entityType}}"
+              scale: 20
+              rotation_mode: "spin"
+          - type: "block_render"
+            id: "quest_block"
+            x: 150
+            y: 15
+            width: 32
+            height: 32
+            properties:
+              block: "{{quest.blockType}}"
+              scale: 2
+          - type: "text"
+            id: "quest_progress"
+            x: 10
+            y: 55
+            properties:
+              content: "[<green>{{quest.current_progress}}</green>/<gold>{{quest.target_progress}}</gold>]"
+              color: "#FFFFFF"
+              shadow: true
+              font_size: 1
+          - type: "text"
+            id: "quest_title"
+            x: 40
+            y: 5
+            width: 188
+            properties:
+              content: "Entrenamiento"
+              color: "#FFFFFF"
+              shadow: false
+              font_size: 1.5
+          - type: "text"
+            id: "quest_objective"
+            x: 40
+            y: 25
+            width: 188
+            properties:
+              content: "{{quest.current_objective}}"
+              color: "#FFFFFF"
+              shadow: false
+              font_size: 1
+              
+
+  # Sistema de notificaciones temporales
+  notifications:
+    enabled: true  # Habilita/deshabilita el sistema de notificaciones
+    max_notifications: 10  # Máximo de notificaciones visibles simultáneamente
+    stack_direction: "up"        # up, down
+    margin: -75                  # Margen desde el borde de la pantalla (en píxeles)
+    default_animation:
+      entry: "slide_left"        # slide_left, slide_right, slide_up, slide_down, fade, scale
+      exit: "fade_out"
+      duration: 2000             # ms (duración visible)
+      entry_duration: 300        # ms (duración animación entrada)
+      exit_duration: 200          # ms (duración animación salida)
+    
+    # Plantillas de notificación
+    templates:
+      objective_complete:
+        elements:
+          - type: "text"
+            id: "complete_text"
+            properties:
+              content: ""
+              color: "#55FF55"
+              shadow: true
+              font_size: 1.0
+      
+      quest_progress:
+        elements:
+          - type: "icon"
+            id: "notification_icon"
+            x: -20
+            y: -5
+            width: 16
+            height: 16
+            properties:
+              item: "{{quest.icon}}"
+              background_color: "#88000000"
+          - type: "text"
+            id: "quest_name"
+            properties:
+              content: "{{event.currentObjective}}: {{event.currentProgress}} / {{event.targetProgress}}"
+              color: "#FFFF55"
+              shadow: true
+              font_size: 1.0
+      event_started:
+        elements:
+          - type: "text"
+            id: "started_text"
+            properties:
+              content: "[!] {{quest.display_name}}"
+              color: "#55FFFF"
+              shadow: true
+              font_size: 1.0
+
+      event_completed:
+        elements:
+          - type: "text"
+            id: "completed_text"
+            properties:
+              content: "[!] {{quest.display_name}} COMPLETED"
+              color: "#FFAA00"
+              shadow: true
+              font_size: 1.1
+              bold: true
+
+      event_failed:
+        elements:
+          - type: "text"
+            id: "failed_text"
+            properties:
+              content: "[X] {{quest.display_name}} FAILED"
+              color: "#FF5555"
+              shadow: true
+              font_size: 1.0
+
+      event_locked:
+        elements:
+          - type: "text"
+            id: "locked_text"
+            properties:
+              content: "[!] Event locked - complete previous events first"
+              color: "#FF5555"
+              shadow: true
+              font_size: 0.9
+
+# Animaciones disponibles (reutilizan HoverAnimationManager)
+# slide_left, slide_right, slide_up, slide_down, fade, scale
+# zoom_in, zoom_out, shake, bounce, rotate, swing, float, wave, heartbeat, jelly, spin_3d, glow

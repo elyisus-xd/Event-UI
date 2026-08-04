@@ -42,6 +42,11 @@ public class UIElementRenderer {
         this.uiScale = uiScale;
     }
 
+    public void setDesignDimensions(int width, int height) {
+        this.designWidth = width;
+        this.designHeight = height;
+    }
+
     private record PositionedElement(UIElement delegate, int resolvedX, int resolvedY) implements UIElement {
 
         @Override public String getId()                          { return delegate.getId(); }
@@ -103,11 +108,11 @@ public class UIElementRenderer {
             case IMAGE_BUTTON  -> renderImageButton(element, graphics, mouseX, mouseY, context);
             case PROGRESS_BAR  -> renderProgressBar(element, graphics, context);
             case PANEL         -> renderPanel(element, graphics, font, mouseX, mouseY, context);
-            case ICON          -> renderIcon(element, graphics);
+            case ICON          -> renderIcon(element, graphics, context);
             case TOOLTIP       -> {}
-            case ENTITY_RENDER -> renderEntityRender(element, graphics, mouseX, mouseY);
+            case ENTITY_RENDER -> renderEntityRender(element, graphics, mouseX, mouseY, context);
             case ITEM_RENDER   -> renderItemRender(element, graphics);
-            case BLOCK_RENDER  -> renderBlockRender(element, graphics);
+            case BLOCK_RENDER  -> renderBlockRender(element, graphics, context);
             case SKILL_TREE    -> {
                 Map<String, Object> skillContext = new HashMap<>(context);
                 skillContext.put("mouseX", mouseX);
@@ -300,7 +305,13 @@ public class UIElementRenderer {
         float fontSize  = parseFloatProp(element, "font_size", 1.0f);
         fontSize        = Math.max(0.1f, fontSize);
         int effectiveWidth = Math.max(element.getWidth(), 0);
-        
+
+        String colorStr = element.getProperties().get("color");
+        int textColor = 0xFFFFFF;
+        if (colorStr != null && !colorStr.isEmpty()) {
+            textColor = parseColor(colorStr);
+        }
+
         int anchorOffsetX = parseIntProp(element, "anchor_offset_x", 0);
         int anchorOffsetY = parseIntProp(element, "anchor_offset_y", 0);
         int lineSpacing = parseIntProp(element, "line_spacing", 0);
@@ -354,7 +365,7 @@ public class UIElementRenderer {
         int baseLineHeight = (int)(font.lineHeight * fontSize);
         int lineHeight = baseLineHeight + lineSpacing;
         
-        // Render
+        
         int localY = 0;
         for (int p = 0; p < paragraphLines.size(); p++) {
             for (String line : paragraphLines.get(p)) {
@@ -374,13 +385,13 @@ public class UIElementRenderer {
                 poseStack.pushPose();
                 poseStack.translate(localX, localY, 0);
                 poseStack.scale(fontSize, fontSize, 1.0f);
-                graphics.drawString(font, lineComponent, 0, 0, 0xFFFFFF, shadow);
+                graphics.drawString(font, lineComponent, 0, 0, textColor, shadow);
                 poseStack.popPose();
 
                 localY += lineHeight;
             }
             
-            // Add paragraph_spacing after each paragraph (except last)
+            
             if (p < paragraphLines.size() - 1) {
                 localY += paragraphSpacing;
             }
@@ -511,8 +522,11 @@ public class UIElementRenderer {
     @SuppressWarnings("unused")
     private void renderPanel(UIElement element, GuiGraphics graphics, Font font, int mouseX, int mouseY, Map<String, Object> context) {
         String bgColor = element.getProperties().get("background_color");
+        String alphaStr = element.getProperties().get("alpha");
+        
         if (bgColor != null) {
-            int color = parseColor(bgColor);
+            float alpha = parseAlpha(alphaStr);
+            int color = parseColor(bgColor, alpha);
             graphics.fill(
                     element.getX(),
                     element.getY(),
@@ -563,19 +577,43 @@ public class UIElementRenderer {
     }
 
     private int parseColor(String hex) {
+        return parseColor(hex, 1.0f);
+    }
+
+    private int parseColor(String hex, float alpha) {
         try {
             if (hex.startsWith("#")) {
                 hex = hex.substring(1);
             }
 
+            String alphaHex = String.format("%02X", (int)(alpha * 255));
+
             if (hex.length() == 6) {
-                hex = "FF" + hex;
+                
+                hex = alphaHex + hex;
+            } else if (hex.length() == 8) {
+                
+                String colorPart = hex.substring(2); 
+                hex = alphaHex + colorPart;
             }
 
             return (int) Long.parseLong(hex, 16);
         } catch (NumberFormatException e) {
             LOGGER.warn("Invalid color format: {}, using gray", hex);
             return 0xFF808080;
+        }
+    }
+
+    private float parseAlpha(String alphaStr) {
+        try {
+            if (alphaStr == null || alphaStr.isEmpty()) {
+                return 1.0f;
+            }
+            float alpha = Float.parseFloat(alphaStr);
+            return Math.clamp(alpha, 0.0f, 1.0f);
+        } catch (NumberFormatException e) {
+            LOGGER.warn("Invalid alpha format: {}, using 1.0", alphaStr);
+            return 1.0f;
         }
     }
 
@@ -876,10 +914,20 @@ public class UIElementRenderer {
         }
     }
 
-    private void renderIcon(UIElement element, GuiGraphics graphics) {
+    private void renderIcon(UIElement element, GuiGraphics graphics, Map<String, Object> context) {
         String itemId = element.getProperties().get("item");
         if (itemId == null || itemId.isEmpty()) {
             LOGGER.warn("ICON element {} missing 'item' property", element.getId());
+            return;
+        }
+
+        
+        if (itemId.contains("{{") && context != null) {
+            itemId = DataBinder.resolveBindings(itemId, context);
+        }
+
+        
+        if (itemId.contains("{{")) {
             return;
         }
 
@@ -968,10 +1016,16 @@ public class UIElementRenderer {
         }
     }
 
-    private void renderEntityRender(UIElement element, GuiGraphics graphics, int mouseX, int mouseY) {
+    private void renderEntityRender(UIElement element, GuiGraphics graphics, int mouseX, int mouseY, Map<String, Object> context) {
         String entityId = element.getProperties().get("entity");
-        if (entityId == null || entityId.isEmpty()) {
-            LOGGER.warn("ENTITY_RENDER element '{}' missing 'entity' property", element.getId());
+
+        
+        if (entityId != null && entityId.contains("{{") && context != null) {
+            entityId = DataBinder.resolveBindings(entityId, context);
+        }
+
+        if (entityId == null || entityId.isEmpty() || entityId.contains("{{")) {
+            
             return;
         }
 
@@ -1066,10 +1120,16 @@ public class UIElementRenderer {
         renderScaledItem(element, graphics, stack);
     }
 
-    private void renderBlockRender(UIElement element, GuiGraphics graphics) {
+    private void renderBlockRender(UIElement element, GuiGraphics graphics, Map<String, Object> context) {
         String blockId = element.getProperties().get("block");
-        if (blockId == null || blockId.isEmpty()) {
-            LOGGER.warn("BLOCK_RENDER element '{}' missing 'block' property", element.getId());
+
+        
+        if (blockId != null && blockId.contains("{{") && context != null) {
+            blockId = DataBinder.resolveBindings(blockId, context);
+        }
+
+        if (blockId == null || blockId.isEmpty() || blockId.contains("{{")) {
+            
             return;
         }
 
