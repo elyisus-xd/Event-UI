@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public interface SkillEffect {
 
-    /** @return Tipo de efecto: "attribute", "command", etc. */
+    
     String getType();
 
     /**

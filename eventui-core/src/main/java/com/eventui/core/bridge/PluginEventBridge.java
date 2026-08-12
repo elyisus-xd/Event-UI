@@ -388,6 +388,32 @@ public class PluginEventBridge implements EventBridge {
                             eventData.put("currentObjective", objDef.getDescription());
                             eventData.put("currentProgress", objProgress.getCurrentAmount());
                             eventData.put("targetProgress", objProgress.getTargetAmount());
+
+                            
+                            if (com.eventui.api.objective.ObjectiveType.KILL_ENTITY == objDef.getType()) {
+                                String entityType = objDef.getParameters() != null
+                                    ? objDef.getParameters().get("entity_type")
+                                    : null;
+                                if (entityType != null) {
+                                    eventData.put("entityType", entityType);
+                                    LOGGER.info("Adding entityType to event data: " + entityType);
+                                } else {
+                                    LOGGER.warning("KILL_ENTITY objective has no entity_type parameter");
+                                }
+                            }
+
+                            
+                            if (com.eventui.api.objective.ObjectiveType.MINE_BLOCK == objDef.getType()) {
+                                String blockType = objDef.getParameters() != null
+                                    ? objDef.getParameters().get("block_id")
+                                    : null;
+                                if (blockType != null) {
+                                    eventData.put("blockType", blockType);
+                                    LOGGER.info("Adding blockType to event data: " + blockType);
+                                } else {
+                                    LOGGER.warning("MINE_BLOCK objective has no block_id parameter");
+                                }
+                            }
                             break;
                         }
                     }
@@ -401,6 +427,26 @@ public class PluginEventBridge implements EventBridge {
                     eventData.put("currentObjective", firstObjective.getDescription());
                     eventData.put("currentProgress", 0);
                     eventData.put("targetProgress", firstObjective.getTargetAmount());
+
+                    
+                    if (com.eventui.api.objective.ObjectiveType.KILL_ENTITY == firstObjective.getType()) {
+                        String entityType = firstObjective.getParameters() != null
+                            ? firstObjective.getParameters().get("entity_type")
+                            : null;
+                        if (entityType != null) {
+                            eventData.put("entityType", entityType);
+                        }
+                    }
+
+                    
+                    if (com.eventui.api.objective.ObjectiveType.MINE_BLOCK == firstObjective.getType()) {
+                        String blockType = firstObjective.getParameters() != null
+                            ? firstObjective.getParameters().get("block_id")
+                            : null;
+                        if (blockType != null) {
+                            eventData.put("blockType", blockType);
+                        }
+                    }
 
                     LOGGER.info("Sending AVAILABLE event '" + eventDef.getId() + "' with objective: " +
                             firstObjective.getDescription() + " (0/" + firstObjective.getTargetAmount() + ")");
@@ -1161,6 +1207,115 @@ public class PluginEventBridge implements EventBridge {
             sendMessage(response);
         } catch (Exception e) {
             LOGGER.severe("Failed to send skill spend error: " + e.getMessage());
+        }
+    }
+
+    public void sendObjectiveCompletedNotification(Player player, String objectiveName) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            data.put("objective_name", objectiveName);
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.OBJECTIVE_COMPLETED_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send objective completed notification: " + e.getMessage());
+        }
+    }
+
+    public void sendEventStartedNotification(Player player, String questName) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            data.put("quest_name", questName);
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.EVENT_STARTED_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send event started notification: " + e.getMessage());
+        }
+    }
+
+    public void sendEventCompletedNotification(Player player, String questName) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            data.put("quest_name", questName);
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.EVENT_COMPLETED_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send event completed notification: " + e.getMessage());
+        }
+    }
+
+    public void sendEventFailedNotification(Player player, String questName) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            data.put("quest_name", questName);
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.EVENT_FAILED_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send event failed notification: " + e.getMessage());
+        }
+    }
+
+    public void sendEventLockedNotification(Player player) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.EVENT_LOCKED_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send event locked notification: " + e.getMessage());
+        }
+    }
+
+    public void sendQuestProgressNotification(Player player, String objective, int current, int target) {
+        try {
+            com.google.gson.Gson gson = new com.google.gson.Gson();
+            Map<String, Object> data = new HashMap<>();
+            data.put("objective", objective);
+            data.put("current", current);
+            data.put("target", target);
+            String jsonData = gson.toJson(data);
+            Map<String, String> payload = Map.of("data", jsonData);
+            BridgeMessage response = new PluginBridgeMessage(
+                    MessageType.QUEST_PROGRESS_NOTIFICATION,
+                    payload,
+                    player.getUniqueId()
+            );
+            sendMessage(response);
+        } catch (Exception e) {
+            LOGGER.severe("Failed to send quest progress notification: " + e.getMessage());
         }
     }
 }

@@ -22,6 +22,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.StandardCopyOption;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -49,6 +53,7 @@ public class EventUIPlugin extends JavaPlugin {
     private UIFileWatcher fileWatcher;
     private SkillTreeFileWatcher skillTreeFileWatcher;
     private EventFileWatcher eventFileWatcher;
+    private QuestTrackerConfigWatcher questTrackerConfigWatcher;
     private PlayerDataManager playerDataManager;
     private com.eventui.core.skill.SkillSourcesConfig skillSourcesConfig;
     private com.eventui.core.skill.PointSourceManager pointSourceManager;
@@ -57,7 +62,6 @@ public class EventUIPlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        LOGGER.info("EventUI v" + getPluginMeta().getVersion() + " initializing...");
         saveDefaultConfig();
         this.adventure = BukkitAudiences.create(this);
         this.configLoader = new EventConfigLoader(getDataFolder());
@@ -90,6 +94,13 @@ public class EventUIPlugin extends JavaPlugin {
 
         this.eventFileWatcher = new EventFileWatcher(this);
         this.eventFileWatcher.start();
+
+        this.questTrackerConfigWatcher = new QuestTrackerConfigWatcher(this);
+        this.questTrackerConfigWatcher.start();
+
+        
+        copyDefaultQuestTrackerConfig();
+
         registerTrackers();
         objectiveTracker.buildObjectiveTypeIndex();
         objectiveTracker.initializeActiveEventsIndex();
@@ -137,6 +148,7 @@ public class EventUIPlugin extends JavaPlugin {
         if (fileWatcher != null) fileWatcher.stop();
         if (skillTreeFileWatcher != null) skillTreeFileWatcher.stop();
         if (eventFileWatcher != null) eventFileWatcher.stop();
+        if (questTrackerConfigWatcher != null) questTrackerConfigWatcher.stop();
 
         if (playerDataManager != null) {
             playerDataManager.saveAll();
@@ -218,13 +230,11 @@ public class EventUIPlugin extends JavaPlugin {
     }
 
     public void reloadEvents() {
-        LOGGER.info("Reloading events, skill trees and UI configuration...");
         this.skillSourcesConfig = new com.eventui.core.skill.SkillSourcesConfig(getConfig());
         this.pointSourceManager = new com.eventui.core.skill.PointSourceManager(skillProgressStorage, skillSourcesConfig, this);
         loadEvents();
         loadSkillTrees();
         this.uiConfigs = uiConfigLoader.loadAllUIConfigs();
-        LOGGER.info("✓ Reloaded " + uiConfigs.size() + " UI config(s)");
         this.uiConfigManager.reload();
         objectiveTracker.buildObjectiveTypeIndex();
         objectiveTracker.initializeActiveEventsIndex();
@@ -263,6 +273,32 @@ public class EventUIPlugin extends JavaPlugin {
                 + " jugadores del skill tree hot reload de: " + treeId);
     }
 
+    public void notifyQuestTrackerConfigReload(String configContent) {
+        for (Player player : getServer().getOnlinePlayers()) {
+            Map<String, String> payload = Map.of("reason", "questtrackerreload", "config", configContent);
+            BridgeMessage message = new PluginBridgeMessage(
+                    MessageType.EVENT_RELOAD_NOTIFICATION, payload, player.getUniqueId());
+            eventBridge.sendMessage(message);
+        }
+        LOGGER.info("[EventUI] Notificados " + getServer().getOnlinePlayers().size()
+                + " jugadores del quest tracker config reload");
+    }
+
+    public void sendQuestTrackerConfigToPlayer(Player player) {
+        File configFile = new File(getDataFolder(), "quest_tracker_config.yml");
+        try {
+            if (configFile.exists()) {
+                String configContent = java.nio.file.Files.readString(configFile.toPath());
+                Map<String, String> payload = Map.of("reason", "questtrackerreload", "config", configContent);
+                BridgeMessage message = new PluginBridgeMessage(
+                        MessageType.EVENT_RELOAD_NOTIFICATION, payload, player.getUniqueId());
+                eventBridge.sendMessage(message);
+            }
+        } catch (Exception e) {
+            LOGGER.warning("[EventUI] Error al enviar quest tracker config al jugador: " + e.getMessage());
+        }
+    }
+
     public EventMessenger getMessenger() {
         return uiConfigManager.getMessenger();
     }
@@ -281,6 +317,21 @@ public class EventUIPlugin extends JavaPlugin {
 
     public void setPointSourceManager(com.eventui.core.skill.PointSourceManager pointSourceManager) {
         this.pointSourceManager = pointSourceManager;
+    }
+
+    private void copyDefaultQuestTrackerConfig() {
+        File configFile = new File(getDataFolder(), "quest_tracker_config.yml");
+        if (!configFile.exists()) {
+            try (InputStream is = getResource("quest_tracker_config.yml")) {
+                if (is != null) {
+                    configFile.getParentFile().mkdirs();
+                    java.nio.file.Files.copy(is, configFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    LOGGER.info("[EventUI] Copied default quest_tracker_config.yml");
+                }
+            } catch (IOException e) {
+                LOGGER.warning("[EventUI] Failed to copy default quest_tracker_config.yml: " + e.getMessage());
+            }
+        }
     }
 
     public Map<String, UIConfig> getUIConfigs() { return uiConfigs; }

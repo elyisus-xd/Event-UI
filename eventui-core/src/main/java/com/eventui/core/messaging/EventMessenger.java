@@ -33,27 +33,59 @@ public class EventMessenger {
                 Placeholder.unparsed("current",     String.valueOf(current)),
                 Placeholder.unparsed("target",      String.valueOf(target)),
                 Placeholder.unparsed("player",      player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendQuestProgressNotification(player, description, current, target);
+        }
     }
 
     public void sendObjectiveCompleted(Player player, String description) {
-        if (!config.isEnabled() || !config.isObjectiveCompletedEnabled()) return;
+        if (!config.isEnabled() || !config.isObjectiveCompletedEnabled()) {
+            return;
+        }
         send(player, config.getObjectiveCompletedFormat(),
                 Placeholder.unparsed("description", description),
                 Placeholder.unparsed("player",      player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendObjectiveCompletedNotification(player, description);
+        } else {
+            LOGGER.warning("EventBridge is null, cannot send HUD notification");
+        }
     }
 
     public void sendEventStarted(Player player, String eventName) {
-        if (!config.isEnabled() || !config.isEventStartedEnabled()) return;
+        if (!config.isEnabled() || !config.isEventStartedEnabled()) {
+            return;
+        }
         send(player, config.getEventStartedFormat(),
                 Placeholder.unparsed("event_name", eventName),
                 Placeholder.unparsed("player",     player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendEventStartedNotification(player, eventName);
+        } else {
+            LOGGER.warning("EventBridge is null, cannot send HUD notification");
+        }
     }
 
     public void sendEventCompleted(Player player, String eventName) {
-        if (!config.isEnabled() || !config.isEventCompletedEnabled()) return;
+        if (!config.isEnabled() || !config.isEventCompletedEnabled()) {
+            return;
+        }
         send(player, config.getEventCompletedFormat(),
                 Placeholder.unparsed("event_name", eventName),
                 Placeholder.unparsed("player",     player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendEventCompletedNotification(player, eventName);
+        } else {
+            LOGGER.warning("EventBridge is null, cannot send HUD notification");
+        }
     }
 
     public void sendEventFailed(Player player, String eventName) {
@@ -61,12 +93,26 @@ public class EventMessenger {
         send(player, config.getEventFailedFormat(),
                 Placeholder.unparsed("event_name", eventName),
                 Placeholder.unparsed("player",     player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendEventFailedNotification(player, eventName);
+        } else {
+            LOGGER.warning("EventBridge is null, cannot send HUD notification");
+        }
     }
 
     public void sendEventLocked(Player player) {
         if (!config.isEnabled() || !config.isEventLockedEnabled()) return;
         send(player, config.getEventLockedFormat(),
                 Placeholder.unparsed("player", player.getName()));
+
+        
+        if (plugin.getEventBridge() != null) {
+            plugin.getEventBridge().sendEventLockedNotification(player);
+        } else {
+            LOGGER.warning("EventBridge is null, cannot send HUD notification");
+        }
     }
 
     public void sendNodeLeveledUp(Player player, String nodeName, String treeName,

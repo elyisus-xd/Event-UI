@@ -28,8 +28,6 @@ public class UIStateManager {
                 .put(key, value);
         savePlayerState(playerId);
         pushStateToClient(playerId, true);
-
-        LOGGER.info("UIState [" + playerId + "] " + key + " = " + value);
     }
 
         public void setVariables(UUID playerId, Map<String, String> variables) {
@@ -81,7 +79,6 @@ public class UIStateManager {
         }
 
         playerState.put(playerId, state);
-        LOGGER.info("Loaded UI state for " + playerId + " (" + state.size() + " variables)");
     }
 
     private void savePlayerState(UUID playerId) {

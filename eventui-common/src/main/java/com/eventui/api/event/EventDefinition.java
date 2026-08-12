@@ -13,16 +13,16 @@ import java.util.Map;
  */
 public interface EventDefinition {
 
-    /** @return ID único del evento (ej: "event_tutorial_mining") */
+    
     String getId();
 
-    /** @return Nombre visible del evento */
+    
     String getDisplayName();
 
-    /** @return Descripción del evento (texto corto) */
+    
     String getDescription();
 
-    /** @return Lista INMUTABLE de objetivos que componen este evento */
+    
     List<ObjectiveDefinition> getObjectives();
 
     /**
@@ -46,7 +46,7 @@ public interface EventDefinition {
      */
     Map<String, String> getMetadata();
 
-    /** @return Lista de IDs de eventos prerequisito */
+    
     List<String> getDependencies();
 
     /**

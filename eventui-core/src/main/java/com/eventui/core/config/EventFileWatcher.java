@@ -50,8 +50,6 @@ public class EventFileWatcher {
             watchThread = new Thread(this::watchLoop, "EventUI-EventFileWatcher");
             watchThread.setDaemon(true);
             watchThread.start();
-
-            LOGGER.info("[EventUI] Event WatchService iniciado en " + eventsFolder.getAbsolutePath());
         } catch (IOException e) {
             LOGGER.severe("[EventUI] Error iniciando WatchService: " + e.getMessage());
             LOGGER.warning("[EventUI] Usando polling como fallback");
@@ -78,7 +76,6 @@ public class EventFileWatcher {
                 LOGGER.warning("[EventUI] Error cerrando WatchService: " + e.getMessage());
             }
         }
-        LOGGER.info("[EventUI] Event FileWatcher detenido.");
     }
 
     private void watchLoop() {
@@ -100,7 +97,6 @@ public class EventFileWatcher {
 
                     if (filename.toString().endsWith(".yml") || filename.toString().endsWith(".yaml")) {
                         String fileName = filename.toString();
-                        LOGGER.info("[EventWatcher] Change detected: " + fileName);
 
                         String path = eventsFolder.getAbsolutePath() + File.separator + fileName;
                         ScheduledFuture<?> prev = pending.get(path);
@@ -155,7 +151,6 @@ public class EventFileWatcher {
 
                     if (previousTs != null) {
                         String fileName = file.getName();
-                        LOGGER.info("[EventWatcher] Change detected: " + fileName);
 
                         ScheduledFuture<?> prev = pending.get(path);
                         if (prev != null && !prev.isDone()) prev.cancel(false);
@@ -184,14 +179,11 @@ public class EventFileWatcher {
                     return;
                 }
 
-                LOGGER.info("[EventUI] Hot Reload: Recargando evento desde " + fileName);
-
                 var eventDef = plugin.getConfigLoader().loadEventFromFile(eventFile);
                 if (eventDef != null) {
                     plugin.getStorage().registerEvent(eventDef);
                     plugin.getObjectiveTracker().buildObjectiveTypeIndex();
                     plugin.getObjectiveTracker().initializeActiveEventsIndex();
-                    LOGGER.info("[EventUI] Hot Reload: Evento '" + eventDef.getId() + "' recargado exitosamente");
                 } else {
                     LOGGER.warning("[EventUI] Hot Reload: No se pudo cargar el evento desde " + fileName);
                 }

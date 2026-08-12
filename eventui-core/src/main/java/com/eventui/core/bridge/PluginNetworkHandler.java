@@ -171,7 +171,5 @@ public class PluginNetworkHandler implements PluginMessageListener {
         public void unregister() {
         plugin.getServer().getMessenger().unregisterIncomingPluginChannel(plugin, CHANNEL);
         plugin.getServer().getMessenger().unregisterOutgoingPluginChannel(plugin, CHANNEL);
-
-        LOGGER.info("Unregistered plugin messaging channel");
     }
 }

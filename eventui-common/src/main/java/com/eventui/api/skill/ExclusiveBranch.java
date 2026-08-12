@@ -8,12 +8,12 @@ import java.util.List;
  */
 public interface ExclusiveBranch {
 
-    /** @return ID único de la rama dentro del grupo (ej: "warrior") */
+    
     String getId();
 
-    /** @return Nombre visible de la rama (ej: "Warrior") */
+    
     String getName();
 
-    /** @return Lista INMUTABLE de IDs de nodos que pertenecen a esta rama */
+    
     List<String> getNodeIds();
 }

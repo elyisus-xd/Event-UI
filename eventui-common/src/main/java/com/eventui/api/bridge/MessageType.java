@@ -7,7 +7,7 @@ package com.eventui.api.bridge;
  * - PLUGIN Ã¢â€ â€™ MOD: actualizaciones de progreso, datos de eventos
  */
 public enum MessageType {
-    // ========== MOD Ã¢â€ â€™ PLUGIN ==========
+    
 
     /**
      * Solicitar datos de un evento especÃƒÂ­fico
@@ -51,7 +51,7 @@ public enum MessageType {
      */
     UI_SCREEN_CLOSED,
 
-    // ========== PLUGIN Ã¢â€ â€™ MOD ==========
+    
 
     /**
      * Respuesta con datos de un evento
@@ -99,7 +99,7 @@ public enum MessageType {
      * PLUGIN Ã¢â€ â€™ MOD: Respuesta con modo de UI y configuraciÃƒÂ³n.
      * Payload: {
      *   mode: "hardcoded" | "custom",
-     *   screenId?: "demain"  // Solo si mode = custom
+     *   screenId?: "demain"  
      * }
      * El cliente usa este payload para decidir quÃƒÂ© pantalla abrir.
      */
@@ -115,8 +115,8 @@ public enum MessageType {
     /**
      * PLUGIN Ã¢â€ â€™ MOD: Respuesta con UIConfig serializado + data bindings.
      * Payload: {
-     *   ui_config: "<json>",  // UIConfig serializado
-     *   data_bindings: "<json>"  // {"eventCount:exploration": "5", ...}
+     *   ui_config: "<json>",  
+     *   data_bindings: "<json>"  
      * }
      * El cliente deserializa y construye la UI dinÃƒÂ¡micamente.
      */
@@ -185,5 +185,41 @@ public enum MessageType {
      * Error en el procesamiento de un mensaje
      * Payload: {"error_code": "...", "message": "..."}
      */
-    ERROR
+    ERROR,
+
+    /**
+     * PLUGIN → MOD: Notificación de objetivo completado para el HUD
+     * Payload: {"objective_name": "...", "points": "..."}
+     */
+    OBJECTIVE_COMPLETED_NOTIFICATION,
+
+    /**
+     * PLUGIN → MOD: Notificación de progreso de quest para el HUD
+     * Payload: {"quest_name": "...", "objective": "...", "progress": "..."}
+     */
+    QUEST_PROGRESS_NOTIFICATION,
+
+    /**
+     * PLUGIN → MOD: Notificación de evento iniciado para el HUD
+     * Payload: {"quest_name": "..."}
+     */
+    EVENT_STARTED_NOTIFICATION,
+
+    /**
+     * PLUGIN → MOD: Notificación de evento completado para el HUD
+     * Payload: {"quest_name": "..."}
+     */
+    EVENT_COMPLETED_NOTIFICATION,
+
+    /**
+     * PLUGIN → MOD: Notificación de evento fallado para el HUD
+     * Payload: {"quest_name": "..."}
+     */
+    EVENT_FAILED_NOTIFICATION,
+
+    /**
+     * PLUGIN → MOD: Notificación de evento bloqueado para el HUD
+     * Payload: {}
+     */
+    EVENT_LOCKED_NOTIFICATION
 }

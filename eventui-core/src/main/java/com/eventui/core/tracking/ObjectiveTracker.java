@@ -43,6 +43,7 @@ public class ObjectiveTracker implements Listener {
     private final Map<UUID, Set<String>> activeEventsByPlayer = new ConcurrentHashMap<>();
     private final Map<ObjectiveType, Set<String>> eventsByObjectiveType = new ConcurrentHashMap<>();
     private final Map<String, CustomObjectiveHandler> customHandlers = new ConcurrentHashMap<>();
+    private final Map<UUID, Long> suppressNotificationsUntil = new ConcurrentHashMap<>();
     private final Map<UUID, Map<String, Integer>> playerItemTracking = new ConcurrentHashMap<>();
 
     public ObjectiveTracker(EventUIPlugin plugin) {
@@ -103,7 +104,9 @@ public class ObjectiveTracker implements Listener {
                 );
 
                 if (completed) {
-                    plugin.getMessenger().sendObjectiveCompleted(player, objective.getDescription());
+                    if (!isNotificationsSuppressed(playerId)) {
+                        plugin.getMessenger().sendObjectiveCompleted(player, objective.getDescription());
+                    }
                     plugin.getPlayerDataManager().requestSave(playerId, "objective completed: " + objective.getId());
                     checkEventCompletion(player, eventDef, progress);
                 }
@@ -243,58 +246,28 @@ public class ObjectiveTracker implements Listener {
     @EventHandler
     public void onBrew(org.bukkit.event.inventory.BrewEvent event) {
         org.bukkit.Location standLocation = event.getBlock().getLocation();
-        LOGGER.info("[BREW_DEBUG] BrewEvent fired: block="
-                + event.getBlock().getType().getKey()
-                + ", location=" + formatLocation(standLocation)
-                + ", cancelled=" + event.isCancelled());
 
         if (standLocation.getWorld() == null) {
-            LOGGER.info("[BREW_DEBUG] BrewEvent ignored: stand world is null.");
             return;
         }
 
         org.bukkit.inventory.BrewerInventory contents = event.getContents();
-        LOGGER.info("[BREW_DEBUG] BrewerInventory holder=" + contents.getHolder()
-                + ", ingredient=" + describeItemStack(contents.getIngredient())
-                + ", fuel=" + describeItemStack(contents.getFuel()));
-
-        for (int slot = 0; slot < contents.getSize(); slot++) {
-            LOGGER.info("[BREW_DEBUG] Slot " + slot + " contains " + describeItemStack(contents.getItem(slot)));
-        }
-
         List<ItemStack> results = event.getResults();
-        for (int slot = 0; slot < results.size(); slot++) {
-            LOGGER.info("[BREW_DEBUG] Result " + slot + " contains " + describeItemStack(results.get(slot)));
-        }
 
         double radiusSquared = 100.0;
-        LOGGER.info("[BREW_DEBUG] Players in world '" + standLocation.getWorld().getName()
-                + "': " + standLocation.getWorld().getPlayers().size()
-                + ", radiusSquared=" + radiusSquared);
 
         for (Player player : standLocation.getWorld().getPlayers()) {
             double distanceSquared = player.getLocation().distanceSquared(standLocation);
-            LOGGER.info("[BREW_DEBUG] Player candidate: name=" + player.getName()
-                    + ", uuid=" + player.getUniqueId()
-                    + ", location=" + formatLocation(player.getLocation())
-                    + ", distanceSquared=" + distanceSquared
-                    + ", withinRadius=" + (distanceSquared <= radiusSquared));
 
             if (distanceSquared > radiusSquared) continue;
 
             for (int slot = 0; slot < results.size(); slot++) {
                 ItemStack result = results.get(slot);
-                LOGGER.info("[BREW_DEBUG] Checking player=" + player.getName()
-                        + ", result slot=" + slot
-                        + ", item=" + describeItemStack(result));
 
                 if (result == null || result.getType().isAir()) {
-                    LOGGER.info("[BREW_DEBUG] Result " + slot + " ignored: empty/air.");
                     continue;
                 }
                 if (!result.getType().getKey().toString().contains("potion")) {
-                    LOGGER.info("[BREW_DEBUG] Result " + slot + " ignored: material key is not potion-like: "
-                            + result.getType().getKey());
                     continue;
                 }
 
@@ -305,12 +278,8 @@ public class ObjectiveTracker implements Listener {
 
     private void processBrewedPotion(Player player, ItemStack potionStack) {
         String potionTypeKey = resolvePotionTypeKey(potionStack);
-        LOGGER.info("[BREW_DEBUG] processBrewedPotion: player=" + player.getName()
-                + ", item=" + describeItemStack(potionStack)
-                + ", resolvedPotionTypeKey=" + potionTypeKey);
 
         if (potionTypeKey == null) {
-            LOGGER.info("[BREW_DEBUG] processBrewedPotion stopped: resolved potion type is null.");
             return;
         }
 
@@ -321,49 +290,28 @@ public class ObjectiveTracker implements Listener {
         Set<String> eventsToCheck = new HashSet<>(activeEvents);
         eventsToCheck.addAll(allTypeEvents);
 
-        LOGGER.info("[BREW_DEBUG] Event candidates for player=" + player.getName()
-                + ": activeEvents=" + activeEvents
-                + ", allTypeEvents=" + allTypeEvents
-                + ", eventsToCheck=" + eventsToCheck);
-
         if (eventsToCheck.isEmpty()) {
-            LOGGER.info("[BREW_DEBUG] processBrewedPotion stopped: eventsToCheck is empty.");
             return;
         }
 
         for (String eventId : eventsToCheck) {
             var defOpt = plugin.getStorage().getEventDefinition(eventId);
             if (defOpt.isEmpty()) {
-                LOGGER.info("[BREW_DEBUG] Event definition missing for eventId=" + eventId);
                 continue;
             }
             EventDefinitionImpl eventDef = (EventDefinitionImpl) defOpt.get();
 
             boolean canProcessEvent = tryAutoStart(player, eventDef, playerId);
-            LOGGER.info("[BREW_DEBUG] tryAutoStart result: eventId=" + eventId
-                    + ", displayName=" + eventDef.getDisplayName()
-                    + ", alwaysActiveOverride=" + eventDef.isAlwaysActive()
-                    + ", canProcess=" + canProcessEvent);
             if (!canProcessEvent) continue;
 
             var progressOpt = plugin.getStorage().getProgress(playerId, eventId);
             if (progressOpt.isEmpty()) {
-                LOGGER.info("[BREW_DEBUG] Progress missing after tryAutoStart: eventId=" + eventId
-                        + ", player=" + player.getName());
                 continue;
             }
             EventProgressImpl progress = (EventProgressImpl) progressOpt.get();
-            LOGGER.info("[BREW_DEBUG] Progress loaded: eventId=" + eventId
-                    + ", state=" + progress.getState());
 
             for (ObjectiveDefinition objective : eventDef.getObjectives()) {
-                LOGGER.info("[BREW_DEBUG] Inspect objective: eventId=" + eventId
-                        + ", objectiveId=" + objective.getId()
-                        + ", type=" + objective.getType()
-                        + ", parameters=" + objective.getParameters());
-
                 if (objective.getType() != ObjectiveType.BREW_POTION) {
-                    LOGGER.info("[BREW_DEBUG] Objective ignored: not BREW_POTION.");
                     continue;
                 }
 
@@ -373,35 +321,19 @@ public class ObjectiveTracker implements Listener {
                     continue;
                 }
                 boolean potionMatches = requiredPotionType.equalsIgnoreCase(potionTypeKey);
-                LOGGER.info("[BREW_DEBUG] Compare potion_type: objectiveId=" + objective.getId()
-                        + ", required='" + requiredPotionType + "'"
-                        + ", actual='" + potionTypeKey + "'"
-                        + ", equalsIgnoreCase=" + potionMatches);
                 if (!potionMatches) continue;
 
                 ObjectiveProgressImpl objProgress = progress.getObjectiveProgress(objective.getId());
                 if (objProgress == null) {
-                    LOGGER.info("[BREW_DEBUG] Objective progress missing; registering objectiveId="
-                            + objective.getId() + ", target=" + objective.getTargetAmount());
                     progress.registerObjective(objective.getId(), objective.getTargetAmount());
                     objProgress = progress.getObjectiveProgress(objective.getId());
                 }
-                LOGGER.info("[BREW_DEBUG] Objective progress before increment: objectiveId=" + objective.getId()
-                        + ", current=" + objProgress.getCurrentAmount()
-                        + ", target=" + objProgress.getTargetAmount()
-                        + ", completed=" + objProgress.isCompleted()
-                        + ", incrementAmount=" + potionStack.getAmount());
 
                 if (objProgress.isCompleted()) {
-                    LOGGER.info("[BREW_DEBUG] Objective ignored: already completed.");
                     continue;
                 }
 
                 boolean completed = objProgress.increment(potionStack.getAmount());
-                LOGGER.info("[BREW_DEBUG] Objective progress after increment: objectiveId=" + objective.getId()
-                        + ", current=" + objProgress.getCurrentAmount()
-                        + ", target=" + objProgress.getTargetAmount()
-                        + ", completedNow=" + completed);
 
                 plugin.getEventBridge().notifyProgressUpdate(
                         playerId, eventDef.getId(), objective.getId(),
@@ -412,7 +344,9 @@ public class ObjectiveTracker implements Listener {
                         objProgress.getCurrentAmount(), objProgress.getTargetAmount());
 
                 if (completed) {
-                    plugin.getMessenger().sendObjectiveCompleted(player, objective.getDescription());
+                    if (!isNotificationsSuppressed(playerId)) {
+                        plugin.getMessenger().sendObjectiveCompleted(player, objective.getDescription());
+                    }
                     plugin.getPlayerDataManager().requestSave(playerId, "objective completed: " + objective.getId());
                     checkEventCompletion(player, eventDef, progress);
                 }
@@ -421,48 +355,15 @@ public class ObjectiveTracker implements Listener {
     }
 
     private String resolvePotionTypeKey(ItemStack item) {
-        LOGGER.info("[BREW_DEBUG] resolvePotionTypeKey input: " + describeItemStack(item));
         if (item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
             var basePotionType = potionMeta.getBasePotionType();
-            LOGGER.info("[BREW_DEBUG] PotionMeta detected: basePotionType=" + basePotionType
-                    + ", customEffects=" + potionMeta.getCustomEffects());
             if (basePotionType != null) {
                 return basePotionType.getKey().toString();
             }
-        } else {
-            LOGGER.info("[BREW_DEBUG] ItemMeta is not PotionMeta: meta="
-                    + (item == null ? null : item.getItemMeta()));
         }
         return null;
     }
 
-    private String describeItemStack(ItemStack item) {
-        if (item == null) return "null";
-
-        StringBuilder description = new StringBuilder();
-        description.append("ItemStack{type=").append(item.getType().getKey())
-                .append(", amount=").append(item.getAmount())
-                .append(", hasMeta=").append(item.hasItemMeta());
-
-        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.PotionMeta potionMeta) {
-            description.append(", potionBase=").append(potionMeta.getBasePotionType())
-                    .append(", customEffects=").append(potionMeta.getCustomEffects());
-        } else if (item.hasItemMeta()) {
-            description.append(", metaClass=").append(item.getItemMeta().getClass().getName());
-        }
-
-        description.append('}');
-        return description.toString();
-    }
-
-    private String formatLocation(org.bukkit.Location location) {
-        if (location == null) return "null";
-        return "Location{world=" + (location.getWorld() == null ? null : location.getWorld().getName())
-                + ", x=" + location.getX()
-                + ", y=" + location.getY()
-                + ", z=" + location.getZ()
-                + "}";
-    }
 
     @EventHandler(ignoreCancelled = true)
     public void onPlayerMove(PlayerMoveEvent event) {
@@ -520,7 +421,6 @@ public class ObjectiveTracker implements Listener {
         plugin.getMessenger().sendEventStarted(player, eventDef.getDisplayName());
         plugin.getEventBridge().notifyStateChange(playerId, eventDef.getId(), EventState.IN_PROGRESS);
         plugin.getPlayerDataManager().requestSave(playerId, "event auto-started: " + eventDef.getId());
-        LOGGER.info("Auto-started '" + eventDef.getId() + "' for " + player.getName());
 
         return true;
     }
@@ -748,14 +648,12 @@ public class ObjectiveTracker implements Listener {
         }
         customHandlers.put(customId, handler);
         handler.onRegister();
-        LOGGER.info("✓ Custom objective handler registrado: " + customId);
     }
-    
+
     public void unregisterCustomHandler(String customId) {
         CustomObjectiveHandler handler = customHandlers.remove(customId);
         if (handler != null) {
             handler.onUnregister();
-            LOGGER.info("✓ Custom objective handler deregistrado: " + customId);
         }
     }
     
@@ -828,6 +726,7 @@ public class ObjectiveTracker implements Listener {
         if (allCompleted) {
             progress.complete();
             unregisterActiveEvent(player.getUniqueId(), eventDef.getId());
+            suppressNotificationsUntil.put(player.getUniqueId(), System.currentTimeMillis() + 2000);
             plugin.getMessenger().sendEventCompleted(player, eventDef.getDisplayName());
             plugin.getRewardManager().giveRewards(player, eventDef);
             notifyStateChange(player.getUniqueId(), eventDef.getId());
@@ -838,6 +737,25 @@ public class ObjectiveTracker implements Listener {
                 plugin.getPointSourceManager().handleEventComplete(player, eventDef.getId(), difficulty);
             }
         }
+    }
+
+    private boolean isEventAboutToComplete(EventDefinitionImpl eventDef, EventProgressImpl progress) {
+        int completedCount = 0;
+        for (ObjectiveDefinition obj : eventDef.getObjectives()) {
+            ObjectiveProgressImpl p = progress.getObjectiveProgress(obj.getId());
+            if (p != null && p.isCompleted()) {
+                completedCount++;
+            }
+        }
+        return completedCount == eventDef.getObjectives().size() - 1;
+    }
+
+    private boolean isNotificationsSuppressed(UUID playerId) {
+        Long suppressUntil = suppressNotificationsUntil.get(playerId);
+        if (suppressUntil == null) return false;
+        if (System.currentTimeMillis() < suppressUntil) return true;
+        suppressNotificationsUntil.remove(playerId);
+        return false;
     }
 
     private void notifyStateChange(UUID playerId, String eventId) {

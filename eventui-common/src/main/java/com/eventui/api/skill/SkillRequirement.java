@@ -5,8 +5,8 @@ package com.eventui.api.skill;
  * (record o simple class)
  */
 public record SkillRequirement(
-        String nodeId,      // ID del nodo requerido
-        int minLevel        // Nivel mínimo requerido en ese nodo
+        String nodeId,      
+        int minLevel        
 ) {
     public String getNodeId() {
         return nodeId;

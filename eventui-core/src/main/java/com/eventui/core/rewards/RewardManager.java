@@ -26,7 +26,6 @@ public class RewardManager {
         try {
             String rewardsJson = eventDef.getMetadata().getOrDefault("rewards_data", "[]");
             if (rewardsJson.equals("[]") || rewardsJson.equals("{}")) {
-                LOGGER.info("No rewards configured for event: " + eventDef.getId());
                 return;
             }
 
@@ -71,8 +70,6 @@ public class RewardManager {
 
             if (rewardCount > 0) {
                 player.sendMessage("§6✓ ¡Recibiste " + rewardCount + " recompensa(s)!");
-                LOGGER.info("Gave " + rewardCount + " reward(s) to " + player.getName()
-                        + " for event: " + eventDef.getId());
             }
 
         } catch (Exception e) {

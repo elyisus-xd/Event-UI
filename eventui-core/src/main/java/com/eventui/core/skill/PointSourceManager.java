@@ -365,10 +365,9 @@ public class PointSourceManager {
 
         if (config.isPlaytimeRequireActivity()) {
             long lastActive = lastActivity.getOrDefault(playerId, 0L);
-            
+
             if (lastActive != 0L && (now - lastActive) / 1000 > config.getPlaytimeActivityThreshold()) {
-                LOGGER.info("[Playtime] " + player.getName() + " is AFK, last active " + ((now - lastActive) / 1000) + "s ago");
-                return; 
+                return;
             }
         }
 

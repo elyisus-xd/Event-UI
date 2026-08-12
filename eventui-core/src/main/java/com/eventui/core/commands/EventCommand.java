@@ -600,8 +600,6 @@ public class EventCommand implements CommandExecutor {
             plugin.getEventBridge().sendMessage(message);
         }
 
-        LOGGER.info("âœ“ Sent reload notification to " + onlinePlayers.size() + " player(s)");
-
         return onlinePlayers.size();
     }
     private void handleOpen(CommandSender sender, String[] args) {

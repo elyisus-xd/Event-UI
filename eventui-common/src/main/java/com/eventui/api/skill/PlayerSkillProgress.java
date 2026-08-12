@@ -9,7 +9,7 @@ import java.util.UUID;
  */
 public interface PlayerSkillProgress {
 
-    /** @return UUID del jugador */
+    
     UUID getPlayerId();
 
     /**

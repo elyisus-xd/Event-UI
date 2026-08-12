@@ -50,7 +50,6 @@ public class DependencyChecker {
 
             if (!isLocked(event, completedEventIds)) {
                 unlocked.add(event.getId());
-                LOGGER.info("Event {} has been unlocked by completing {}", event.getId(), completedEventId);
             }
         }
 

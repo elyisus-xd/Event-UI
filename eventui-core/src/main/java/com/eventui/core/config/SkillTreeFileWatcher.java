@@ -51,8 +51,6 @@ public class SkillTreeFileWatcher {
             watchThread = new Thread(this::watchLoop, "EventUI-SkillTreeFileWatcher");
             watchThread.setDaemon(true);
             watchThread.start();
-
-            LOGGER.info("[EventUI] SkillTree WatchService iniciado en " + skillsFolder.getAbsolutePath());
         } catch (IOException e) {
             LOGGER.severe("[EventUI] Error iniciando WatchService: " + e.getMessage());
             LOGGER.warning("[EventUI] Usando polling como fallback");
@@ -79,7 +77,6 @@ public class SkillTreeFileWatcher {
                 LOGGER.warning("[EventUI] Error cerrando WatchService: " + e.getMessage());
             }
         }
-        LOGGER.info("[EventUI] Skill Tree Hot Reload detenido.");
     }
 
     private void watchLoop() {
@@ -101,7 +98,6 @@ public class SkillTreeFileWatcher {
 
                     if (filename.toString().endsWith(".yml") || filename.toString().endsWith(".yaml")) {
                         String fileName = filename.toString();
-                        LOGGER.info("[SkillTreeWatcher] Change detected: " + fileName);
 
                         String path = skillsFolder.getAbsolutePath() + File.separator + fileName;
                         ScheduledFuture<?> prev = pending.get(path);
@@ -157,7 +153,6 @@ public class SkillTreeFileWatcher {
 
                     if (previousTs != null) {
                         String fileName = file.getName();
-                        LOGGER.info("[SkillTreeWatcher] Change detected: " + fileName);
 
                         ScheduledFuture<?> prev = pending.get(path);
                         if (prev != null && !prev.isDone()) prev.cancel(false);
@@ -183,8 +178,6 @@ public class SkillTreeFileWatcher {
                 SkillTreeDefinition newTree =
                         plugin.getSkillTreeConfigLoader().loadSkillTreeFromFile(file);
                 plugin.getSkillTreeStorage().registerSkillTree(newTree);
-                LOGGER.info("[EventUI] Skill Tree Hot Reload: '"
-                        + newTree.getId() + "' recargado desde " + fileName);
                 plugin.notifySkillTreeHotReload(newTree.getId());
             } catch (Exception e) {
                 LOGGER.severe("[EventUI] Skill Tree Hot Reload: error en "

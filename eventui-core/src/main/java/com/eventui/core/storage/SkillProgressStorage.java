@@ -40,6 +40,5 @@ public class SkillProgressStorage {
 
     public void clearPlayerProgress(UUID playerId) {
         playerProgress.remove(playerId);
-        LOGGER.info("Cleared skill progress for player: " + playerId);
     }
 }

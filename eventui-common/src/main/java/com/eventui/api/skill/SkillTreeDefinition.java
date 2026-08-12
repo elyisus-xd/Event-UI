@@ -11,21 +11,21 @@ import java.util.List;
  */
 public interface SkillTreeDefinition {
 
-    /** @return ID único del árbol (ej: "combat-tree") */
+    
     String getId();
 
-    /** @return Nombre visible del árbol */
+    
     String getDisplayName();
 
-    /** @return Descripción del árbol (texto corto) */
+    
     String getDescription();
 
-    /** @return Tipo de puntos usado en este árbol (ej: "combat_points", "magic_points") */
+    
     String getPointType();
 
-    /** @return Lista INMUTABLE de nodos que componen este árbol */
+    
     List<SkillNodeDefinition> getNodes();
 
-    /** @return Lista INMUTABLE de grupos exclusivos de ramas (puede estar vacía) */
+    
     List<ExclusiveGroup> getExclusiveGroups();
 }

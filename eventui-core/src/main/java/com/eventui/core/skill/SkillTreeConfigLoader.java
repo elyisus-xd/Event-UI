@@ -73,9 +73,6 @@ public class SkillTreeConfigLoader {
 
         if (trees.isEmpty()) {
             LOGGER.warning("No skill trees were loaded successfully. Check the errors above.");
-        } else {
-            String treeIds = String.join(", ", trees.keySet());
-            LOGGER.info("✓ Loaded " + trees.size() + " skill tree(s): [" + treeIds + "]");
         }
 
         return trees;

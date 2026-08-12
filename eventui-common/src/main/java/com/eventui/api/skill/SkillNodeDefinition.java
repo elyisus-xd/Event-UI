@@ -8,37 +8,37 @@ import java.util.Map;
  */
 public interface SkillNodeDefinition {
 
-    /** @return ID único del nodo dentro del árbol (ej: "vitality_1") */
+    
     String getId();
 
-    /** @return Nombre visible del nodo */
+    
     String getDisplayName();
 
-    /** @return Descripción del nodo (texto corto) */
+    
     String getDescription();
 
-    /** @return Icono del nodo en formato ResourceLocation (ej: "minecraft:apple") */
+    
     String getIcon();
 
-    /** @return Número máximo de niveles que puede alcanzar este nodo */
+    
     int getMaxLevel();
 
-    /** @return Costo para subir AL nivel indicado (1-indexed, ej: getCostForLevel(1) = costo para llegar a nivel 1) */
+    
     int getCostForLevel(int level);
 
-    /** @return Lista INMUTABLE de requisitos que este nodo tiene */
+    
     List<SkillRequirement> getRequirements();
 
-    /** @return Modo de requisitos: "all" (todos deben cumplirse) o "any" (al menos uno) */
+    
     String getRequiresMode();
 
-    /** @return Posición X en el árbol (para UI) */
+    
     int getPositionX();
 
-    /** @return Posición Y en el árbol (para UI) */
+    
     int getPositionY();
 
-    /** @return Lista INMUTABLE de efectos que se aplican al subir este nodo */
+    
     List<SkillEffect> getEffects();
 
     /**

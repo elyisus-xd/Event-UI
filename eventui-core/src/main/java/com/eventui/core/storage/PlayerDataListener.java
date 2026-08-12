@@ -20,6 +20,8 @@ public class PlayerDataListener implements Listener {
         plugin.getUIStateManager().loadPlayerState(event.getPlayer().getUniqueId());
 
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> plugin.getEventBridge().sendSkillDataToPlayer(event.getPlayer()), 60L);
+
+        plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> plugin.sendQuestTrackerConfigToPlayer(event.getPlayer()), 80L);
     }
 
     @EventHandler
